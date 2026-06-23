@@ -1,0 +1,1789 @@
+[
+  {
+    "id": "red-list-1",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "弟兄老火锅（祥瑞新城店）",
+    "category": "火锅",
+    "tasteTags": [
+      "适中",
+      "荔枝味（火锅）"
+    ],
+    "signatureDishes": "苕粉",
+    "review": "位置有点刁钻，建议中辣起点，锅底比较有味，价格便宜",
+    "region": "九龙坡区",
+    "locationLabel": "弟兄老火锅(祥瑞新城店)",
+    "parkingNote": "直港大道公共停车场，就那个桥下面，然后走到桥底",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.0,
+      "chen": 0.0
+    },
+    "teamScore": 3.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-2",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "一口火锅（已关门）",
+    "category": "火锅",
+    "tasteTags": [
+      "适中",
+      "荔枝味（火锅）"
+    ],
+    "signatureDishes": "吊龙、牛肉",
+    "review": "春森彼岸那边味道稍辣 锅底会变得有点咸，不苦",
+    "region": "江北区",
+    "locationLabel": "一口火锅",
+    "parkingNote": "可以停在鲤鱼池轻轨站出口处的停车场",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-3",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "苟味道老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "麻辣",
+      "适中"
+    ],
+    "signatureDishes": "嫩肉片",
+    "review": "川美黄角坪校区，牛油不重，有点辣，锅底会煮得发咸发苦",
+    "region": "九龙坡区",
+    "locationLabel": "苟味道老火锅(黄正街社区店)",
+    "parkingNote": "不好停车，可以就停路边，注意违规短信",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-4",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "氿氿老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "适中",
+      "麻辣"
+    ],
+    "signatureDishes": "特色葱香牛肉、莴笋片、咸蛋黄虾滑",
+    "review": "价格实惠，有点辣，点微辣就好，在南坪协信背后，厚豆干不太入味",
+    "region": "南岸区, 协信星光",
+    "locationLabel": "氿氿老火锅(协信城二店)",
+    "parkingNote": "停协信",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-5",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "咖咖老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "适中",
+      "麻辣"
+    ],
+    "signatureDishes": "鲜切牛肉、耙鸡脚、花生浆",
+    "review": "总店在小区里，锅底盐味比较重，调料别放盐了，菜品都不错，毛肚烫了缩水有点严重，不要点拼盘了，有菜不爱吃",
+    "region": "渝北区",
+    "locationLabel": "咖咖火锅(总店)",
+    "parkingNote": "车停路边",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-6",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "陈胖子火锅（七星岗）",
+    "category": "串串, 火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "鱼泡（没吃到）",
+    "review": "老字号",
+    "region": "渝中区",
+    "locationLabel": "陈胖子火锅(总店)",
+    "parkingNote": "有个学校的停车场",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-7",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "二火锅（下沙店）",
+    "category": "火锅",
+    "tasteTags": [
+      "适中",
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "不太辣，锅底久煮不发苦，外地人吃微微辣",
+    "region": "沙坪坝区",
+    "locationLabel": "二火锅(土湾店)",
+    "parkingNote": "停车场",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.0,
+      "chen": 0.0
+    },
+    "teamScore": 3.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-8",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "喜巴蜀金钱毛肚",
+    "category": "串串",
+    "tasteTags": [
+      "适中",
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "9.9代金券可去，味道不错",
+    "region": "江北区",
+    "locationLabel": "喜巴蜀金钱牛肚串串(观音桥通宵店)",
+    "parkingNote": "",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.0,
+      "chen": 0.0
+    },
+    "teamScore": 3.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-9",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "（换人了）临江门秀嬢串串香（大井巷店）",
+    "category": "串串",
+    "tasteTags": [
+      "适中",
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "小巷子里，菜品丰富新鲜，味道好",
+    "region": "渝中区",
+    "locationLabel": "临江门秀孃串串香(大井巷店)",
+    "parkingNote": "",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-10",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "牛得水现切牛肉牛杂火锅",
+    "category": "汤锅, 牛肉",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "牛胸口油",
+    "review": "番茄锅和酸汤锅（番茄好吃点），牛肉新鲜，牛胸口油切得很薄煮起来很脆，称斤数",
+    "region": "渝北区",
+    "locationLabel": "牛得水现切牛肉牛杂火锅(西政店)",
+    "parkingNote": "",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-11",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "旺和牛潮汕牛肉",
+    "category": "汤锅, 牛肉",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "有套餐88或者68/39，较为划算，骨汤锅底",
+    "region": "江北区, 渝北区",
+    "locationLabel": "旺·和牛潮汕牛肉店(花卉园店)",
+    "parkingNote": "",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 2.0,
+      "chen": 0.0
+    },
+    "teamScore": 2.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-12",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "缘知袁味生态耙牛肉（北碚总店）",
+    "category": "汤锅, 牛肉",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "番茄浓汤，番茄锅里是牛尾骨，辣锅是牛肉，可以拼锅，有玉米羹，多喊点人",
+    "region": "北碚区",
+    "locationLabel": "缘知袁味生态耙牛肉(北碚总店)",
+    "parkingNote": "瞎停",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-13",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "小喆清水烫",
+    "category": "汤锅",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "脆哨炒饭、黄金六两、软哨、嫩牛肉，",
+    "review": "骨汤锅底，贵州蘸水，人均很便宜",
+    "region": "九龙坡区, 民主新村",
+    "locationLabel": "小喆清水烫",
+    "parkingNote": "万象城或者西城天街",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-14",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "精华黑豆花美蛙鱼自助",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "石桥铺总店，人较多要排队，解放碑店位置比较偏，人比较少，有豆花和黄辣丁",
+    "region": "九龙坡区",
+    "locationLabel": "精华黑豆花美蛙鱼自助(石桥铺总店)",
+    "parkingNote": "石桥铺总店车停路边",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 5.0,
+      "chen": 0.0
+    },
+    "teamScore": 5.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-15",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "80后美蛙肥肠鱼",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "南岸区城南大道路边，自助，有肥肠和黄辣丁，肥肠品质还可以，凉菜很好吃，分店味道不咋地，不要去",
+    "region": "南岸区",
+    "locationLabel": "80后美蛙肥肠鱼(南城大道店)",
+    "parkingNote": "停到紫金大道上再走过去",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 5.0,
+      "chen": 0.0
+    },
+    "teamScore": 5.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-16",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "顿顿鱼藕相莲",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "巴南区红光大道，理工对面的美食街上，藤椒味道，不辣，蛙个头娇小，不是自助，称斤数，吃到后面可能会有点苦",
+    "region": "巴南区",
+    "locationLabel": "顿顿鱼藕相莲",
+    "parkingNote": "路边",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.0,
+      "chen": 0.0
+    },
+    "teamScore": 3.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-17",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "品鱻黑豆花美蛙鱼（大坪）",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "自助，巷子里，味道比较辣，没有豆花，蛙个头大，生意好要排队",
+    "region": "渝中区",
+    "locationLabel": "品鱻黑豆花美蛙鱼(大坪总店)",
+    "parkingNote": "可以停他对面的停车场",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 5.0,
+      "chen": 0.0
+    },
+    "teamScore": 5.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-18",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "秋小二水煮蛙",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "猪肝、某种鱼肚",
+    "review": "观音桥店在九街上面，特辣爆麻爆辣，可能点微辣比较好，泡久了会发苦，可以加一份猪肝（比较厚），一份鱼肚（脆的），泡椒蛙肚不要，菜籽油生油味重，泡椒味淡，晚上排队特别凶",
+    "region": "江北区",
+    "locationLabel": "秋小二水煮蛙",
+    "parkingNote": "车可以停附近小区里面",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-19",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "蒋黎鳅美蛙泥鳅",
+    "category": "美蛙鱼, 泥鳅",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "有木姜子，不辣，味道很清新，有酸菜、泡椒，泥鳅一斤有十几条",
+    "region": "渝北区",
+    "locationLabel": "蒋黎鳅美蛙泥鳅",
+    "parkingNote": "路边",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-20",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "胡姐自助美蛙鱼肥肠鱼",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "“品控不稳定，第二次吃非常老”偏辣，微辣就好，胡辣块的香味，有一点点咸，是九品自助美蛙鱼（谢家湾菜市场）老板妈妈开的",
+    "region": "渝中区",
+    "locationLabel": "胡姐自助美蛙肥肠鱼",
+    "parkingNote": "日月光停车场",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-21",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "小院江湖味（聚慧雅苑店）",
+    "category": "江湖菜",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "泡椒黄辣丁、干烧蛙",
+    "review": "干烧味道很足，泡椒味道比较清爽，建议再点个素菜漱口",
+    "region": "江北区",
+    "locationLabel": "小院江湖味(聚慧雅苑店)",
+    "parkingNote": "路边",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-22",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "夏季餐馆",
+    "category": "江湖菜",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "招牌馋嘴蛙",
+    "review": "就在我家附近，分量很足，招牌馋嘴蛙，麻辣鲜香",
+    "region": "巴南区",
+    "locationLabel": "夏记餐馆(环球时代广场店)",
+    "parkingNote": "家里",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-23",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "洞子曾老幺鱼庄（长滨路店）",
+    "category": "江湖菜",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "香辣虾",
+    "review": "鲫鱼刺多，鲫鱼和蛙是一个调料，可以直接点蛙，香辣虾好吃，味道是温和的江湖菜，很香，不是太辣",
+    "region": "渝中区",
+    "locationLabel": "洞子曾老幺鱼庄(长滨路店)",
+    "parkingNote": "十八梯 D 区停车场，",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-24",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "涮江湖鱼府",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "蛙吃两斤送三斤，罗非鱼不要吃干烧，糖醋味的不好吃，直接煮进去，便宜实惠，有青花椒味的，两个人五斤蛙一条鱼 1.5 斤，150",
+    "region": "巴南区",
+    "locationLabel": "涮江湖鱼府(民主新街店)",
+    "parkingNote": "坡坡上面",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.0,
+      "chen": 0.0
+    },
+    "teamScore": 3.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-25",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "老六土黄鳝（鲁能三期）",
+    "category": "家常菜, 江湖菜",
+    "tasteTags": [
+      "麻辣",
+      "适中"
+    ],
+    "signatureDishes": "双椒鳝鱼、干煸鳝丝（爆辣、 凉拌蛙（口水鸡味道）、韭香泥鳅片、’泡椒牛肉丝",
+    "review": "鳝鱼泥鳅都挺好吃的，外焦里嫩，嚼起来很有肉感，水煮系列味道不足不要点，稍微有点贵",
+    "region": "渝北区",
+    "locationLabel": "老六土黄鳝(鲁能星城三街区店)",
+    "parkingNote": "想想办法",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 5.0,
+      "chen": 0.0
+    },
+    "teamScore": 5.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-26",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "宰牛匠",
+    "category": "汤锅, 牛肉",
+    "tasteTags": [
+      "麻辣",
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "鲜切牛肉自助",
+    "region": "渝北区",
+    "locationLabel": "宰牛匠·鲜牛肉自助火锅(龙头寺店)",
+    "parkingNote": "想想办法",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-27",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "野烤山·营地围炉炭火烤肉店（搬家了）",
+    "category": "烤串",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "黄牛肉串",
+    "review": "九街，牛肉肉质好，很香，肥瘦相间，份量大，菜品不多，营业时间比较短，下午六点才开门，沾碟调料辣椒面和黄豆粉，烧烤调料辣椒面和孜然面",
+    "region": "江北区",
+    "locationLabel": "野烤山·营地围炉炭火烤肉店",
+    "parkingNote": "总财火锅旁有露天停车场",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 5.0,
+      "chen": 0.0
+    },
+    "teamScore": 5.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-28",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "合平酿造·精酿小炉子烤串",
+    "category": "烤串",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "菜品丰富",
+    "region": "南岸区",
+    "locationLabel": "合平酿造·精酿小炉子烤串(回龙湾店)",
+    "parkingNote": "路边",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-29",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "雷神烤鸭",
+    "category": "小吃",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "趁热，便宜",
+    "region": "巴南区",
+    "locationLabel": "",
+    "parkingNote": "",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.0,
+      "chen": 0.0
+    },
+    "teamScore": 3.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-30",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "旺德发烧鹅",
+    "category": "小吃",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "烧鹅、叉烧、豉油鸡",
+    "review": "加了老板微信，微信喊他留，去现场根本买不到，豉油鸡、蜜蜡鸡翅、烧鹅都好吃，烧鹅很大，人少要 1/4 就可以了",
+    "region": "南岸区",
+    "locationLabel": "旺得发广式烧腊专门店",
+    "parkingNote": "路边",
+    "sourceLabel": "xhs",
+    "visited": true,
+    "memberScores": {
+      "yang": 5.0,
+      "chen": 0.0
+    },
+    "teamScore": 5.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-31",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "爱厨梁山鸡",
+    "category": "汤锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "沙坪坝区",
+    "locationLabel": "爱厨梁山鸡",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-32",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "村长的串",
+    "category": "串串",
+    "tasteTags": [
+      "适中",
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "渝北区",
+    "locationLabel": "村长的串",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-33",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "呆呆烧腊",
+    "category": "小吃",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "九龙坡区, 万象城",
+    "locationLabel": "呆呆烧腊",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-34",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "二莽子腰片老火锅上海城店",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "腰片、老肉片、郡花",
+    "review": "",
+    "region": "南岸区",
+    "locationLabel": "二莽子腰片王老火锅(上海城店)",
+    "parkingNote": "",
+    "sourceLabel": "霞姐, 小胖总",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-35",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "福斋点心",
+    "category": "小吃",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "渝中区, 时代天街",
+    "locationLabel": "福斋点心 时代天街店",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-36",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "格特士",
+    "category": "美式烧肉",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "容易腻，分量挺大的",
+    "region": "渝北区",
+    "locationLabel": "格特士美式烤肉GUTS&ONION(冉家坝店)",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-37",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "古垒斯美式烤肉",
+    "category": "美式烧肉",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "渝北区",
+    "locationLabel": "古垒斯cules美式烤肉",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-38",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "憨灯火锅串串香（升伟新意境店）",
+    "category": "串串",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "江北区",
+    "locationLabel": "憨灯火锅串串香(升伟新意境店)",
+    "parkingNote": "",
+    "sourceLabel": "小胖总, 霞姐",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-39",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "好望角老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "水火锅"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "江北区",
+    "locationLabel": "好望角老火锅(江北金果园小区店)",
+    "parkingNote": "",
+    "sourceLabel": "霞姐, 小胖总",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-40",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "鸿顺美蛙鱼",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "渝中区, 解放碑",
+    "locationLabel": "鸿顺老铁锅美蛙鱼府(解放碑店)",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-41",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "胡子哥的火锅店",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "渝北区",
+    "locationLabel": "胡子哥的火锅店(龙头寺公园店)",
+    "parkingNote": "",
+    "sourceLabel": "小胖总, 霞姐",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-42",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "金罗三老火锅（洋河店）",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "江北区",
+    "locationLabel": "金罗三老火锅(九街洋河路总店)",
+    "parkingNote": "",
+    "sourceLabel": "霞姐, 小胖总",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-43",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "筷禾老火锅（观音桥店）",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "江北区",
+    "locationLabel": "筷禾老火锅(观音桥店)",
+    "parkingNote": "",
+    "sourceLabel": "霞姐, 小胖总",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-44",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "糯烧烤",
+    "category": "烤串",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "南岸区",
+    "locationLabel": "糯烧烤",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-45",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "向往的炸鸡",
+    "category": "小吃",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "外卖有点软了，去店里试试",
+    "region": "巴南区",
+    "locationLabel": "向往的炸鸡",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-46",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "渔鳝坊双椒鳝片",
+    "category": "江湖菜, 鳝鱼",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "渝北区",
+    "locationLabel": "渔鳝坊双椒鳝片",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-47",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "张飞老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "",
+    "region": "沙坪坝区",
+    "locationLabel": "张飞老火锅(新城大厦店)",
+    "parkingNote": "",
+    "sourceLabel": "霞姐, 小胖总",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-48",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "达记卤味.烧烤",
+    "category": "小吃",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "怪味鸡、椒麻蛙、郡把、牙梗",
+    "review": "",
+    "region": "渝北区, 光环",
+    "locationLabel": "达记卤味.烧烤(光环店)",
+    "parkingNote": "",
+    "sourceLabel": "小胖总",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-49",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "友谊食店（九街店）",
+    "category": "江湖菜",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "干烧蛙",
+    "review": "very nice！青小米椒碎，炒的童工蛙，每一口都入味，蛙最好吃，很惊艳，相比起来其他的都普通了起来。还有个清淡的招牌菜猪肚鸡煲没有吃",
+    "region": "江北区",
+    "locationLabel": "友谊食店·九街",
+    "parkingNote": "老店位于北城天街，堂子就9-10桌，排队严重，支付打车费让去九街店。停车情况参考九街",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 5.0,
+      "chen": 5.0
+    },
+    "teamScore": 5.0,
+    "legacyScore": 5.0
+  },
+  {
+    "id": "red-list-50",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "知味三合鱼",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "跳水蛙",
+    "review": "三个女生吃7.5斤蛙➕两个素菜差不多，人均一百，蛙个头大，点中辣，微辣味道不够，三点杀蛙师傅下班",
+    "region": "九龙坡区",
+    "locationLabel": "知味三和鱼(总店)",
+    "parkingNote": "路口右转有停车场",
+    "sourceLabel": "霞姐",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-51",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "红火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "双碑三杰的师傅",
+    "region": "沙坪坝区",
+    "locationLabel": "红火锅(三陵大厦C栋店)",
+    "parkingNote": "",
+    "sourceLabel": "xhs",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-52",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "香辣源",
+    "category": "虾蟹",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "蛋黄味、麻辣味",
+    "review": "0.1分扣给同一口味两斤起点，两个人点两个口味吃着有点多。稍贵人均200+。香辣锅带汤，煮蛙也好吃，煮蟹也好吃。蛋黄味两斤有点多吃着略腻，但是好吃",
+    "region": "九龙坡区",
+    "locationLabel": "香辣源(杨家坪横街杨家坪步行商业区店)",
+    "parkingNote": "",
+    "sourceLabel": "杨队",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.8,
+      "chen": 4.9
+    },
+    "teamScore": 4.8,
+    "legacyScore": 4.9
+  },
+  {
+    "id": "red-list-53",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "庆三元老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "适中",
+      "不辣"
+    ],
+    "signatureDishes": "豆干、板筋、耙芋儿、五花趾、吊龙",
+    "review": "微辣可以，不是很辣但是味道比较足，锅底第一口就有味，煮到后面会有点咸。店里嬢嬢很好，人不多吃的很舒适不会等位等到人麻了。",
+    "region": "江北区",
+    "locationLabel": "庆三元老火锅(珠江太阳城D区店)",
+    "parkingNote": "有停车场",
+    "sourceLabel": "杨队",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.5,
+      "chen": 4.7
+    },
+    "teamScore": 4.6,
+    "legacyScore": 4.6
+  },
+  {
+    "id": "red-list-54",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "邂火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "麻辣",
+      "适中"
+    ],
+    "signatureDishes": "焦糖布丁的雪花冰",
+    "review": "",
+    "region": "渝中区, 解放碑",
+    "locationLabel": "邂火锅(老店)",
+    "parkingNote": "",
+    "sourceLabel": "密子君",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-55",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "小华大虾火锅串串（光环店）",
+    "category": "串串",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "鹿茸菇、冬瓜、脆豆腐等素菜",
+    "review": "锅底比较厚重，烫肉一般，烫素菜很好吃，总店排队太狠了，可以去光环店新开的，晚点去排队不多",
+    "region": "光环, 九龙坡区",
+    "locationLabel": "小华大虾火锅串串(光环店)",
+    "parkingNote": "光环",
+    "sourceLabel": "xhs, 霞姐",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.5,
+      "chen": 0.0
+    },
+    "teamScore": 4.5,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-56",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "香辣螃蟹村",
+    "category": "虾蟹",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "香辣蟹、虾",
+    "review": "味道可以，原材料品质比起香辣源略差一筹，素材年糕和土豆都不好吃，蟹 98/斤，虾 68/斤，蟹可以称多少吃多少，两斤起做",
+    "region": "沙坪坝区",
+    "locationLabel": "香辣螃蟹村",
+    "parkingNote": "小龙坎那边，不太好停车，附近停车位较小，可以停到金沙，再走过来，不远",
+    "sourceLabel": "xhs",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.8,
+      "chen": 0.0
+    },
+    "teamScore": 3.8,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-57",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "缘和源椒麻鱼",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "鱼肚，笋",
+    "review": "中辣小麻，很合适，蛙个头比较小，梭边鱼很入味，山药粉不咋好吃，鱼肚和笋好吃，听说花鲢可以片到没刺，下次试试",
+    "region": "南岸区",
+    "locationLabel": "缘和源椒麻鱼",
+    "parkingNote": "路边",
+    "sourceLabel": "xhs",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.0,
+      "chen": 0.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-58",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "四哥呱呱鱼庄",
+    "category": "江湖菜",
+    "tasteTags": [
+      "麻辣",
+      "适中"
+    ],
+    "signatureDishes": "凉拌蛙（口水鸡味道）、仔姜蛙、泡椒鱼肚",
+    "review": "凉拌蛙泡一会儿就咸了，仔姜蛙姜有点老，泡椒鱼肚脆脆的，炒的素菜别点垃圾，好几个店根本不知道老板在哪",
+    "region": "江北区",
+    "locationLabel": "四哥呱呱鱼庄",
+    "parkingNote": "对面卖茶的广场，可以去那买茶叶",
+    "sourceLabel": "杨队, 小胖总",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.8,
+      "chen": 0.0
+    },
+    "teamScore": 3.8,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-59",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "午火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "鱼泡，胆水豆干，鹅郡片，水牛毛肚",
+    "review": "微辣即可，辣但是不燥",
+    "region": "江北区",
+    "locationLabel": "午火锅(金融街·融景城臻苑店)",
+    "parkingNote": "路边找找位置",
+    "sourceLabel": "小胖总",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.2,
+      "chen": 0.0
+    },
+    "teamScore": 4.2,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-60",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "呱呱侠",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣",
+      "鲜椒"
+    ],
+    "signatureDishes": "",
+    "review": "鲜椒仔姜味道，微辣都很辣，吃起来很爽，有点像第一次吃知友三和鱼",
+    "region": "渝中区, 时代天街",
+    "locationLabel": "呱呱侠美蛙鱼(煤建新村店)",
+    "parkingNote": "",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.7,
+      "chen": 0.0
+    },
+    "teamScore": 4.7,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-61",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "星光头强老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "虾滑、毛肚、耙芋儿",
+    "review": "过年摆我们一道的光头强老火锅，豆干不好吃，锅底味道很足，较辣，点个微辣刚合适，菜品比较老式",
+    "region": "沙坪坝区",
+    "locationLabel": "星光头强老火锅",
+    "parkingNote": "千万不要停到旁边菜市场的停车场",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.2,
+      "chen": 0.0
+    },
+    "teamScore": 4.2,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-62",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "华儿哥串串店",
+    "category": "牛肉, 串串",
+    "tasteTags": [
+      "水火锅"
+    ],
+    "signatureDishes": "吊龙、五花趾、毛肚",
+    "review": "九点半后鲜切牛肉，十点半到比较合适，非常新鲜，无敌了吊龙毛肚 五花趾 雪花没有爆雪稍逊一筹 牛胸口还是咬不动 鹅郡一般不入味 锅底煮素菜无敌（鹿茸菇和山药）",
+    "region": "鱼嘴",
+    "locationLabel": "华儿哥串串香",
+    "parkingNote": "乱停",
+    "sourceLabel": "杨队",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.8,
+      "chen": 4.8
+    },
+    "teamScore": 4.8,
+    "legacyScore": 4.8
+  },
+  {
+    "id": "red-list-63",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "向得福香辣水煮鱼蛙",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣",
+      "鲜椒"
+    ],
+    "signatureDishes": "姜丝蛙，猪肝",
+    "review": "我觉得不难吃，也没有很惊艳",
+    "region": "时代天街, 渝中区",
+    "locationLabel": "向得福香辣水煮鱼蛙(时代天街店)",
+    "parkingNote": "时代天街",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 4.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-64",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "呱呱侠大坪店",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "鲜椒"
+    ],
+    "signatureDishes": "鲜椒姜丝蛙",
+    "review": "这个姜丝锅底够味，微辣就够辣，一口冒烟，但是个别蛙腿上有脓包，所以没有再吃第二次",
+    "region": "时代天街",
+    "locationLabel": "呱呱侠美蛙鱼(煤建新村店)",
+    "parkingNote": "停在时代e馆",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 4.1
+    },
+    "teamScore": 4.1,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-65",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "建国耙泥鳅",
+    "category": "江湖菜, 泥鳅",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "泥鳅、耙鸡脚",
+    "review": "",
+    "region": "观音桥",
+    "locationLabel": "建国耙泥鳅",
+    "parkingNote": "",
+    "sourceLabel": "波波",
+    "visited": false,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-66",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "眯眯眼",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "微辣即可，锅底有味，锅底有点偏咸，胸口油不肥但是有点绵，不是很脆",
+    "region": "时代天街",
+    "locationLabel": "眯眯眼老火锅(园林酒店小区店)",
+    "parkingNote": "时代天街",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 3.9,
+      "chen": 4.0
+    },
+    "teamScore": 4.0,
+    "legacyScore": 4.0
+  },
+  {
+    "id": "red-list-67",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "贰莽老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "黄金六两，莴笋片，猪肝丝",
+    "review": "点微辣吃原汤碟，莴笋喊他切片，莴笋吃着微甜不苦，应该是靠近芯子，煮到最后也不苦。不会煮不耙，部分菜品价格很便宜，十块的虾滑，三块的莴笋，十块的棒棒鱼，三块一个鸡蛋。黄金六两很嫩不老",
+    "region": "时代天街",
+    "locationLabel": "贰莽老火锅",
+    "parkingNote": "时代天街",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.3,
+      "chen": 4.5
+    },
+    "teamScore": 4.4,
+    "legacyScore": 4.4
+  },
+  {
+    "id": "red-list-68",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "贵州蘸水米线",
+    "category": "米线",
+    "tasteTags": [
+      "三鲜"
+    ],
+    "signatureDishes": "三鲜沾水米线",
+    "review": "从校门口的十几岁吃到现在，三鲜汤底还是那么稳定，蘸水还是那么辣那么地道，蘸水是特色，如果不吃辣不建议去吃",
+    "region": "渝中区",
+    "locationLabel": "学田湾[公交站]",
+    "parkingNote": "不晓得，就在学田湾公交车站的",
+    "sourceLabel": "毛毛精选",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 4.8
+    },
+    "teamScore": 4.8,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-69",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "老字号砂锅米线",
+    "category": "米线",
+    "tasteTags": [
+      "三鲜"
+    ],
+    "signatureDishes": "三鲜米线",
+    "review": "要打干辣椒面的蘸水佐料碟，这个店也是开了二十多年无外卖，汤底每天熬，真的非常好吃。",
+    "region": "渝中区",
+    "locationLabel": "老号砂锅米线(华宇渝州新都店)",
+    "parkingNote": "未知",
+    "sourceLabel": "毛毛精选",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 4.8
+    },
+    "teamScore": 4.8,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-70",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "铜豌豆",
+    "category": "米线",
+    "tasteTags": [
+      "鲜椒"
+    ],
+    "signatureDishes": "红辣炝锅米线，尖椒牛渣米线",
+    "review": "红辣炝锅是鲜椒碎和青花椒现炒的心肺郡片任选一，超绝。杨家坪老店选特辣（不吃辣的还是慎点），米线是那种特制的米线超级好吃软嫩。sklp开了分店，米线不是特制的，没有那么好吃，但是炒制的味道是一致的。尖椒牛渣米线是干拌的，当然也是老店的好吃，点中辣加一份豌豆最好吃。",
+    "region": "九龙坡区",
+    "locationLabel": "铜豌豆",
+    "parkingNote": "",
+    "sourceLabel": "毛毛精选",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.8,
+      "chen": 5.0
+    },
+    "teamScore": 4.9,
+    "legacyScore": 4.9
+  },
+  {
+    "id": "red-list-71",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "浓转飞鸭肠米线",
+    "category": "米线",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "鸭肠米线，鸭肠黄喉米线，鸭肠毛肚米线",
+    "review": "这鸭肠真是很脆一口开胃，中辣没有很辣放心点，还算是好吃的，但是偏咸口哦。缺点：34一碗很贵，米线很硬要扣分0.1（我让她回锅了），分量也没有很多，男生肯定吃不饱，黄喉是牛黄喉大概三四片，鸭肠是短截截很难翻找",
+    "region": "九龙坡区",
+    "locationLabel": "浓转飞鸭肠米线(团结路口店)",
+    "parkingNote": "西城天街",
+    "sourceLabel": "毛毛精选",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 4.2
+    },
+    "teamScore": 4.2,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-72",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "长旭大牛串串",
+    "category": "串串",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "鹿茸菇、鲜切吊龙",
+    "review": "无锅底，便宜得要命，不过有低消 80，吊龙阔以，甜品都很大一碗，锅底不是很咸烫素菜很安逸，荤菜可以打原汤碟",
+    "region": "大渡口区",
+    "locationLabel": "长旭大牛串串香(动物园店)",
+    "parkingNote": "中交那里",
+    "sourceLabel": "毛毛精选",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.6,
+      "chen": 0.0
+    },
+    "teamScore": 4.6,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-73",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "爆坤爬爬虾生蚝大排档",
+    "category": "虾蟹",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "酱辣爬爬虾、招牌香辣蟹",
+    "review": "杨队的店，中午去不排队，爬爬虾是开了壳的，他家干锅的味道挺好的，麻辣鲜香，但是不会咸，锅里的年糕裹满调料很美味，去店里会一人送十个生蚝，个大饱满，花甲不行，芥末味太冲了，皮蛋肉丸子个头太大，不辣适合小孩，吃一个就饱了",
+    "region": "观音桥",
+    "locationLabel": "爆坤爬爬虾生蚝大排档",
+    "parkingNote": "路边找地方",
+    "sourceLabel": "杨队",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.6,
+      "chen": 0.0
+    },
+    "teamScore": 4.6,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "red-list-74",
+    "listSlug": "red-list",
+    "listName": "红榜",
+    "name": "猪脑壳老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "血毛肚，黄花，竹荪虾滑",
+    "review": "打原汤碟，品类丰富选择比较多，山药不好吃不面，猪颈肉有点厚，鳝鱼片还是泥鳅片不入味，牛肝菌不入味，恨你们像块木头",
+    "region": "民主新村, 万象城",
+    "locationLabel": "猪脑壳老火锅(谢家湾店)",
+    "parkingNote": "民主村的路面停车场，吃香辣源停的那里然后走过去",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 4.2,
+      "chen": 0.0
+    },
+    "teamScore": 4.2,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "retry-list-1",
+    "listSlug": "retry-list",
+    "listName": "再练练",
+    "name": "蓝河堰·美蛙肥肠鱼",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "麻辣"
+    ],
+    "signatureDishes": "",
+    "review": "味道可以，吃鱼可以，蛙很老，不行",
+    "region": "南岸区",
+    "locationLabel": "蓝河堰·美蛙肥肠鱼(回龙湾店)",
+    "parkingNote": "",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "retry-list-2",
+    "listSlug": "retry-list",
+    "listName": "再练练",
+    "name": "谭谭鱼",
+    "category": "美蛙鱼",
+    "tasteTags": [
+      "不辣"
+    ],
+    "signatureDishes": "",
+    "review": "花鲢刺有点多，不是很嫩，锅底味道比较淡",
+    "region": "沙坪坝区",
+    "locationLabel": "谭谭鱼(民主一村店)",
+    "parkingNote": "路边，有摄像头",
+    "sourceLabel": "其他",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  },
+  {
+    "id": "retry-list-3",
+    "listSlug": "retry-list",
+    "listName": "再练练",
+    "name": "凤霞老火锅",
+    "category": "火锅",
+    "tasteTags": [
+      "适中"
+    ],
+    "signatureDishes": "",
+    "review": "地盘变大了，味道变难吃了，山药都是干的，马奎出来受死！",
+    "region": "观音桥",
+    "locationLabel": "赖凤霞老火锅(总店)",
+    "parkingNote": "乱停",
+    "sourceLabel": "xhs",
+    "visited": true,
+    "memberScores": {
+      "yang": 0.0,
+      "chen": 0.0
+    },
+    "teamScore": 0,
+    "legacyScore": 0.0
+  }
+]
