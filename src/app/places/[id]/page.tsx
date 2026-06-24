@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { MapPinned, Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getMixedScore } from "@/lib/score";
 import { getPlace } from "@/lib/places";
@@ -69,8 +70,11 @@ export default function PlacePage({ params }: PlacePageProps) {
         </div>
 
         <aside className="detail-side">
-          <article className="info-card">
-            <h3>评分</h3>
+          <article className="info-card rating-card">
+            <h3>
+              <Star aria-hidden="true" size={18} />
+              评分
+            </h3>
             <dl className="info-list">
               <div>
                 <dt>杨</dt>
@@ -92,10 +96,14 @@ export default function PlacePage({ params }: PlacePageProps) {
           </article>
 
           <article className="info-card">
-            <h3>地图</h3>
+            <h3>
+              <MapPinned aria-hidden="true" size={18} />
+              地图
+            </h3>
             <p className="section-note">地图页会用高德地图按店名和地区尝试定位。</p>
             <div style={{ marginTop: 14 }}>
               <Link className="button secondary" href="/map">
+                <MapPinned aria-hidden="true" size={17} />
                 打开地图
               </Link>
             </div>

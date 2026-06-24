@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, MapPinned, Sparkles, Trophy, Utensils } from "lucide-react";
 import { ListCard } from "@/components/list-card";
 import { PlaceCard } from "@/components/place-card";
 import { getCategories, getRegions, getTopPlaces, lists, places } from "@/lib/places";
@@ -15,18 +16,29 @@ export default function HomePage() {
           <span className="eyebrow">重庆探店小队</span>
           <h1>今天吃什么</h1>
           <p>
-            把朋友之间的探店记录做成真正的应用：红榜、再练练、地图探索、队内评分和公开打分会在这里慢慢长齐。
+            红榜、二刷候选、停车提示和队内评分都收在一起，打开就能决定今晚去哪一桌。
           </p>
           <div className="hero-actions">
             <Link className="button" href="/lists/red-list">
+              <Trophy aria-hidden="true" size={17} />
               看红榜
+              <ArrowRight aria-hidden="true" size={16} />
             </Link>
             <Link className="button secondary" href="/map">
+              <MapPinned aria-hidden="true" size={17} />
               打开地图
             </Link>
           </div>
         </div>
         <div className="hero-panel">
+          <div className="spotlight-card">
+            <span className="eyebrow">
+              <Sparkles aria-hidden="true" size={14} />
+              今日优先
+            </span>
+            <strong>{topPlaces[0]?.name}</strong>
+            <span>{topPlaces[0]?.region || "重庆"} · 队内 {topPlaces[0]?.teamScore.toFixed(1) || "待评"} 分</span>
+          </div>
           <div className="stat-grid">
             <div className="stat-card">
               <span className="stat-value">{places.length}</span>
@@ -42,9 +54,12 @@ export default function HomePage() {
             </div>
           </div>
           <div className="info-card">
-            <span className="eyebrow">双宠物 Logo 方向</span>
+            <span className="eyebrow">
+              <Utensils aria-hidden="true" size={14} />
+              探店资料
+            </span>
             <p className="section-note">
-              品牌围绕小狗和小猫设计，首版先使用圆形饭碗标识，后续可替换为正式双宠物 App 图标。
+              已导入红榜和再练练共 {places.length} 条记录，后续会接入 Supabase 后台编辑。
             </p>
           </div>
         </div>

@@ -1,11 +1,12 @@
+import { CheckCircle2, Database, MapPinned, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
 import { lists, places } from "@/lib/places";
 
 const adminTasks = [
-  ["Supabase", "执行 schema migration，开启 RLS"],
-  ["导入", "把 77 条 Excel 记录导入 places / ratings"],
-  ["地图", "补全无法自动解析的经纬度"],
-  ["权限", "创建 owner 账号并校验全公开规则"],
-  ["品牌", "生成双宠物正式 logo"],
+  { name: "Supabase", detail: "执行 schema migration，开启 RLS", icon: Database },
+  { name: "导入", detail: "把 77 条 Excel 记录导入 places / ratings", icon: UploadCloud },
+  { name: "地图", detail: "补全无法自动解析的经纬度", icon: MapPinned },
+  { name: "权限", detail: "创建 owner 账号并校验全公开规则", icon: ShieldCheck },
+  { name: "品牌", detail: "生成双宠物正式 logo", icon: Sparkles },
 ];
 
 export default function AdminPage() {
@@ -43,12 +44,20 @@ export default function AdminPage() {
             <p className="section-note">这些事项完成后，后台就能从计划板变成真正的编辑系统。</p>
           </div>
           <ul className="task-list">
-            {adminTasks.map(([name, detail]) => (
-              <li key={name}>
-                <strong>{name}</strong>
-                <span>{detail}</span>
-              </li>
-            ))}
+            {adminTasks.map((task) => {
+              const Icon = task.icon;
+
+              return (
+                <li key={task.name}>
+                  <span className="task-icon">
+                    <Icon aria-hidden="true" size={17} />
+                  </span>
+                  <strong>{task.name}</strong>
+                  <span>{task.detail}</span>
+                  <CheckCircle2 aria-hidden="true" className="task-status" size={18} />
+                </li>
+              );
+            })}
           </ul>
         </div>
       </section>

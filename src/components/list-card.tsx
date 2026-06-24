@@ -1,14 +1,19 @@
 import Link from "next/link";
+import { ArrowRight, LockKeyhole, MessageCircle, Trophy } from "lucide-react";
 import { getListStats } from "@/lib/places";
 import type { ListSummary } from "@/lib/types";
 
 export function ListCard({ list }: { list: ListSummary }) {
   const stats = getListStats(list.slug);
+  const isOpenRate = list.visibility === "public_rate";
 
   return (
     <article className="list-card">
       <div>
-        <span className="eyebrow">{list.visibility === "public_rate" ? "公开打分" : "公开查看"}</span>
+        <span className="eyebrow list-eyebrow">
+          {isOpenRate ? <MessageCircle aria-hidden="true" size={14} /> : <LockKeyhole aria-hidden="true" size={14} />}
+          {isOpenRate ? "公开打分" : "公开查看"}
+        </span>
         <h3>{list.name}</h3>
       </div>
       <p>{list.description}</p>
@@ -27,7 +32,9 @@ export function ListCard({ list }: { list: ListSummary }) {
         </div>
       </div>
       <Link className="button secondary" href={`/lists/${list.slug}`}>
+        <Trophy aria-hidden="true" size={17} />
         打开榜单
+        <ArrowRight aria-hidden="true" size={16} />
       </Link>
     </article>
   );
