@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowDownWideNarrow, Filter, MapPinned, Search, ShieldCheck, Tags, TrendingUp, X } from "lucide-react";
+import { Filter, ShieldCheck } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PlaceCard } from "@/components/place-card";
-import { getList, getListStats, getPlacesByList } from "@/lib/places";
+import { normalizeRegion, splitCategory } from "@/lib/display";
+import { getList, getListStats, getPlacesByList, lists } from "@/lib/places";
 
 type ListPageProps = {
   params: {
@@ -19,6 +20,19 @@ function getSearchValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
 }
 
+function buildFilterHref(slug: string, params: Record<string, string>) {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      query.set(key, value);
+    }
+  });
+
+  const queryString = query.toString();
+  return queryString ? `/lists/${slug}?${queryString}` : `/lists/${slug}`;
+}
+
 export default function ListPage({ params, searchParams }: ListPageProps) {
   const list = getList(params.slug);
 
@@ -30,15 +44,15 @@ export default function ListPage({ params, searchParams }: ListPageProps) {
     (a, b) => b.teamScore - a.teamScore || a.name.localeCompare(b.name, "zh-Hans-CN"),
   );
   const stats = getListStats(list.slug);
-  const regions = Array.from(new Set(listPlaces.map((place) => place.region).filter(Boolean))).sort();
-  const categories = Array.from(new Set(listPlaces.map((place) => place.category).filter(Boolean))).sort();
+  const regions = Array.from(new Set(listPlaces.map((place) => normalizeRegion(place.region)).filter(Boolean))).sort();
+  const categories = Array.from(new Set(listPlaces.flatMap((place) => splitCategory(place.category)).filter(Boolean))).sort();
   const keyword = getSearchValue(searchParams?.q).trim();
   const selectedRegion = getSearchValue(searchParams?.region);
   const selectedCategory = getSearchValue(searchParams?.category);
   const normalizedKeyword = keyword.toLowerCase();
   const filteredPlaces = listPlaces.filter((place) => {
-    const matchesRegion = selectedRegion ? place.region === selectedRegion : true;
-    const matchesCategory = selectedCategory ? place.category === selectedCategory : true;
+    const matchesRegion = selectedRegion ? normalizeRegion(place.region) === selectedRegion : true;
+    const matchesCategory = selectedCategory ? splitCategory(place.category).includes(selectedCategory) : true;
     const searchableText = [
       place.name,
       place.category,
@@ -57,127 +71,103 @@ export default function ListPage({ params, searchParams }: ListPageProps) {
   });
   const hasActiveSearch = Boolean(keyword || selectedRegion || selectedCategory);
   const visitedCount = listPlaces.filter((place) => place.visited).length;
-  const topRatedCount = listPlaces.filter((place) => place.teamScore >= 4.5).length;
-  const topScore = listPlaces[0]?.teamScore ?? 0;
 
   return (
     <>
-      <section className="container page-head list-page-head">
-        <div className="list-title-block">
-          <span className="eyebrow">
-            <ShieldCheck aria-hidden="true" size={14} />
-            {list.visibility === "public_rate" ? "公开查看与打分" : "公开查看"}
-          </span>
-          <h1 className="page-title">{list.name}</h1>
-          <p className="page-lede">{list.description}</p>
+      <section className="container list-board">
+        <div className="list-board-top">
+          <nav className="list-switcher" aria-label="榜单切换">
+            {lists.map((item) => (
+              <Link
+                className={item.slug === list.slug ? "list-switch active" : "list-switch"}
+                href={`/lists/${item.slug}`}
+                key={item.slug}
+              >
+                {item.name}
+              </Link>
+            ))}
+          </nav>
+
+          <div className="list-board-actions">
+            <span className="permission-badge">
+              <ShieldCheck aria-hidden="true" size={14} />
+              {list.visibility === "public_rate" ? "公开查看" : "公开查看"}
+            </span>
+            <span className="filter-button">
+              <Filter aria-hidden="true" size={16} />
+              筛选
+            </span>
+          </div>
         </div>
 
-        <div className="list-head-panel" aria-label={`${list.name}概览`}>
-          <div className="list-score-focus">
-            <span className="eyebrow">
-              <TrendingUp aria-hidden="true" size={14} />
-              当前榜首
-            </span>
-            <strong>{listPlaces[0]?.name || "暂无店铺"}</strong>
-            <span>{topScore > 0 ? `队内 ${topScore.toFixed(1)} 分` : "等待评分"}</span>
+        <div className="list-metrics" aria-label={`${list.name}概览`}>
+          <span>
+            <strong>{stats.count}</strong> 家店铺
+          </span>
+          <span>
+            <strong>{stats.scoredCount}</strong> 已评分
+          </span>
+          <span>
+            队内均分 <strong>{stats.avgScore || "-"}</strong>
+          </span>
+          <span className="muted-metric">{visitedCount} 家已探店</span>
+        </div>
+
+        <div className="chip-filter-panel" aria-label="店铺筛选条件">
+          <div className="chip-group">
+            <span className="chip-label">地区</span>
+            <Link
+              className={!selectedRegion ? "filter-chip active" : "filter-chip"}
+              href={buildFilterHref(list.slug, { q: keyword, category: selectedCategory })}
+            >
+              全部
+            </Link>
+            {regions.map((region) => (
+              <Link
+                className={selectedRegion === region ? "filter-chip active" : "filter-chip"}
+                href={buildFilterHref(list.slug, { q: keyword, region, category: selectedCategory })}
+                key={region}
+              >
+                {region}
+              </Link>
+            ))}
           </div>
-          <div className="stat-grid list-stats">
-            <div className="stat-card">
-              <span className="stat-value">{stats.count}</span>
-              <span className="stat-label">店铺</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{visitedCount}</span>
-              <span className="stat-label">已探店</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{topRatedCount}</span>
-              <span className="stat-label">4.5 分以上</span>
-            </div>
-            <div className="stat-card">
-              <span className="stat-value">{stats.avgScore || "-"}</span>
-              <span className="stat-label">队内均分</span>
-            </div>
+
+          <div className="chip-group">
+            <span className="chip-label">类型</span>
+            <Link
+              className={!selectedCategory ? "filter-chip active dark" : "filter-chip"}
+              href={buildFilterHref(list.slug, { q: keyword, region: selectedRegion })}
+            >
+              全部
+            </Link>
+            {categories.map((category) => (
+              <Link
+                className={selectedCategory === category ? "filter-chip active dark" : "filter-chip"}
+                href={buildFilterHref(list.slug, { q: keyword, region: selectedRegion, category })}
+                key={category}
+              >
+                {category}
+              </Link>
+            ))}
+          </div>
+
+          <div className="chip-group">
+            <span className="chip-label">排序</span>
+            <span className="filter-chip active dark">评分↓</span>
+            <span className="filter-chip">评分↑</span>
+            <span className="filter-chip">名称</span>
           </div>
         </div>
       </section>
 
       <section className="container section">
-        <div className="list-toolbar">
-          <div>
-            <h2 className="section-title">店铺列表</h2>
-            <p className="section-note">按队内评分从高到低排列，同分时按店名排序。</p>
-          </div>
-          <span className="sort-badge">
-            <ArrowDownWideNarrow aria-hidden="true" size={16} />
-            队内分优先
+        <div className="list-result-line" aria-live="polite">
+          <span>
+            当前显示 <strong>{filteredPlaces.length}</strong> / {listPlaces.length} 家
           </span>
+          {hasActiveSearch ? <Link href={`/lists/${list.slug}`}>清空筛选</Link> : null}
         </div>
-
-        <form className="search-panel" action={`/lists/${list.slug}`} aria-label="店铺搜索条件">
-          <div className="search-form">
-            <label className="field">
-              <span>
-                <Search aria-hidden="true" size={15} />
-                关键词
-              </span>
-              <input name="q" placeholder="店名、菜品、评价" type="search" defaultValue={keyword} />
-            </label>
-
-            <label className="field">
-              <span>
-                <Filter aria-hidden="true" size={15} />
-                地区
-              </span>
-              <select name="region" defaultValue={selectedRegion}>
-                <option value="">全部地区</option>
-                {regions.map((region) => (
-                  <option key={region} value={region}>
-                    {region}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="field">
-              <span>
-                <Tags aria-hidden="true" size={15} />
-                类型
-              </span>
-              <select name="category" defaultValue={selectedCategory}>
-                <option value="">全部类型</option>
-                {categories.map((category) => (
-                  <option key={category} value={category}>
-                    {category}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <div className="search-actions">
-              <button className="button" type="submit">
-                <Search aria-hidden="true" size={16} />
-                搜索
-              </button>
-              {hasActiveSearch ? (
-                <Link className="button secondary" href={`/lists/${list.slug}`}>
-                  <X aria-hidden="true" size={16} />
-                  清空
-                </Link>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="filter-summary" aria-live="polite">
-            <span>
-              当前显示 <strong>{filteredPlaces.length}</strong> / {listPlaces.length} 家
-            </span>
-            <Link className="filter-chip compact" href="/map">
-              <MapPinned aria-hidden="true" size={16} />
-              <span>地图浏览</span>
-            </Link>
-          </div>
-        </form>
 
         {filteredPlaces.length > 0 ? (
           <div className="grid">

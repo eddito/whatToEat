@@ -6,9 +6,10 @@ import type { ListSummary } from "@/lib/types";
 export function ListCard({ list }: { list: ListSummary }) {
   const stats = getListStats(list.slug);
   const isOpenRate = list.visibility === "public_rate";
+  const isPrimaryList = list.slug === "red-list";
 
   return (
-    <article className="list-card">
+    <article className={isPrimaryList ? "list-card primary-list-card" : "list-card"}>
       <div>
         <span className="eyebrow list-eyebrow">
           {isOpenRate ? <MessageCircle aria-hidden="true" size={14} /> : <LockKeyhole aria-hidden="true" size={14} />}
