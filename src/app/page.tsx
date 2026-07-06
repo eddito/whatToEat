@@ -2,12 +2,10 @@ import Link from "next/link";
 import { ArrowRight, MapPinned, Star, Tags, Trophy } from "lucide-react";
 import { ListCard } from "@/components/list-card";
 import { PlaceCard } from "@/components/place-card";
-import { getCategories, getRegions, getTopPlaces, lists, places } from "@/lib/places";
+import { getHomeData } from "@/lib/public-data";
 
-export default function HomePage() {
-  const topPlaces = getTopPlaces(9);
-  const regions = getRegions();
-  const categories = getCategories();
+export default async function HomePage() {
+  const { categories, listsWithStats, places, regions, topPlaces } = await getHomeData();
   const visitedCount = places.filter((place) => place.visited).length;
   const scoredCount = places.filter((place) => place.teamScore > 0).length;
 
@@ -61,8 +59,8 @@ export default function HomePage() {
           </Link>
         </div>
         <div className="list-grid">
-          {lists.map((list) => (
-            <ListCard key={list.slug} list={list} />
+          {listsWithStats.map(({ list, stats }) => (
+            <ListCard key={list.slug} list={list} stats={stats} />
           ))}
         </div>
       </section>

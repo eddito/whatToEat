@@ -3,8 +3,14 @@ import { ArrowRight, LockKeyhole, MessageCircle, Trophy } from "lucide-react";
 import { getListStats } from "@/lib/places";
 import type { ListSummary } from "@/lib/types";
 
-export function ListCard({ list }: { list: ListSummary }) {
-  const stats = getListStats(list.slug);
+type ListCardStats = {
+  count: number;
+  scoredCount: number;
+  avgScore: number;
+};
+
+export function ListCard({ list, stats: providedStats }: { list: ListSummary; stats?: ListCardStats }) {
+  const stats = providedStats ?? getListStats(list.slug);
   const isOpenRate = list.visibility === "public_rate";
   const isPrimaryList = list.slug === "red-list";
 

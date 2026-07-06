@@ -1,8 +1,10 @@
 import { AmapExplorer } from "@/components/amap-explorer";
 import { MapPinned } from "lucide-react";
-import { places } from "@/lib/places";
+import { getMapPageData } from "@/lib/public-data";
 
-export default function MapPage() {
+export default async function MapPage() {
+  const { places } = await getMapPageData();
+
   return (
     <>
       <section className="container page-head">

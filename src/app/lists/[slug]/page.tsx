@@ -3,7 +3,7 @@ import { Filter, ShieldCheck } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PlaceCard } from "@/components/place-card";
 import { normalizeRegion, splitCategory } from "@/lib/display";
-import { getList, getListStats, getPlacesByList, lists } from "@/lib/places";
+import { getListPageData } from "@/lib/public-data";
 
 type ListPageProps = {
   params: {
@@ -33,17 +33,17 @@ function buildFilterHref(slug: string, params: Record<string, string>) {
   return queryString ? `/lists/${slug}?${queryString}` : `/lists/${slug}`;
 }
 
-export default function ListPage({ params, searchParams }: ListPageProps) {
-  const list = getList(params.slug);
+export default async function ListPage({ params, searchParams }: ListPageProps) {
+  const pageData = await getListPageData(params.slug);
 
-  if (!list) {
+  if (!pageData) {
     notFound();
   }
 
-  const listPlaces = getPlacesByList(list.slug).sort(
+  const { list, lists, places, stats } = pageData;
+  const listPlaces = places.sort(
     (a, b) => b.teamScore - a.teamScore || a.name.localeCompare(b.name, "zh-Hans-CN"),
   );
-  const stats = getListStats(list.slug);
   const regions = Array.from(new Set(listPlaces.map((place) => normalizeRegion(place.region)).filter(Boolean))).sort();
   const categories = Array.from(new Set(listPlaces.flatMap((place) => splitCategory(place.category)).filter(Boolean))).sort();
   const keyword = getSearchValue(searchParams?.q).trim();

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MapPinned, Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getMixedScore } from "@/lib/score";
-import { getPlace } from "@/lib/places";
+import { getPlacePageData } from "@/lib/public-data";
 
 type PlacePageProps = {
   params: {
@@ -10,13 +10,14 @@ type PlacePageProps = {
   };
 };
 
-export default function PlacePage({ params }: PlacePageProps) {
-  const place = getPlace(params.id);
+export default async function PlacePage({ params }: PlacePageProps) {
+  const pageData = await getPlacePageData(params.id);
 
-  if (!place) {
+  if (!pageData) {
     notFound();
   }
 
+  const { place } = pageData;
   const mixedScore = getMixedScore(place.teamScore, 0, 0);
 
   return (
