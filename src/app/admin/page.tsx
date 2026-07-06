@@ -1,4 +1,5 @@
-import { CheckCircle2, Database, MapPinned, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
+import Link from "next/link";
+import { CheckCircle2, Database, LogIn, MapPinned, ShieldCheck, Sparkles, UploadCloud } from "lucide-react";
 import { lists, places } from "@/lib/places";
 
 const adminTasks = [
@@ -43,6 +44,10 @@ export default function AdminPage() {
             <h2 className="section-title">下一步</h2>
             <p className="section-note">这些事项完成后，后台就能从计划板变成真正的编辑系统。</p>
           </div>
+          <Link className="button secondary" href="/login">
+            <LogIn aria-hidden="true" size={16} />
+            认证入口
+          </Link>
           <ul className="task-list">
             {adminTasks.map((task) => {
               const Icon = task.icon;

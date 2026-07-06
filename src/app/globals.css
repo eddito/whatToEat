@@ -1471,6 +1471,28 @@ body {
   min-height: 44px;
 }
 
+.auth-link {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  padding: 0 12px;
+  font-size: 14px;
+  font-weight: 760;
+}
+
+.auth-link.active,
+.auth-link:hover {
+  border-color: var(--red);
+  background: var(--red);
+  color: #fff;
+}
+
 .list-page-head {
   grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1fr);
 }
@@ -1834,9 +1856,98 @@ body {
   font-size: 13px;
 }
 
+.auth-page {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 430px);
+  gap: 18px;
+  align-items: stretch;
+  padding: 34px 0 24px;
+}
+
+.auth-copy,
+.auth-card,
+.auth-scope-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  box-shadow: none;
+}
+
+.auth-copy {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: clamp(24px, 5vw, 48px);
+}
+
+.auth-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.auth-card {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: clamp(22px, 4vw, 32px);
+}
+
+.auth-card h2 {
+  margin: 8px 0 0;
+  font-family:
+    "Noto Serif SC",
+    Songti SC,
+    Georgia,
+    serif;
+  font-size: 30px;
+  line-height: 1.15;
+}
+
+.auth-card p,
+.auth-scope-card p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-submit:disabled {
+  cursor: not-allowed;
+  border-color: var(--line);
+  background: var(--bg-soft);
+  color: var(--muted);
+}
+
+.auth-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.auth-scope-card {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+}
+
+.auth-scope-card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
 @media (max-width: 960px) {
   .section .grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .auth-page,
+  .auth-scope-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1858,5 +1969,10 @@ body {
 
   .section .grid {
     grid-template-columns: 1fr;
+  }
+
+  .auth-link {
+    width: 100%;
+    min-height: 44px;
   }
 }
