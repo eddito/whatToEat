@@ -21,7 +21,7 @@
 - Supabase secret key 已提供，后续仅写入服务端环境变量，不在文档或仓库中明文保存。
 - Supabase Project URL 已提供：`https://lickxydbtkyijgjmpnqo.supabase.co`。
 - 本地项目路径：`D:\yjl\what-to-eat-today`
-- 当前实现：Next.js 应用骨架、真实种子数据、首页卡片流、榜单页、店铺详情页、地图页、Magic link 登录和回调、后台占位、Supabase schema、公开页面 Supabase 读取适配层。
+- 当前实现：Next.js 应用骨架、真实种子数据、首页卡片流、榜单页、店铺详情页、地图页、邮箱密码登录、后台占位、Supabase schema、公开页面 Supabase 读取适配层。
 - 验证状态：TypeScript 检查通过，Next.js 生产构建通过，核心路由本地 HTTP 检查通过。
 - 工作表：
   - `红榜`：74 条记录。
@@ -277,4 +277,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-06-21 | 初始化 Next.js 首版应用并完成构建验证 | Codex | 前端、数据、Supabase schema |
 | 2026-07-06 | 按 E2 补齐登录入口页面骨架并完成构建验证 | Codex | 前端公开页面、后续认证接入 |
 | 2026-07-16 | integration 分支接入后端公开浏览读取层并保留 seed fallback | Codex | 前后端联调、公开页面 |
-| 2026-07-16 | 实现 Supabase Magic link 登录、回调和 Header 会话状态 | Codex | 认证流程、后续评分和后台权限 |
+| 2026-07-16 | 实现 Supabase 邮箱密码登录和 Header 会话状态 | Codex | 认证流程、后续评分和后台权限 |

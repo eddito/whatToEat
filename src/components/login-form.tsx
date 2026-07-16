@@ -1,32 +1,48 @@
 "use client";
 
-import { Mail } from "lucide-react";
+import { LockKeyhole, Mail } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
 
-type LoginState = "idle" | "loading" | "sent" | "error";
+type AuthMode = "sign-in" | "sign-up";
+type LoginState = "idle" | "loading" | "success" | "error";
+
+function getSafeNextPath() {
+  const next = new URLSearchParams(window.location.search).get("next");
+  return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
 
 export function LoginForm() {
+  const router = useRouter();
+  const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("1397854281@qq.com");
+  const [password, setPassword] = useState("");
   const [state, setState] = useState<LoginState>("idle");
   const [message, setMessage] = useState("");
   const supabase = getBrowserSupabase();
-  const isDisabled = state === "loading" || !email.trim();
+  const isDisabled = state === "loading" || !email.trim() || password.length < 6;
   const helperText = useMemo(() => {
     if (!supabase) {
-      return "缺少 Supabase 前端环境变量，暂时不能发送登录链接。";
+      return "缺少 Supabase 前端环境变量，暂时不能登录。";
     }
 
-    if (state === "sent") {
-      return "登录链接已发送，请打开邮箱完成登录。";
+    if (state === "success") {
+      return mode === "sign-in" ? "登录成功，正在跳转..." : message || "账号已创建，可以继续使用。";
     }
 
     if (state === "error") {
-      return message || "发送失败，请稍后重试。";
+      return message || "操作失败，请稍后重试。";
     }
 
-    return "输入邮箱后会收到一封 magic link 登录邮件。";
-  }, [message, state, supabase]);
+    return mode === "sign-in" ? "使用邮箱和密码登录，登录后可参与评分。" : "创建账号后，可用于评分和后续权限流程。";
+  }, [message, mode, state, supabase]);
+
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setState("idle");
+    setMessage("");
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -38,16 +54,15 @@ export function LoginForm() {
     setState("loading");
     setMessage("");
 
-    const next = new URLSearchParams(window.location.search).get("next") || "/";
-    const redirectTo = new URL("/auth/callback", window.location.origin);
-    redirectTo.searchParams.set("next", next);
-
-    const { error } = await supabase.auth.signInWithOtp({
+    const credentials = {
       email: email.trim(),
-      options: {
-        emailRedirectTo: redirectTo.toString(),
-      },
-    });
+      password,
+    };
+
+    const { data, error } =
+      mode === "sign-in"
+        ? await supabase.auth.signInWithPassword(credentials)
+        : await supabase.auth.signUp(credentials);
 
     if (error) {
       setState("error");
@@ -55,11 +70,39 @@ export function LoginForm() {
       return;
     }
 
-    setState("sent");
+    setState("success");
+
+    if (mode === "sign-up" && !data.session) {
+      setMessage("账号已创建，请按 Supabase 当前配置完成邮箱确认后再登录。");
+      return;
+    }
+
+    window.setTimeout(() => router.replace(getSafeNextPath()), 500);
   }
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
+      <div className="auth-mode-tabs" role="tablist" aria-label="登录方式">
+        <button
+          aria-selected={mode === "sign-in"}
+          className={mode === "sign-in" ? "auth-mode-tab active" : "auth-mode-tab"}
+          onClick={() => switchMode("sign-in")}
+          role="tab"
+          type="button"
+        >
+          登录
+        </button>
+        <button
+          aria-selected={mode === "sign-up"}
+          className={mode === "sign-up" ? "auth-mode-tab active" : "auth-mode-tab"}
+          onClick={() => switchMode("sign-up")}
+          role="tab"
+          type="button"
+        >
+          创建账号
+        </button>
+      </div>
+
       <label className="field">
         <span>
           <Mail aria-hidden="true" size={15} />
@@ -74,9 +117,26 @@ export function LoginForm() {
           value={email}
         />
       </label>
+
+      <label className="field">
+        <span>
+          <LockKeyhole aria-hidden="true" size={15} />
+          密码
+        </span>
+        <input
+          autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+          minLength={6}
+          name="password"
+          onChange={(event) => setPassword(event.target.value)}
+          placeholder="至少 6 位"
+          type="password"
+          value={password}
+        />
+      </label>
+
       <p className={state === "error" ? "auth-helper auth-helper-error" : "auth-helper"}>{helperText}</p>
       <button className="button auth-submit" disabled={isDisabled || !supabase} type="submit">
-        {state === "loading" ? "发送中..." : state === "sent" ? "已发送" : "发送登录链接"}
+        {state === "loading" ? "处理中..." : mode === "sign-in" ? "登录" : "创建账号"}
       </button>
     </form>
   );

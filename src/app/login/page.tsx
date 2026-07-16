@@ -5,7 +5,7 @@ import { LoginForm } from "@/components/login-form";
 const loginScopes = [
   {
     title: "外部评分",
-    detail: "开放打分榜单会允许登录用户提交自己的评分。",
+    detail: "开放评分榜单会允许登录用户提交自己的评分。",
     icon: Star,
   },
   {
@@ -30,7 +30,7 @@ export default function LoginPage() {
             权限入口
           </span>
           <h1 className="page-title">登录后参与评分和管理</h1>
-          <p className="page-lede">公开内容可以直接浏览；评分、编辑和后台管理会在接入 Supabase Auth 后开放。</p>
+          <p className="page-lede">公开内容可以直接浏览；评分、编辑和后台管理会根据登录账号权限开放。</p>
           <div className="auth-actions">
             <Link className="button" href="/lists/red-list">
               继续看红榜
@@ -44,9 +44,9 @@ export default function LoginPage() {
 
         <section className="auth-card" aria-labelledby="login-form-title">
           <div>
-            <span className="eyebrow">Magic link</span>
-            <h2 id="login-form-title">邮箱登录</h2>
-            <p>输入邮箱获取登录链接，完成后就能进入评分和后台权限流程。</p>
+            <span className="eyebrow">Email password</span>
+            <h2 id="login-form-title">邮箱密码登录</h2>
+            <p>使用邮箱和密码登录，后续评分和后台权限都会跟随这个账号。</p>
           </div>
 
           <LoginForm />
