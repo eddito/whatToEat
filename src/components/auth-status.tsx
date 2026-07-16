@@ -10,6 +10,12 @@ export function AuthStatus({ active }: { active?: boolean }) {
   const [user, setUser] = useState<User | null>(null);
   const [isReady, setIsReady] = useState(false);
   const supabase = getBrowserSupabase();
+  const displayName =
+    typeof user?.user_metadata?.username === "string"
+      ? user.user_metadata.username
+      : typeof user?.user_metadata?.display_name === "string"
+        ? user.user_metadata.display_name
+        : user?.email;
 
   useEffect(() => {
     if (!supabase) {
@@ -49,7 +55,7 @@ export function AuthStatus({ active }: { active?: boolean }) {
   return (
     <div className="auth-session" aria-label="当前登录状态">
       <span className="auth-email" title={user.email ?? "已登录"}>
-        {user.email ?? "已登录"}
+        {displayName ?? "已登录"}
       </span>
       <button className="auth-signout" onClick={() => supabase?.auth.signOut()} type="button">
         <LogOut aria-hidden="true" size={15} strokeWidth={2.1} />

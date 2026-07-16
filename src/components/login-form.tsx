@@ -6,10 +6,25 @@ import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
 
 type LoginState = "idle" | "loading" | "success" | "error";
+const USERNAME_EMAIL_DOMAIN = "users.what-to-eat-today.invalid";
 
 function getSafeNextPath() {
   const next = new URLSearchParams(window.location.search).get("next");
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
+}
+
+function getLoginCredentials(account: string, password: string) {
+  const loginAccount = account.trim();
+
+  if (loginAccount.includes("@")) {
+    return { email: loginAccount, password };
+  }
+
+  if (/^\+?\d{6,15}$/.test(loginAccount)) {
+    return { phone: loginAccount, password };
+  }
+
+  return { email: `${loginAccount}@${USERNAME_EMAIL_DOMAIN}`, password };
 }
 
 export function LoginForm() {
@@ -33,7 +48,7 @@ export function LoginForm() {
       return message || "登录失败，请检查账号密码后重试。";
     }
 
-    return "使用账号密码登录。账号可以是邮箱或手机号，登录状态会保存在当前浏览器中。";
+    return "使用账号密码登录。账号可以是用户名、邮箱或手机号，登录状态会保存在当前浏览器中。";
   }, [message, state, supabase]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -46,18 +61,16 @@ export function LoginForm() {
     setState("loading");
     setMessage("");
 
-    const loginAccount = account.trim();
-    const credentials = loginAccount.includes("@")
-      ? { email: loginAccount, password }
-      : { phone: loginAccount, password };
-    const { error } = await supabase.auth.signInWithPassword(credentials);
+    const { error } = await supabase.auth.signInWithPassword(getLoginCredentials(account, password));
 
     if (error) {
       setState("error");
       setMessage(
         error.message === "Phone logins are disabled"
-          ? "当前 Supabase 未开启手机号登录，请开启 Phone 登录或改用邮箱账号。"
-          : error.message,
+          ? "当前 Supabase 未开启手机号登录，请开启 Phone 登录或改用用户名/邮箱账号。"
+          : error.message === "Invalid login credentials"
+            ? "账号或密码不正确，请检查后重试。"
+            : error.message,
       );
       return;
     }
@@ -78,7 +91,7 @@ export function LoginForm() {
           inputMode="text"
           name="account"
           onChange={(event) => setAccount(event.target.value)}
-          placeholder="邮箱或手机号"
+          placeholder="用户名、邮箱或手机号"
           type="text"
           value={account}
         />
