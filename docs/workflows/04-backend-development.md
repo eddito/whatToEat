@@ -24,7 +24,7 @@
 | B1 | Supabase schema 初始化 | 已完成 | 核心表、枚举、RLS、触发器 |
 | B2 | 初始数据导入 | 已完成 | seed 脚本和初始数据导入能力 |
 | B3 | 公开浏览读取层 | 已完成 | `getLists/getList/getPlacesByList/getPlace/getMapPlaces/getListStats` |
-| B4 | integration 联调接入 | 待联调 | 由 integration 分支合入后验证 |
+| B4 | integration 联调接入 | 已完成 | integration 分支已合入并接入 seed fallback / Supabase 读取适配 |
 | B5 | 认证、评分、后台写入 | 后续切片 | 本次不提交写入接口和 UI |
 
 ## 任务进度表
@@ -51,6 +51,7 @@
 | 2026-06-24 | 完成初始 seed 脚本并导入真实数据 | `scripts/seed-supabase.mjs`、`package.json` | `teams:1`、`lists:2`、`places:77`、`ratings:60` |
 | 2026-07-06 | 收拢公开浏览后端切片，移除本次不提交的页面/UI/评分写入改动 | `src/server/**`、`supabase/schema.sql`、`docs/**` | `git status` 确认无页面/UI 改动 |
 | 2026-07-06 | 完成公开浏览数据读取契约 | `src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `node --check scripts/seed-supabase.mjs`、`tsc --noEmit`、`next build` 通过 |
+| 2026-07-16 | integration 分支完成公开浏览读取接入 | `src/lib/public-data.ts`、公开页面、`scripts/smoke-public-pages.mjs` | `tsc --noEmit`、`next build`、公开页面 smoke 检查通过 |
 
 ## 当前数据库快照
 
@@ -67,8 +68,8 @@
 
 ## 下一步
 
-1. 提交 `Implement public browsing backend slice`。
-2. 等 integration 分支合入后，联调前端 seed fallback 与 Supabase 读取。
+1. 配置 integration 分支本地 `.env.local`，验证真实 Supabase 读取路径。
+2. 进入认证、评分和后台写入的下一组薄切片。
 
 ## 记录规则
 

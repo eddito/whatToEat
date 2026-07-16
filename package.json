@@ -9,6 +9,7 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "node scripts/seed-supabase.mjs",
+    "smoke:public": "node scripts/smoke-public-pages.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
