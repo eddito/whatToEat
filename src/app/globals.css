@@ -1957,33 +1957,6 @@ body {
   gap: 12px;
 }
 
-.auth-mode-tabs {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: var(--bg-soft);
-  padding: 4px;
-}
-
-.auth-mode-tab {
-  min-height: 34px;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.auth-mode-tab.active {
-  background: var(--ink);
-  color: var(--surface);
-}
-
 .auth-helper {
   margin: -2px 0 0;
   color: var(--muted);

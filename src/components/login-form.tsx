@@ -5,7 +5,6 @@ import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
 
-type AuthMode = "sign-in" | "sign-up";
 type LoginState = "idle" | "loading" | "success" | "error";
 
 function getSafeNextPath() {
@@ -15,7 +14,6 @@ function getSafeNextPath() {
 
 export function LoginForm() {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("sign-in");
   const [email, setEmail] = useState("1397854281@qq.com");
   const [password, setPassword] = useState("");
   const [state, setState] = useState<LoginState>("idle");
@@ -28,21 +26,15 @@ export function LoginForm() {
     }
 
     if (state === "success") {
-      return mode === "sign-in" ? "登录成功，正在跳转..." : message || "账号已创建，可以继续使用。";
+      return "登录成功，正在跳转...";
     }
 
     if (state === "error") {
-      return message || "操作失败，请稍后重试。";
+      return message || "登录失败，请检查账号密码后重试。";
     }
 
-    return mode === "sign-in" ? "使用邮箱和密码登录，登录后可参与评分。" : "创建账号后，可用于评分和后续权限流程。";
-  }, [message, mode, state, supabase]);
-
-  function switchMode(nextMode: AuthMode) {
-    setMode(nextMode);
-    setState("idle");
-    setMessage("");
-  }
+    return "使用账号密码登录。登录状态会保存在当前浏览器中，除非主动退出或会话过期。";
+  }, [message, state, supabase]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,15 +46,10 @@ export function LoginForm() {
     setState("loading");
     setMessage("");
 
-    const credentials = {
+    const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password,
-    };
-
-    const { data, error } =
-      mode === "sign-in"
-        ? await supabase.auth.signInWithPassword(credentials)
-        : await supabase.auth.signUp(credentials);
+    });
 
     if (error) {
       setState("error");
@@ -71,45 +58,18 @@ export function LoginForm() {
     }
 
     setState("success");
-
-    if (mode === "sign-up" && !data.session) {
-      setMessage("账号已创建，请按 Supabase 当前配置完成邮箱确认后再登录。");
-      return;
-    }
-
     window.setTimeout(() => router.replace(getSafeNextPath()), 500);
   }
 
   return (
     <form className="auth-form" onSubmit={handleSubmit}>
-      <div className="auth-mode-tabs" role="tablist" aria-label="登录方式">
-        <button
-          aria-selected={mode === "sign-in"}
-          className={mode === "sign-in" ? "auth-mode-tab active" : "auth-mode-tab"}
-          onClick={() => switchMode("sign-in")}
-          role="tab"
-          type="button"
-        >
-          登录
-        </button>
-        <button
-          aria-selected={mode === "sign-up"}
-          className={mode === "sign-up" ? "auth-mode-tab active" : "auth-mode-tab"}
-          onClick={() => switchMode("sign-up")}
-          role="tab"
-          type="button"
-        >
-          创建账号
-        </button>
-      </div>
-
       <label className="field">
         <span>
           <Mail aria-hidden="true" size={15} />
           邮箱
         </span>
         <input
-          autoComplete="email"
+          autoComplete="username"
           inputMode="email"
           name="email"
           onChange={(event) => setEmail(event.target.value)}
@@ -124,7 +84,7 @@ export function LoginForm() {
           密码
         </span>
         <input
-          autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+          autoComplete="current-password"
           minLength={6}
           name="password"
           onChange={(event) => setPassword(event.target.value)}
@@ -136,7 +96,7 @@ export function LoginForm() {
 
       <p className={state === "error" ? "auth-helper auth-helper-error" : "auth-helper"}>{helperText}</p>
       <button className="button auth-submit" disabled={isDisabled || !supabase} type="submit">
-        {state === "loading" ? "处理中..." : mode === "sign-in" ? "登录" : "创建账号"}
+        {state === "loading" ? "登录中..." : "登录"}
       </button>
     </form>
   );

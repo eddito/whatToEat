@@ -44,9 +44,9 @@ export default function LoginPage() {
 
         <section className="auth-card" aria-labelledby="login-form-title">
           <div>
-            <span className="eyebrow">Email password</span>
+            <span className="eyebrow">Password login</span>
             <h2 id="login-form-title">邮箱密码登录</h2>
-            <p>使用邮箱和密码登录，后续评分和后台权限都会跟随这个账号。</p>
+            <p>使用已创建的账号登录，登录状态会长期保存在当前浏览器中。</p>
           </div>
 
           <LoginForm />
