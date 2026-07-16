@@ -199,3 +199,62 @@ username: test_user
 password: TestUser_2026
 role: member
 ```
+
+### `POST /api/ratings`
+
+路径：`src/app/api/ratings/route.ts`
+
+用途：登录用户给公开店铺评分。
+
+认证：
+
+```txt
+Authorization: Bearer <accessToken>
+```
+
+权限规则：
+- `owner` / `member`：写入 `team_member` 评分。
+- 非成员登录用户：仅当店铺所在榜单包含 `public_rate` 时写入 `external` 评分。
+- `viewer`：不写 `team_member`，如榜单允许 `public_rate`，按 `external` 处理。
+- 数据库 RLS 仍不直接开放客户端写入；写入由服务端验证 token 后使用 server admin client 完成。
+
+请求体：
+
+```ts
+type UpsertRatingRequest = {
+  placeId: string;
+  score: number;
+  note?: string | null;
+};
+```
+
+成功响应：
+
+```ts
+type UpsertRatingResponse = {
+  ok: true;
+  rating: {
+    id: string;
+    source: "team_member" | "external";
+    score: number;
+    note: string | null;
+    updated_at: string;
+  };
+  source: "team_member" | "external";
+  role: "owner" | "member" | "viewer" | null;
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或 `placeId/score/note` 不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `place_not_public` | 店铺不在公开榜单中 |
+| 403 | `rating_not_allowed` | 当前用户无权评分 |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+幂等性：
+- 同一用户对同一店铺、同一评分来源再次提交时更新原评分。

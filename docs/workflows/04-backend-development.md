@@ -43,6 +43,8 @@
 | BE-012 | 增加 username 创建用户脚本 | 已完成 | `scripts/create-auth-user.mjs`、`pnpm auth:create-user` | `node --check` |
 | BE-013 | 创建测试登录账号 | 已完成 | `test_user` member 账号 | `pnpm auth:create-user` 成功 |
 | BE-014 | 实现 username/password 登录接口 | 已完成 | `POST /api/auth/login`、`src/server/auth/**` | `test_user` 登录 200，错误密码/非法 username 返回 401 |
+| BE-015 | 实现 bearer token 解析 | 已完成 | `src/server/auth/session.ts` | 未带 token 返回 401 |
+| BE-016 | 实现评分写入接口 | 已完成 | `POST /api/ratings`、`src/server/ratings/**` | `test_user` 写入 `red-list-1` 评分成功 |
 
 ## 完成记录
 
@@ -55,6 +57,8 @@
 | 2026-07-16 | 调整认证模型为 username + password，业务表移除 email | `supabase/schema.sql`、`scripts/create-auth-user.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过 |
 | 2026-07-16 | 创建测试登录账号 | Supabase Auth、`profiles`、`team_members` | `test_user` 已创建并绑定为 `what-to-eat` member |
 | 2026-07-16 | 实现 username/password 登录接口 | `src/app/api/auth/login/route.ts`、`src/server/auth/**`、`src/server/supabase/auth.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、登录 API smoke test 通过 |
+| 2026-07-16 | 实现评分写入接口 | `src/app/api/ratings/route.ts`、`src/server/auth/session.ts`、`src/server/ratings/**`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、登录后评分 API smoke test 通过 |
+| 2026-07-16 | 远端测试评分写入 | Supabase `ratings` | `test_user` 对 `red-list-1` 写入/更新 `team_member` 评分 `4.2` |
 
 ## 当前数据库快照
 
@@ -71,8 +75,8 @@
 
 ## 下一步
 
-1. 使用 `test_user` 测试后续权限接口。
-2. 实现评分写入接口和 bearer token 权限校验。
+1. 继续补后台写入接口和更完整的权限测试脚本。
+2. 后续 integration 接入评分表单时使用 `POST /api/ratings`。
 
 ## 记录规则
 
