@@ -23,7 +23,7 @@
 | B2 | 初始数据导入 | 已完成 | seed 脚本和初始数据导入能力 |
 | B3 | 公开浏览读取层 | 已完成 | `getLists/getList/getPlacesByList/getPlace/getMapPlaces/getListStats` |
 | B4 | username 业务身份模型 | 已完成 | `profiles.username` 和创建用户脚本 |
-| B5 | 认证、评分、后台写入 | 后续切片 | 登录接口、权限校验、写入接口 |
+| B5 | 认证、评分、后台写入 | 进行中 | username 登录接口已实现；权限校验、写入接口待实现 |
 
 ## 任务进度表
 
@@ -42,6 +42,7 @@
 | BE-011 | 增加 username 业务身份模型 | 已完成 | `profiles.username`、username 约束、触发器更新 | `tsc --noEmit`、`next build` |
 | BE-012 | 增加 username 创建用户脚本 | 已完成 | `scripts/create-auth-user.mjs`、`pnpm auth:create-user` | `node --check` |
 | BE-013 | 创建测试登录账号 | 已完成 | `test_user` member 账号 | `pnpm auth:create-user` 成功 |
+| BE-014 | 实现 username/password 登录接口 | 已完成 | `POST /api/auth/login`、`src/server/auth/**` | `test_user` 登录 200，错误密码/非法 username 返回 401 |
 
 ## 完成记录
 
@@ -53,6 +54,7 @@
 | 2026-07-06 | 完成公开浏览数据读取契约 | `src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过 |
 | 2026-07-16 | 调整认证模型为 username + password，业务表移除 email | `supabase/schema.sql`、`scripts/create-auth-user.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过 |
 | 2026-07-16 | 创建测试登录账号 | Supabase Auth、`profiles`、`team_members` | `test_user` 已创建并绑定为 `what-to-eat` member |
+| 2026-07-16 | 实现 username/password 登录接口 | `src/app/api/auth/login/route.ts`、`src/server/auth/**`、`src/server/supabase/auth.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、登录 API smoke test 通过 |
 
 ## 当前数据库快照
 
@@ -69,8 +71,8 @@
 
 ## 下一步
 
-1. 后续实现真正的 username/password 登录接口。
-2. 使用 `test_user` 测试登录态和后续权限接口。
+1. 使用 `test_user` 测试后续权限接口。
+2. 实现评分写入接口和 bearer token 权限校验。
 
 ## 记录规则
 

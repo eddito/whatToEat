@@ -138,3 +138,64 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 | `--team-slug` | 否 | 默认 `what-to-eat` |
 
 输出不会打印密码。
+
+## HTTP 接口
+
+### `POST /api/auth/login`
+
+路径：`src/app/api/auth/login/route.ts`
+
+用途：使用业务账号 `username + password` 登录。
+
+说明：
+- 不支持免密登录、magic link、OTP。
+- `username` 不要求是邮箱。
+- 服务端内部会把 username 映射到占位 email，再调用 Supabase password auth。
+- 响应返回 Supabase session token，后续需要登录态的接口使用 `Authorization: Bearer <accessToken>`。
+
+请求体：
+
+```ts
+type LoginRequest = {
+  username: string;
+  password: string;
+};
+```
+
+成功响应：
+
+```ts
+type LoginResponse = {
+  ok: true;
+  session: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number | null;
+    tokenType: string;
+    user: {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl: string | null;
+    };
+  };
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或缺少 username/password |
+| 401 | `invalid_username` | username 格式不合法 |
+| 401 | `profile_not_found` | 账号不存在 |
+| 401 | `invalid_credentials` | 密码错误或 Supabase Auth 登录失败 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+测试账号：
+
+```txt
+username: test_user
+password: TestUser_2026
+role: member
+```
