@@ -47,6 +47,10 @@ export type RatingRecord = {
   score: number;
 };
 
+export type TeamMembershipRecord = {
+  role: "owner" | "member" | "viewer";
+};
+
 const PUBLIC_VISIBILITIES: ListVisibility[] = ["public_view", "public_rate"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -203,4 +207,71 @@ export async function getRatingsForPlaces(placeIds: string[]) {
   }
 
   return data as RatingRecord[];
+}
+
+export async function getTeamMembership(teamId: string, userId: string) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("team_members")
+    .select("role")
+    .eq("team_id", teamId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as TeamMembershipRecord | null;
+}
+
+export async function getUserRatingForPlace(placeId: string, userId: string, source: RatingSource) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("ratings")
+    .select("id, place_id, source, rater_label, score")
+    .eq("place_id", placeId)
+    .eq("user_id", userId)
+    .eq("source", source)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as RatingRecord | null;
+}
+
+export async function upsertUserRating(input: {
+  existingRatingId?: string;
+  teamId: string;
+  placeId: string;
+  userId: string;
+  raterLabel: string;
+  source: RatingSource;
+  score: number;
+  note?: string;
+}) {
+  const supabase = createSupabaseAdminClient();
+  const payload = {
+    team_id: input.teamId,
+    place_id: input.placeId,
+    user_id: input.userId,
+    rater_label: input.raterLabel,
+    source: input.source,
+    score: input.score,
+    note: input.note || null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const query = input.existingRatingId
+    ? supabase.from("ratings").update(payload).eq("id", input.existingRatingId).select("id, score").single()
+    : supabase.from("ratings").insert(payload).select("id, score").single();
+  const { data, error } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  return data as { id: string; score: number };
 }

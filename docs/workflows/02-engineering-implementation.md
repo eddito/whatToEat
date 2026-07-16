@@ -21,7 +21,7 @@
 - Supabase secret key 已提供，后续仅写入服务端环境变量，不在文档或仓库中明文保存。
 - Supabase Project URL 已提供：`https://lickxydbtkyijgjmpnqo.supabase.co`。
 - 本地项目路径：`D:\yjl\what-to-eat-today`
-- 当前实现：Next.js 应用骨架、真实种子数据、首页卡片流、榜单页、店铺详情页、地图页、账号密码登录和浏览器会话持久化、后台占位、Supabase schema、公开页面 Supabase 读取适配层。
+- 当前实现：Next.js 应用骨架、真实种子数据、首页卡片流、榜单页、店铺详情页、地图页、账号密码登录和浏览器会话持久化、登录用户评分入口、后台占位、Supabase schema、公开页面 Supabase 读取适配层。
 - 验证状态：TypeScript 检查通过，Next.js 生产构建通过，核心路由本地 HTTP 检查通过。
 - 工作表：
   - `红榜`：74 条记录。
@@ -220,7 +220,7 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [x] 实现公开页面 Supabase 读取适配和 seed fallback。
 - [ ] 实现小队和成员管理。
 - [ ] 实现榜单权限。
-- [ ] 实现评分和混合总分。
+- [ ] 实现评分和混合总分。（已完成登录用户评分写入入口；外部评分统计和混合总分联动待完善）
 - [x] 生成 Excel 种子数据和导入说明。
 - [x] 建立公开页面和 Supabase 公开读取 smoke 检查。
 - [ ] 实现图片上传。
@@ -278,3 +278,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-07-06 | 按 E2 补齐登录入口页面骨架并完成构建验证 | Codex | 前端公开页面、后续认证接入 |
 | 2026-07-16 | integration 分支接入后端公开浏览读取层并保留 seed fallback | Codex | 前后端联调、公开页面 |
 | 2026-07-16 | 实现 Supabase 账号密码登录、浏览器会话持久化和 Header 会话状态 | Codex | 认证流程、后续评分和后台权限 |
+| 2026-07-16 | 接入店铺详情页登录用户评分提交和 `/api/ratings` 写入接口 | Codex | 评分入口、成员权限校验 |

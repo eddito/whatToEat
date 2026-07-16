@@ -3,6 +3,7 @@ import { MapPinned, Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getMixedScore } from "@/lib/score";
 import { getPlacePageData } from "@/lib/public-data";
+import { RatingForm } from "@/components/rating-form";
 
 type PlacePageProps = {
   params: {
@@ -94,6 +95,14 @@ export default async function PlacePage({ params }: PlacePageProps) {
                 <dd>{mixedScore || "待评"}</dd>
               </div>
             </dl>
+          </article>
+
+          <article className="info-card">
+            <h3>
+              <Star aria-hidden="true" size={18} />
+              我的评分
+            </h3>
+            <RatingForm placeId={place.id} />
           </article>
 
           <article className="info-card">

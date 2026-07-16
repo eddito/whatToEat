@@ -812,6 +812,78 @@ button {
   line-height: 1.55;
 }
 
+.rating-form {
+  display: grid;
+  gap: 12px;
+}
+
+.rating-score-options {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.rating-score-button {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 800;
+}
+
+.rating-score-button.active {
+  border-color: var(--red);
+  background: var(--red);
+  color: var(--surface);
+}
+
+.rating-note-field {
+  display: grid;
+  gap: 7px;
+}
+
+.rating-note-field span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.rating-note-field textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 10px 11px;
+  color: var(--ink);
+  font: inherit;
+  line-height: 1.5;
+}
+
+.rating-form-note,
+.rating-login-box p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.rating-form-note.error {
+  color: var(--red);
+}
+
+.rating-login-box {
+  display: grid;
+  gap: 12px;
+}
+
 .map-panel {
   overflow: hidden;
 }

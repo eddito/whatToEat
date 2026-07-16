@@ -45,7 +45,7 @@
 
 ### RLS 最小闭环
 
-当前切片只开放读取，不开放写入。
+公开读取仍由 RLS 负责。评分写入暂由服务端 Route Handler 使用当前登录用户 token 校验身份后执行，不在客户端直接开放匿名写入。
 
 | 资源 | 未登录用户权限 |
 | --- | --- |
@@ -55,7 +55,7 @@
 | `ratings` | 可 `select` 公开店铺的评分，用于统计展示 |
 | `photos` | 可 `select` 公开店铺图片 |
 
-私密榜单、写入、成员管理、后台管理策略留到后续切片。
+私密榜单、成员管理、后台管理策略留到后续切片。
 
 ## 公开浏览数据契约
 
@@ -178,6 +178,49 @@ async function getListStats(slug: string): Promise<PublicListStats | null>;
 | `getPublicPlacePageData(id)` | 返回旧店铺详情数据结构 |
 | `getListStatsFromPlaces(places)` | 旧 `Place[]` 统计函数 |
 
+## Route Handlers
+
+### `POST /api/ratings`
+
+用途：登录用户在店铺详情页提交或更新自己的评分。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+Content-Type: application/json
+```
+
+请求体：
+
+```ts
+type RatingRequest = {
+  placeId: string; // places.import_key 或 UUID
+  score: number; // 1-5
+  note?: string; // 最长 500 字
+};
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 小队 `owner` / `member` 提交为 `team_member` 评分。
+- 非小队成员仅可给 `public_rate` 榜单下的店铺提交 `external` 评分。
+- 同一用户对同一店铺、同一评分来源重复提交时更新原评分。
+
+响应：
+
+```ts
+type RatingResponse = {
+  rating: {
+    id: string;
+    score: number;
+  };
+  source: "team_member" | "external";
+  message: string;
+};
+```
+
 ## 数据访问层接口
 
 路径：`src/server/places/repository.ts`
@@ -190,6 +233,9 @@ async function getListStats(slug: string): Promise<PublicListStats | null>;
 | `getPublicPlaceByStableId(id)` | 按 `import_key` 或 UUID 查询店铺 |
 | `getPublicListsForPlace(placeId)` | 查询某店铺所属的公开榜单 |
 | `getRatingsForPlaces(placeIds)` | 批量读取评分记录 |
+| `getTeamMembership(teamId, userId)` | 查询用户在小队中的角色 |
+| `getUserRatingForPlace(placeId, userId, source)` | 查询用户对店铺的已有评分 |
+| `upsertUserRating(input)` | 新增或更新用户评分 |
 
 ## 脚本接口
 
