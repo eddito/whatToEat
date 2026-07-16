@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ArrowRight, KeyRound, Mail, ShieldCheck, Star, UsersRound } from "lucide-react";
+import { ArrowRight, KeyRound, ShieldCheck, Star, UsersRound } from "lucide-react";
+import { LoginForm } from "@/components/login-form";
 
 const loginScopes = [
   {
@@ -45,27 +46,10 @@ export default function LoginPage() {
           <div>
             <span className="eyebrow">Magic link</span>
             <h2 id="login-form-title">邮箱登录</h2>
-            <p>认证环境变量配置完成后，这里会发送登录链接。</p>
+            <p>输入邮箱获取登录链接，完成后就能进入评分和后台权限流程。</p>
           </div>
 
-          <form className="auth-form">
-            <label className="field">
-              <span>
-                <Mail aria-hidden="true" size={15} />
-                邮箱
-              </span>
-              <input
-                autoComplete="email"
-                defaultValue="1397854281@qq.com"
-                inputMode="email"
-                name="email"
-                type="email"
-              />
-            </label>
-            <button className="button auth-submit" disabled type="button">
-              等待认证接入
-            </button>
-          </form>
+          <LoginForm />
         </section>
       </section>
 

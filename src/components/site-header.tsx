@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, Compass, LayoutDashboard, LogIn, MapPinned, Trophy } from "lucide-react";
+import { ClipboardList, Compass, LayoutDashboard, MapPinned, Trophy } from "lucide-react";
 import { usePathname } from "next/navigation";
+import { AuthStatus } from "./auth-status";
 import { BrandMark } from "./brand-mark";
 
 const navItems = [
@@ -40,10 +41,7 @@ export function SiteHeader() {
             );
           })}
         </nav>
-        <Link className={pathname === "/login" ? "auth-link active" : "auth-link"} href="/login">
-          <LogIn aria-hidden="true" size={16} strokeWidth={2.1} />
-          登录
-        </Link>
+        <AuthStatus active={pathname === "/login"} />
       </div>
     </header>
   );

@@ -1493,6 +1493,47 @@ body {
   color: #fff;
 }
 
+.auth-session {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  padding: 0 6px 0 10px;
+}
+
+.auth-email {
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-signout {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--bg-soft);
+  color: var(--ink);
+  padding: 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.auth-signout:hover {
+  background: var(--red);
+  color: #fff;
+}
+
 .list-page-head {
   grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1fr);
 }
@@ -1916,6 +1957,17 @@ body {
   gap: 12px;
 }
 
+.auth-helper {
+  margin: -2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.auth-helper-error {
+  color: var(--red);
+}
+
 .auth-submit:disabled {
   cursor: not-allowed;
   border-color: var(--line);
@@ -1938,6 +1990,45 @@ body {
 .auth-scope-card h3 {
   margin: 0;
   font-size: 18px;
+}
+
+.auth-callback {
+  display: grid;
+  min-height: 58vh;
+  align-items: center;
+  padding: 34px 0;
+}
+
+.auth-callback-card {
+  justify-items: start;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.auth-callback-card h1 {
+  margin: 0;
+  font-family:
+    "Noto Serif SC",
+    Songti SC,
+    Georgia,
+    serif;
+  font-size: 34px;
+}
+
+.auth-callback-icon {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.auth-callback-icon.error {
+  background: var(--red-soft);
+  color: var(--red);
 }
 
 @media (max-width: 960px) {
@@ -1974,5 +2065,10 @@ body {
   .auth-link {
     width: 100%;
     min-height: 44px;
+  }
+
+  .auth-session {
+    width: 100%;
+    justify-content: space-between;
   }
 }
