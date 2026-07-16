@@ -222,6 +222,7 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [ ] 实现榜单权限。
 - [ ] 实现评分和混合总分。
 - [x] 生成 Excel 种子数据和导入说明。
+- [x] 建立公开页面和 Supabase 公开读取 smoke 检查。
 - [ ] 实现图片上传。
 - [ ] 完成测试。
 - [ ] 交付部署清单。

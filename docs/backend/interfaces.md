@@ -225,3 +225,19 @@ async function getListStats(slug: string): Promise<PublicListStats | null>;
 - 店铺按 `team_id + import_key` 复用。
 - 榜单按 `team_id + slug` 复用。
 - 评分按 `place_id + source + user_id/rater_label` 复用。
+
+### `pnpm smoke:supabase`
+
+路径：`scripts/smoke-supabase-public.mjs`
+
+用途：
+- 使用 `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 验证未登录公开读取路径。
+- 检查公开榜单、公开榜单关联、公开店铺、公开评分和一条样例店铺能否读取。
+- 不读取、不打印 `SUPABASE_SECRET_KEY`。
+
+输入：
+- `.env.local`
+
+输出：
+- 每个检查项的 `PASS` / `FAIL`。
+- 只输出数量和布尔结果，不输出密钥。

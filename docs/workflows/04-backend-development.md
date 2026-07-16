@@ -68,7 +68,7 @@
 
 ## 下一步
 
-1. 配置 integration 分支本地 `.env.local`，验证真实 Supabase 读取路径。
+1. 在 integration 分支本地 `.env.local` 写入 Supabase public key 后运行 `pnpm smoke:supabase`。
 2. 进入认证、评分和后台写入的下一组薄切片。
 
 ## 记录规则

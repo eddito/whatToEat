@@ -10,6 +10,7 @@
     "lint": "next lint",
     "db:seed": "node scripts/seed-supabase.mjs",
     "smoke:public": "node scripts/smoke-public-pages.mjs",
+    "smoke:supabase": "node scripts/smoke-supabase-public.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
