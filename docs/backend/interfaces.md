@@ -4,7 +4,7 @@
 
 - 状态：进行中
 - 分支：`codex/backend-dev`
-- 当前切片：公开浏览数据读取
+- 当前切片：公开浏览数据读取 + username 业务身份模型
 - 维护规则：新增或修改后端服务、脚本、Route Handler、Server Action 时，同步更新本文档。
 
 ## 后端边界
@@ -14,9 +14,33 @@
 | 数据库 | `supabase/schema.sql` | 表结构、枚举、RLS、触发器 |
 | 数据访问层 | `src/server/**/repository.ts` | 封装 Supabase 查询，返回数据库记录 |
 | 服务层 | `src/server/**/service.ts` | 输出前端/integration 可用的数据契约 |
-| 脚本 | `scripts/*.mjs` | seed、初始化等可重复任务 |
+| 脚本 | `scripts/*.mjs` | seed、用户初始化等可重复任务 |
 
-页面和 UI 组件不在本切片内改动；integration 分支后续再决定如何从 seed 切到 Supabase，并保留失败回退。
+页面和 UI 组件不在本后端切片内改动。
+
+## 认证模型
+
+业务侧只使用 `username + password`。
+
+Supabase Auth 底层仍需要一个 email 或 phone 承载 password auth。后端创建用户脚本会自动生成内部占位 email：
+
+```txt
+<username>@users.what-to-eat-today.invalid
+```
+
+这个 email 是实现细节，不作为产品账号展示，也不写入 `public.profiles`。
+
+### Username 规则
+
+```txt
+^[a-z][a-z0-9_]{2,31}$
+```
+
+- 3 到 32 位。
+- 必须以小写字母开头。
+- 只允许小写字母、数字、下划线。
+- 不要求是邮箱。
+- 按大小写不敏感的唯一索引约束。
 
 ## 环境变量
 
@@ -31,21 +55,21 @@
 
 ## 数据库契约
 
-### 核心表
-
-| 表 | 用途 | 当前切片字段是否够用 |
+| 表 | 用途 | 当前字段 |
 | --- | --- | --- |
-| `teams` | 小队空间 | 够用：`id`、`slug`、`name`、`description` |
-| `profiles` | Auth 用户资料 | 够用：`id`、`email`、`display_name`、`avatar_url` |
-| `team_members` | 成员和角色 | 够用：`team_id`、`user_id`、`role` |
-| `lists` | 榜单 | 够用：`slug`、`name`、`description`、`visibility` |
-| `places` | 店铺 | 够用：基础信息、口味、评价、停车、来源、地图字段 |
-| `list_places` | 榜单和店铺关联 | 够用：`list_id`、`place_id`、`sort_order` |
-| `ratings` | 评分 | 够用：`source`、`rater_label`、`score`、`note` |
+| `profiles` | 业务用户资料 | `id`、`username`、`display_name`、`avatar_url`、`created_at` |
+| `teams` | 小队空间 | `id`、`slug`、`name`、`description` |
+| `team_members` | 成员和角色 | `team_id`、`user_id`、`role` |
+| `lists` | 榜单 | `slug`、`name`、`description`、`visibility` |
+| `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段 |
+| `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
+| `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
 
-### RLS 最小闭环
+`profiles.email` 已从业务表移除。Supabase `auth.users.email` 仍由 Supabase Auth 内部使用。
 
-当前切片只开放读取，不开放写入。
+## RLS 最小闭环
+
+当前公开浏览切片只开放读取，不开放写入。
 
 | 资源 | 未登录用户权限 |
 | --- | --- |
@@ -57,126 +81,18 @@
 
 私密榜单、写入、成员管理、后台管理策略留到后续切片。
 
-## 公开浏览数据契约
-
-### `PublicList`
-
-```ts
-type PublicList = {
-  slug: string;
-  name: string;
-  description: string;
-  visibility: "private" | "public_view" | "public_rate";
-  stats: {
-    count: number;
-    scoredCount: number;
-    avgScore: number;
-  };
-};
-```
-
-### `PublicPlace`
-
-```ts
-type PublicPlace = {
-  id: string;
-  listSlug: string;
-  listName: string;
-  name: string;
-  category: string;
-  tasteTags: string[];
-  signatureDishes: string;
-  review: string;
-  region: string;
-  locationLabel: string;
-  parkingNote: string;
-  sourceLabel: string;
-  visited: boolean;
-  memberScores: Record<string, number>;
-  teamScore: number;
-  longitude?: number;
-  latitude?: number;
-};
-```
-
-说明：`id` 优先使用 `places.import_key`，用于兼容当前 `/places/red-list-1` 这类 URL；没有 `import_key` 时回退到数据库 UUID。
-
-### `PublicMapPlace`
-
-```ts
-type PublicMapPlace = {
-  id: string;
-  name: string;
-  region: string;
-  category: string;
-  score: number;
-  longitude?: number;
-  latitude?: number;
-};
-```
-
-## 服务层接口
+## 公开浏览服务层接口
 
 路径：`src/server/places/service.ts`
 
-### `getLists()`
-
-获取公开榜单列表，包含统计信息。
-
-```ts
-async function getLists(): Promise<PublicList[]>;
-```
-
-### `getList(slug)`
-
-获取单个公开榜单和统计信息。
-
-```ts
-async function getList(slug: string): Promise<PublicList | null>;
-```
-
-### `getPlacesByList(slug)`
-
-获取某个公开榜单下的店铺。
-
-```ts
-async function getPlacesByList(slug: string): Promise<PublicPlace[]>;
-```
-
-### `getPlace(id)`
-
-获取公开店铺详情。`id` 可以是 `places.import_key` 或 UUID。
-
-```ts
-async function getPlace(id: string): Promise<PublicPlace | null>;
-```
-
-### `getMapPlaces()`
-
-获取地图页需要的公开店铺数据。
-
-```ts
-async function getMapPlaces(): Promise<PublicMapPlace[]>;
-```
-
-### `getListStats(slug)`
-
-获取公开榜单统计。
-
-```ts
-async function getListStats(slug: string): Promise<PublicListStats | null>;
-```
-
-## 兼容函数
-
-为 integration 分支渐进迁移，服务层暂时保留旧应用模型适配函数：
-
 | 函数 | 说明 |
 | --- | --- |
-| `getPublicPlaceData()` | 返回旧 `ListSummary[]` 和 `Place[]` |
-| `getPublicListPageData(slug)` | 返回旧榜单页数据结构 |
-| `getPublicPlacePageData(id)` | 返回旧店铺详情数据结构 |
-| `getListStatsFromPlaces(places)` | 旧 `Place[]` 统计函数 |
+| `getLists()` | 获取公开榜单列表，包含统计信息 |
+| `getList(slug)` | 获取单个公开榜单和统计信息 |
+| `getPlacesByList(slug)` | 获取某个公开榜单下的店铺 |
+| `getPlace(id)` | 获取公开店铺详情，`id` 可以是 `places.import_key` 或 UUID |
+| `getMapPlaces()` | 获取地图页需要的公开店铺数据 |
+| `getListStats(slug)` | 获取公开榜单统计 |
 
 ## 数据访问层接口
 
@@ -197,31 +113,28 @@ async function getListStats(slug: string): Promise<PublicListStats | null>;
 
 路径：`scripts/seed-supabase.mjs`
 
-用途：
-- 创建或复用默认小队。
-- 创建或更新公开榜单。
-- 导入 `src/data/seed-places.json` 中的 77 条店铺。
-- 创建榜单关联。
-- 导入已有评分。
+用途：创建默认小队、公开榜单、导入初始店铺、榜单关联和已有评分。
 
-输入：
-- `.env.local`
-- `src/data/seed-places.json`
+### `pnpm auth:create-user`
 
-输出示例：
+路径：`scripts/create-auth-user.mjs`
 
-```json
-{
-  "ok": true,
-  "teamId": "...",
-  "importBatchId": "...",
-  "lists": 2,
-  "places": 77,
-  "ratingsWithScores": 60
-}
+用途：用 `username + password` 创建或更新业务用户。
+
+示例：
+
+```powershell
+pnpm auth:create-user -- --username yang --password "<password>" --display-name "Yang" --role owner
 ```
 
-幂等性：
-- 店铺按 `team_id + import_key` 复用。
-- 榜单按 `team_id + slug` 复用。
-- 评分按 `place_id + source + user_id/rater_label` 复用。
+参数：
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `--username` | 是 | 业务账号，必须符合 username 规则 |
+| `--password` | 是 | 密码，至少 8 位 |
+| `--display-name` | 否 | 展示名，默认等于 username |
+| `--role` | 否 | `owner`、`member`、`viewer`，默认 `member` |
+| `--team-slug` | 否 | 默认 `what-to-eat` |
+
+输出不会打印密码。

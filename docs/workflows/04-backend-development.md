@@ -4,17 +4,15 @@
 
 - 状态：进行中
 - 分支：`codex/backend-dev`
-- 当前切片：公开浏览数据读取
 - 后端工作树：`C:/Users/xyc20/.codex/worktrees/5f6f/what-to-eat-today`
 - 集成策略：本分支只提交后端切片；不合入前端分支，不合入 integration 分支。
 - 接口文档：`docs/backend/interfaces.md`
-- 数据库：Supabase PostgreSQL
 
 ## 后端边界
 
 - 后端代码范围：`supabase/**`、`src/server/**`、`scripts/**`、后端文档。
-- 本切片不修改页面和 UI 组件。
-- integration 分支后续负责把前端从 seed JSON 切到 Supabase 读取，并保留失败回退。
+- 页面和 UI 组件由前端或 integration 分支接入。
+- 认证产品形态：`username + password`，不做免密登录、magic link、OTP。
 
 ## 阶段计划
 
@@ -24,8 +22,8 @@
 | B1 | Supabase schema 初始化 | 已完成 | 核心表、枚举、RLS、触发器 |
 | B2 | 初始数据导入 | 已完成 | seed 脚本和初始数据导入能力 |
 | B3 | 公开浏览读取层 | 已完成 | `getLists/getList/getPlacesByList/getPlace/getMapPlaces/getListStats` |
-| B4 | integration 联调接入 | 待联调 | 由 integration 分支合入后验证 |
-| B5 | 认证、评分、后台写入 | 后续切片 | 本次不提交写入接口和 UI |
+| B4 | username 业务身份模型 | 已完成 | `profiles.username` 和创建用户脚本 |
+| B5 | 认证、评分、后台写入 | 后续切片 | 登录接口、权限校验、写入接口 |
 
 ## 任务进度表
 
@@ -41,6 +39,8 @@
 | BE-008 | 新增公开浏览 service 契约 | 已完成 | `src/server/places/service.ts` | `tsc --noEmit` |
 | BE-009 | 建立后端接口文档 | 已完成 | `docs/backend/interfaces.md` | 已记录公开浏览契约 |
 | BE-010 | 后端切片构建验证 | 已完成 | `pnpm typecheck`、`pnpm build` | `node --check`、`tsc --noEmit`、`next build` 通过 |
+| BE-011 | 增加 username 业务身份模型 | 已完成 | `profiles.username`、username 约束、触发器更新 | `tsc --noEmit`、`next build` |
+| BE-012 | 增加 username 创建用户脚本 | 已完成 | `scripts/create-auth-user.mjs`、`pnpm auth:create-user` | `node --check` |
 
 ## 完成记录
 
@@ -49,8 +49,8 @@
 | 2026-06-24 | 建立 Supabase schema，并确认远端核心表可访问 | `supabase/schema.sql` | 表 count 查询全部 OK |
 | 2026-06-24 | 创建并填写本地 `.env.local` | `.env.local` | 环境变量存在 |
 | 2026-06-24 | 完成初始 seed 脚本并导入真实数据 | `scripts/seed-supabase.mjs`、`package.json` | `teams:1`、`lists:2`、`places:77`、`ratings:60` |
-| 2026-07-06 | 收拢公开浏览后端切片，移除本次不提交的页面/UI/评分写入改动 | `src/server/**`、`supabase/schema.sql`、`docs/**` | `git status` 确认无页面/UI 改动 |
-| 2026-07-06 | 完成公开浏览数据读取契约 | `src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `node --check scripts/seed-supabase.mjs`、`tsc --noEmit`、`next build` 通过 |
+| 2026-07-06 | 完成公开浏览数据读取契约 | `src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过 |
+| 2026-07-16 | 调整认证模型为 username + password，业务表移除 email | `supabase/schema.sql`、`scripts/create-auth-user.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过 |
 
 ## 当前数据库快照
 
@@ -62,13 +62,13 @@
 | `list_places` | 77 | 店铺和榜单关联 |
 | `ratings` | 60 | 已有成员评分 |
 | `import_batches` | 1 | 初始导入批次 |
-| `profiles` | 1 | Auth 用户资料 |
+| `profiles` | 1 | Auth 用户资料，业务身份改为 username |
 | `team_members` | 1 | 初始 owner 成员 |
 
 ## 下一步
 
-1. 提交 `Implement public browsing backend slice`。
-2. 等 integration 分支合入后，联调前端 seed fallback 与 Supabase 读取。
+1. 提交 username 身份模型切片。
+2. 后续实现真正的 username/password 登录接口。
 
 ## 记录规则
 

@@ -23,11 +23,26 @@ end $$;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  email text,
+  username text,
   display_name text,
   avatar_url text,
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists username text;
+update public.profiles
+set username = 'user_' || left(replace(id::text, '-', ''), 12)
+where username is null;
+alter table public.profiles alter column username set not null;
+alter table public.profiles drop column if exists email;
+
+drop index if exists profiles_username_lower_idx;
+create unique index profiles_username_lower_idx
+  on public.profiles (lower(username));
+
+alter table public.profiles drop constraint if exists profiles_username_format_chk;
+alter table public.profiles add constraint profiles_username_format_chk
+  check (username ~ '^[a-z][a-z0-9_]{2,31}$');
 
 create table if not exists public.teams (
   id uuid primary key default gen_random_uuid(),
@@ -194,17 +209,25 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  candidate_username text;
 begin
-  insert into public.profiles (id, email, display_name, avatar_url)
+  candidate_username := lower(trim(coalesce(new.raw_user_meta_data ->> 'username', '')));
+
+  if candidate_username !~ '^[a-z][a-z0-9_]{2,31}$' then
+    candidate_username := 'user_' || left(replace(new.id::text, '-', ''), 12);
+  end if;
+
+  insert into public.profiles (id, username, display_name, avatar_url)
   values (
     new.id,
-    new.email,
+    candidate_username,
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'name'),
     new.raw_user_meta_data ->> 'avatar_url'
   )
   on conflict (id) do update
   set
-    email = excluded.email,
+    username = coalesce(public.profiles.username, excluded.username),
     display_name = coalesce(public.profiles.display_name, excluded.display_name),
     avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url);
 
