@@ -45,6 +45,10 @@ function getCategoriesFromPlaces(places: Place[]) {
   return Array.from(new Set(places.map((place) => place.category).filter(Boolean))).sort();
 }
 
+function getRankingScore(place: Place) {
+  return place.mixedScore || place.teamScore;
+}
+
 async function trySupabase<T>(load: () => Promise<T>) {
   try {
     return await load();
@@ -68,7 +72,7 @@ export async function getHomeData() {
       lists: supabaseData.lists,
       listsWithStats,
       places,
-      topPlaces: [...places].sort((a, b) => b.teamScore - a.teamScore || a.name.localeCompare(b.name, "zh-Hans-CN")).slice(0, 9),
+      topPlaces: [...places].sort((a, b) => getRankingScore(b) - getRankingScore(a) || a.name.localeCompare(b.name, "zh-Hans-CN")).slice(0, 9),
       regions: getRegionsFromPlaces(places),
       categories: getCategoriesFromPlaces(places),
     };

@@ -19,6 +19,9 @@ export type Place = {
     chen: number;
   };
   teamScore: number;
+  externalScore: number;
+  externalRatingCount: number;
+  mixedScore: number;
   legacyScore: number;
   longitude?: number;
   latitude?: number;

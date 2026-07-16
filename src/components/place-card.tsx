@@ -18,6 +18,7 @@ export function PlaceCard({ place }: { place: Place }) {
     .filter(Boolean)
     .slice(0, 6);
   const scoreLabel = place.teamScore > 0 ? place.teamScore.toFixed(1) : "待评";
+  const mixedScoreLabel = place.mixedScore > 0 ? place.mixedScore.toFixed(1) : "待评";
   const yangScore = place.memberScores.yang ? place.memberScores.yang.toFixed(1) : "待评";
   const chenScore = place.memberScores.chen ? place.memberScores.chen.toFixed(1) : "待评";
 
@@ -46,6 +47,7 @@ export function PlaceCard({ place }: { place: Place }) {
         </span>
         <span>杨 {yangScore}</span>
         <span>陈 {chenScore}</span>
+        <span>混合 {mixedScoreLabel}</span>
       </div>
 
       <div className="card-footer">

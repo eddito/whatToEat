@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { MapPinned, Star } from "lucide-react";
 import { notFound } from "next/navigation";
-import { getMixedScore } from "@/lib/score";
 import { getPlacePageData } from "@/lib/public-data";
 import { RatingForm } from "@/components/rating-form";
 
@@ -19,7 +18,6 @@ export default async function PlacePage({ params }: PlacePageProps) {
   }
 
   const { place } = pageData;
-  const mixedScore = getMixedScore(place.teamScore, 0, 0);
 
   return (
     <>
@@ -91,8 +89,12 @@ export default async function PlacePage({ params }: PlacePageProps) {
                 <dd>{place.teamScore || "待评"}</dd>
               </div>
               <div>
+                <dt>外部分</dt>
+                <dd>{place.externalRatingCount > 0 ? `${place.externalScore}（${place.externalRatingCount} 人）` : "暂无"}</dd>
+              </div>
+              <div>
                 <dt>混合分</dt>
-                <dd>{mixedScore || "待评"}</dd>
+                <dd>{place.mixedScore || "待评"}</dd>
               </div>
             </dl>
           </article>

@@ -40,7 +40,7 @@ export function getCategories() {
 
 export function getTopPlaces(limit = 12) {
   return [...places]
-    .sort((a, b) => b.teamScore - a.teamScore || a.name.localeCompare(b.name, "zh-Hans-CN"))
+    .sort((a, b) => (b.mixedScore || b.teamScore) - (a.mixedScore || a.teamScore) || a.name.localeCompare(b.name, "zh-Hans-CN"))
     .slice(0, limit);
 }
 

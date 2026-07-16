@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getMixedScore } from "@/lib/score";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
   getPlacesForPublicListId,
@@ -44,6 +45,9 @@ export type PublicPlace = {
   visited: boolean;
   memberScores: Record<string, number>;
   teamScore: number;
+  externalScore: number;
+  externalRatingCount: number;
+  mixedScore: number;
   longitude?: number;
   latitude?: number;
 };
@@ -73,6 +77,7 @@ function toListBase(list: PublicListRecord) {
 
 function buildRatingSummary(placeId: string, ratings: RatingRecord[]) {
   const teamRatings = ratings.filter((rating) => rating.place_id === placeId && rating.source === "team_member");
+  const externalRatings = ratings.filter((rating) => rating.place_id === placeId && rating.source === "external");
   const memberScores = Object.fromEntries(
     teamRatings
       .filter((rating) => rating.rater_label)
@@ -80,10 +85,18 @@ function buildRatingSummary(placeId: string, ratings: RatingRecord[]) {
   );
   const scored = teamRatings.map((rating) => Number(rating.score)).filter((score) => score > 0);
   const teamScore = scored.length > 0 ? scored.reduce((sum, score) => sum + score, 0) / scored.length : 0;
+  const externalScored = externalRatings.map((rating) => Number(rating.score)).filter((score) => score > 0);
+  const externalScore =
+    externalScored.length > 0 ? externalScored.reduce((sum, score) => sum + score, 0) / externalScored.length : 0;
+  const roundedTeamScore = Number(teamScore.toFixed(1));
+  const roundedExternalScore = Number(externalScore.toFixed(1));
 
   return {
     memberScores,
-    teamScore: Number(teamScore.toFixed(1)),
+    teamScore: roundedTeamScore,
+    externalScore: roundedExternalScore,
+    externalRatingCount: externalScored.length,
+    mixedScore: getMixedScore(roundedTeamScore, roundedExternalScore, externalScored.length),
   };
 }
 
@@ -106,6 +119,9 @@ function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: Rati
     visited: place.visited,
     memberScores: ratingSummary.memberScores,
     teamScore: ratingSummary.teamScore,
+    externalScore: ratingSummary.externalScore,
+    externalRatingCount: ratingSummary.externalRatingCount,
+    mixedScore: ratingSummary.mixedScore,
     longitude: place.longitude ?? undefined,
     latitude: place.latitude ?? undefined,
   };
@@ -272,6 +288,9 @@ function toLegacyPlace(place: PublicPlace): Place {
       chen: place.memberScores["陈"] ?? 0,
     },
     teamScore: place.teamScore,
+    externalScore: place.externalScore,
+    externalRatingCount: place.externalRatingCount,
+    mixedScore: place.mixedScore,
     legacyScore: 0,
     longitude: place.longitude,
     latitude: place.latitude,
@@ -286,6 +305,9 @@ export function getListStatsFromPlaces(places: Place[]): PublicListStats {
         杨: place.memberScores.yang,
         陈: place.memberScores.chen,
       },
+      externalScore: place.externalScore,
+      externalRatingCount: place.externalRatingCount,
+      mixedScore: place.mixedScore,
     })),
   );
 }

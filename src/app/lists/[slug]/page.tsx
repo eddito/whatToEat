@@ -33,6 +33,10 @@ function buildFilterHref(slug: string, params: Record<string, string>) {
   return queryString ? `/lists/${slug}?${queryString}` : `/lists/${slug}`;
 }
 
+function getRankingScore(place: { mixedScore?: number; teamScore: number }) {
+  return place.mixedScore || place.teamScore;
+}
+
 export default async function ListPage({ params, searchParams }: ListPageProps) {
   const pageData = await getListPageData(params.slug);
 
@@ -42,7 +46,7 @@ export default async function ListPage({ params, searchParams }: ListPageProps) 
 
   const { list, lists, places, stats } = pageData;
   const listPlaces = places.sort(
-    (a, b) => b.teamScore - a.teamScore || a.name.localeCompare(b.name, "zh-Hans-CN"),
+    (a, b) => getRankingScore(b) - getRankingScore(a) || a.name.localeCompare(b.name, "zh-Hans-CN"),
   );
   const regions = Array.from(new Set(listPlaces.map((place) => normalizeRegion(place.region)).filter(Boolean))).sort();
   const categories = Array.from(new Set(listPlaces.flatMap((place) => splitCategory(place.category)).filter(Boolean))).sort();

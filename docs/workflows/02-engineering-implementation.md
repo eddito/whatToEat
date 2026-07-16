@@ -279,3 +279,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-07-16 | integration 分支接入后端公开浏览读取层并保留 seed fallback | Codex | 前后端联调、公开页面 |
 | 2026-07-16 | 实现 Supabase 账号密码登录、浏览器会话持久化和 Header 会话状态 | Codex | 认证流程、后续评分和后台权限 |
 | 2026-07-16 | 接入店铺详情页登录用户评分提交和 `/api/ratings` 写入接口 | Codex | 评分入口、成员权限校验 |
+| 2026-07-16 | 补齐外部评分统计、混合分计算和混合分排序展示 | Codex | 评分展示、榜单排序 |

@@ -94,6 +94,9 @@ type PublicPlace = {
   visited: boolean;
   memberScores: Record<string, number>;
   teamScore: number;
+  externalScore: number;
+  externalRatingCount: number;
+  mixedScore: number;
   longitude?: number;
   latitude?: number;
 };
