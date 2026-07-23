@@ -817,6 +817,23 @@ button {
   gap: 12px;
 }
 
+.rating-score-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.rating-score-field legend {
+  margin-bottom: 7px;
+  padding: 0;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .rating-score-options {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -825,7 +842,7 @@ button {
 
 .rating-score-button {
   display: inline-flex;
-  min-height: 38px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 4px;
@@ -836,6 +853,12 @@ button {
   cursor: pointer;
   font: inherit;
   font-weight: 800;
+}
+
+.rating-score-field:disabled .rating-score-button,
+.rating-note-field textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .rating-score-button.active {
@@ -877,6 +900,10 @@ button {
 
 .rating-form-note.error {
   color: var(--red);
+}
+
+.rating-form-note.success {
+  color: var(--green);
 }
 
 .rating-login-box {

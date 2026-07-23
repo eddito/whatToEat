@@ -45,6 +45,7 @@ export type RatingRecord = {
   source: RatingSource;
   rater_label: string | null;
   score: number;
+  note: string | null;
 };
 
 export type TeamMembershipRecord = {
@@ -199,7 +200,7 @@ export async function getRatingsForPlaces(placeIds: string[]) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("ratings")
-    .select("id, place_id, source, rater_label, score")
+    .select("id, place_id, source, rater_label, score, note")
     .in("place_id", placeIds);
 
   if (error) {
@@ -229,7 +230,7 @@ export async function getUserRatingForPlace(placeId: string, userId: string, sou
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("ratings")
-    .select("id, place_id, source, rater_label, score")
+    .select("id, place_id, source, rater_label, score, note")
     .eq("place_id", placeId)
     .eq("user_id", userId)
     .eq("source", source)
@@ -265,13 +266,13 @@ export async function upsertUserRating(input: {
   };
 
   const query = input.existingRatingId
-    ? supabase.from("ratings").update(payload).eq("id", input.existingRatingId).select("id, score").single()
-    : supabase.from("ratings").insert(payload).select("id, score").single();
+    ? supabase.from("ratings").update(payload).eq("id", input.existingRatingId).select("id, score, note").single()
+    : supabase.from("ratings").insert(payload).select("id, score, note").single();
   const { data, error } = await query;
 
   if (error) {
     throw error;
   }
 
-  return data as { id: string; score: number };
+  return data as { id: string; score: number; note: string | null };
 }

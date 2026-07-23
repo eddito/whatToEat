@@ -225,6 +225,42 @@ type AdminSummaryResponse = {
 };
 ```
 
+### `GET /api/ratings`
+
+用途：登录用户在店铺详情页读取自己对当前店铺的已有评分，用于表单预填。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+查询参数：
+
+```txt
+placeId=<places.import_key 或 UUID>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 小队 `owner` / `member` 读取自己的 `team_member` 评分。
+- 非小队成员仅可在 `public_rate` 榜单关联店铺读取自己的 `external` 评分。
+
+响应：
+
+```ts
+type RatingLookupResponse = {
+  rating: {
+    id: string;
+    score: number;
+    note: string | null;
+    source: "team_member" | "external";
+  } | null;
+  source: "team_member" | "external";
+};
+```
+
 ### `POST /api/ratings`
 
 用途：登录用户在店铺详情页提交或更新自己的评分。
@@ -241,7 +277,7 @@ Content-Type: application/json
 ```ts
 type RatingRequest = {
   placeId: string; // places.import_key 或 UUID
-  score: number; // 1-5
+  score: number; // 1-5，前端按 0.5 分档位提交
   note?: string; // 最长 500 字
 };
 ```
@@ -260,6 +296,7 @@ type RatingResponse = {
   rating: {
     id: string;
     score: number;
+    note: string | null;
   };
   source: "team_member" | "external";
   message: string;

@@ -9,7 +9,20 @@ import { getBrowserSupabase } from "@/lib/supabase";
 
 type SubmitState = "idle" | "loading" | "success" | "error";
 
-const scoreOptions = [1, 2, 3, 4, 5];
+const scoreOptions = [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5];
+
+function formatScore(value: number) {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+type RatingLookupResponse = {
+  error?: string;
+  rating?: {
+    id: string;
+    note: string | null;
+    score: number;
+  } | null;
+};
 
 export function RatingForm({ placeId }: { placeId: string }) {
   const pathname = usePathname();
@@ -19,6 +32,8 @@ export function RatingForm({ placeId }: { placeId: string }) {
   const [isReady, setIsReady] = useState(false);
   const [score, setScore] = useState(5);
   const [note, setNote] = useState("");
+  const [hasExistingRating, setHasExistingRating] = useState(false);
+  const [isLoadingRating, setIsLoadingRating] = useState(false);
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
 
@@ -48,10 +63,84 @@ export function RatingForm({ placeId }: { placeId: string }) {
     };
   }, [supabase]);
 
+  useEffect(() => {
+    if (!supabase || !user) {
+      setHasExistingRating(false);
+      setIsLoadingRating(false);
+      setMessage("");
+      return;
+    }
+
+    let mounted = true;
+    const client = supabase;
+
+    async function loadExistingRating() {
+      setIsLoadingRating(true);
+      setState("idle");
+      setMessage("正在读取你的评分...");
+
+      const { data } = await client.auth.getSession();
+      const token = data.session?.access_token;
+
+      if (!token) {
+        if (mounted) {
+          setState("error");
+          setMessage("登录状态已失效，请重新登录。");
+          setIsLoadingRating(false);
+        }
+        return;
+      }
+
+      const response = await fetch(`/api/ratings?placeId=${encodeURIComponent(placeId)}`, {
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+      const result = (await response.json().catch(() => null)) as RatingLookupResponse | null;
+
+      if (!mounted) {
+        return;
+      }
+
+      if (!response.ok) {
+        setState("error");
+        setMessage(result?.error ?? "评分读取失败，请刷新后重试。");
+        setIsLoadingRating(false);
+        return;
+      }
+
+      if (result?.rating) {
+        setScore(result.rating.score);
+        setNote(result.rating.note ?? "");
+        setHasExistingRating(true);
+        setMessage("已载入你上次的评分。");
+      } else {
+        setScore(5);
+        setNote("");
+        setHasExistingRating(false);
+        setMessage("还没有给这家店打过分。");
+      }
+
+      setIsLoadingRating(false);
+    }
+
+    loadExistingRating().catch(() => {
+      if (mounted) {
+        setState("error");
+        setMessage("评分读取失败，请刷新后重试。");
+        setIsLoadingRating(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+    };
+  }, [placeId, supabase, user]);
+
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    if (!supabase || !user) {
+    if (!supabase || !user || isLoadingRating) {
       return;
     }
 
@@ -88,6 +177,7 @@ export function RatingForm({ placeId }: { placeId: string }) {
     }
 
     setState("success");
+    setHasExistingRating(true);
     setMessage(result?.message ?? "评分已提交。");
     router.refresh();
   }
@@ -109,25 +199,29 @@ export function RatingForm({ placeId }: { placeId: string }) {
 
   return (
     <form className="rating-form" onSubmit={handleSubmit}>
-      <div className="rating-score-options" aria-label="选择评分">
-        {scoreOptions.map((value) => (
-          <button
-            aria-pressed={score === value}
-            className={score === value ? "rating-score-button active" : "rating-score-button"}
-            key={value}
-            onClick={() => setScore(value)}
-            type="button"
-          >
-            <Star aria-hidden="true" size={15} />
-            {value}
-          </button>
-        ))}
-      </div>
+      <fieldset className="rating-score-field" disabled={isLoadingRating || state === "loading"}>
+        <legend>评分</legend>
+        <div className="rating-score-options">
+          {scoreOptions.map((value) => (
+            <button
+              aria-pressed={score === value}
+              className={score === value ? "rating-score-button active" : "rating-score-button"}
+              key={value}
+              onClick={() => setScore(value)}
+              type="button"
+            >
+              <Star aria-hidden="true" size={15} />
+              {formatScore(value)}
+            </button>
+          ))}
+        </div>
+      </fieldset>
 
       <label className="rating-note-field">
         <span>备注</span>
         <textarea
           maxLength={500}
+          disabled={isLoadingRating || state === "loading"}
           onChange={(event) => setNote(event.target.value)}
           placeholder="可选，记录这次评分的理由"
           rows={3}
@@ -135,13 +229,19 @@ export function RatingForm({ placeId }: { placeId: string }) {
         />
       </label>
 
-      <p className={state === "error" ? "rating-form-note error" : "rating-form-note"}>
-        {message || "提交后会更新你自己的评分记录。"}
+      <p
+        aria-live="polite"
+        className={
+          state === "error" ? "rating-form-note error" : state === "success" ? "rating-form-note success" : "rating-form-note"
+        }
+      >
+        {message ||
+          (hasExistingRating ? "已保存过评分，可以调整后更新。" : "提交后会保存为你自己的评分记录。")}
       </p>
 
-      <button className="button auth-submit" disabled={state === "loading"} type="submit">
+      <button className="button auth-submit" disabled={isLoadingRating || state === "loading"} type="submit">
         <Send aria-hidden="true" size={15} />
-        {state === "loading" ? "提交中..." : "提交评分"}
+        {state === "loading" ? "提交中..." : hasExistingRating ? "更新评分" : "提交评分"}
       </button>
     </form>
   );
