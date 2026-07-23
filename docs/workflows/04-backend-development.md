@@ -24,7 +24,7 @@
 | B3 | 公开浏览读取层 | 已完成 | `getLists/getList/getPlacesByList/getPlace/getMapPlaces/getListStats` |
 | B4 | username 业务身份模型 | 已完成 | `profiles.username` 和创建用户脚本 |
 | B5 | 认证与评分 | 已完成 | 登录、bearer token、评分写入、权限 smoke |
-| B6 | 后台写入接口 | 进行中 | 店铺新增/编辑接口已实现，榜单管理待实现 |
+| B6 | 后台写入接口 | 进行中 | 店铺新增/编辑和榜单新增/编辑接口已实现 |
 
 ## 任务进度表
 
@@ -49,6 +49,7 @@
 | BE-017 | 创建外部测试账号 | 已完成 | `test_external` 无小队账号 | `pnpm auth:create-user -- --no-team` 成功 |
 | BE-018 | 新增登录和评分权限 smoke 脚本 | 已完成 | `scripts/smoke-auth-ratings.mjs`、`pnpm smoke:auth-ratings` | member/external/401/403 路径通过 |
 | BE-019 | 实现后台店铺新增/编辑接口 | 已完成 | `POST /api/admin/places`、`upsertAdminPlace` | member 写入 200，external 403，未登录 401 |
+| BE-020 | 实现后台榜单新增/编辑接口 | 已完成 | `POST /api/admin/lists`、`upsertAdminList` | member 写入 200，external 403，未登录 401 |
 
 ## 完成记录
 
@@ -67,13 +68,15 @@
 | 2026-07-23 | 远端权限测试评分写入 | Supabase `ratings` | `test_user` 更新 `team_member` 评分；`test_external` 写入/更新 `external` 评分 |
 | 2026-07-23 | 实现后台店铺新增/编辑接口 | `src/app/api/admin/places/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`src/server/teams/repository.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、API smoke test 通过 |
 | 2026-07-23 | 远端后台店铺写入测试 | Supabase `places`、`list_places` | `admin-smoke-place` 已写入/更新并关联 `red-list` |
+| 2026-07-23 | 实现后台榜单新增/编辑接口 | `src/app/api/admin/lists/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`src/server/teams/repository.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、API smoke test 通过 |
+| 2026-07-23 | 远端后台榜单写入测试 | Supabase `lists` | `admin-smoke-list` 已写入/更新到 `what-to-eat` |
 
 ## 当前数据库快照
 
 | 表 | 当前数量 | 说明 |
 | --- | ---: | --- |
 | `teams` | 1 | 默认探店小队 |
-| `lists` | 2 | 红榜、再练练 |
+| `lists` | 3+ | 红榜、再练练和后台接口 smoke 测试榜单 |
 | `places` | 78+ | 初始店铺数据和后台接口 smoke 测试店 |
 | `list_places` | 78+ | 店铺和榜单关联，包含后台接口 smoke 测试关联 |
 | `ratings` | 60+ | 初始评分和测试评分 |
@@ -83,8 +86,8 @@
 
 ## 下一步
 
-1. 继续补后台榜单管理接口。
-2. 后续 integration 接入后台表单时使用 `POST /api/admin/places`。
+1. 后续 integration 接入后台表单时使用 `POST /api/admin/places` 和 `POST /api/admin/lists`。
+2. 继续补成员管理或归档能力。
 
 ## 记录规则
 

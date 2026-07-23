@@ -100,6 +100,36 @@ export async function getListBySlug(slug: string) {
   return data as PublicListRecord | null;
 }
 
+export async function upsertListRecord(input: {
+  id?: string;
+  teamId: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  visibility: ListVisibility;
+}) {
+  const supabase = createSupabaseAdminClient();
+  const payload = {
+    team_id: input.teamId,
+    slug: input.slug,
+    name: input.name,
+    description: input.description,
+    visibility: input.visibility,
+  };
+  const query = input.id
+    ? supabase.from("lists").update(payload).eq("id", input.id)
+    : supabase.from("lists").insert(payload);
+  const { data, error } = await query
+    .select("id, team_id, slug, name, description, visibility")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PublicListRecord;
+}
+
 export async function getPlacesForPublicListId(listId: string) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase

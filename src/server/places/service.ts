@@ -17,9 +17,10 @@ import {
   type PublicListRecord,
   type RatingRecord,
   upsertListPlace,
+  upsertListRecord,
   upsertPlaceRecord,
 } from "@/server/places/repository";
-import { canManageTeamContent, getTeamMembership } from "@/server/teams/repository";
+import { canManageTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
 
 export type PublicListStats = {
   count: number;
@@ -84,6 +85,15 @@ export type UpsertAdminPlaceInput = {
   latitude?: number | null;
 };
 
+export type UpsertAdminListInput = {
+  userId: string;
+  slug: string;
+  name: string;
+  description?: string | null;
+  visibility: ListVisibility;
+  teamSlug?: string;
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
@@ -91,6 +101,16 @@ export class PlaceWriteError extends Error {
   ) {
     super(message);
     this.name = "PlaceWriteError";
+  }
+}
+
+export class ListWriteError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "team_not_found" | "not_allowed",
+  ) {
+    super(message);
+    this.name = "ListWriteError";
   }
 }
 
@@ -423,4 +443,36 @@ export async function upsertAdminPlace(input: UpsertAdminPlaceInput): Promise<Pu
   });
 
   return toPublicPlace(place, list, await getRatingsForPlaces([place.id]));
+}
+
+export async function upsertAdminList(input: UpsertAdminListInput): Promise<PublicList> {
+  const slug = input.slug.trim();
+  const existingList = await getListBySlug(slug);
+  const team = existingList ? null : await getTeamBySlug(input.teamSlug?.trim() || "what-to-eat");
+  const teamId = existingList?.team_id ?? team?.id;
+
+  if (!teamId) {
+    throw new ListWriteError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(teamId, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new ListWriteError("Current user cannot manage lists for this team.", "not_allowed");
+  }
+
+  const list = await upsertListRecord({
+    id: existingList?.id,
+    teamId,
+    slug,
+    name: input.name.trim(),
+    description: optionalText(input.description),
+    visibility: input.visibility,
+  });
+  const places = await getPublicPlacesForListRecord(list);
+
+  return {
+    ...toListBase(list),
+    stats: getStatsFromPlaces(places),
+  };
 }

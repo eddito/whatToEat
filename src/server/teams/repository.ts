@@ -8,6 +8,28 @@ export type TeamMembership = {
   role: TeamRole;
 };
 
+export type TeamRecord = {
+  id: string;
+  slug: string | null;
+  name: string;
+  description: string | null;
+};
+
+export async function getTeamBySlug(slug: string): Promise<TeamRecord | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("teams")
+    .select("id, slug, name, description")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as TeamRecord | null;
+}
+
 export async function getTeamMembership(teamId: string, userId: string): Promise<TeamMembership | null> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
