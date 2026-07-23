@@ -10,6 +10,7 @@
     "lint": "next lint",
     "db:seed": "node scripts/seed-supabase.mjs",
     "auth:create-user": "node scripts/create-auth-user.mjs",
+    "smoke:auth-ratings": "node scripts/smoke-auth-ratings.mjs",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

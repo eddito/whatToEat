@@ -136,8 +136,31 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 | `--display-name` | 否 | 展示名，默认等于 username |
 | `--role` | 否 | `owner`、`member`、`viewer`，默认 `member` |
 | `--team-slug` | 否 | 默认 `what-to-eat` |
+| `--no-team` | 否 | 创建外部测试用户，不绑定小队 |
 
 输出不会打印密码。
+
+### `pnpm smoke:auth-ratings`
+
+路径：`scripts/smoke-auth-ratings.mjs`
+
+用途：验证后端登录和评分权限闭环。
+
+前置条件：
+- 本地后端服务运行在 `http://127.0.0.1:3101`，或通过 `BACKEND_SMOKE_URL` 指定。
+- 已创建测试账号：
+  - `test_user / TestUser_2026`，小队 `member`
+  - `test_external / TestExternal_2026`，不绑定小队
+
+验证内容：
+- member 登录成功。
+- external 登录成功。
+- 未带 token 调评分接口返回 401。
+- member 给 `red-list-1` 评分写入 `team_member`。
+- external 给 `red-list-1` 评分写入 `external`。
+- external 给 `retry-list-1` 评分返回 403，因为该榜单是 `public_view`。
+
+注意：该脚本会写入/更新远端 Supabase 测试评分。
 
 ## HTTP 接口
 

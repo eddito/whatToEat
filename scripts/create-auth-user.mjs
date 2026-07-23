@@ -54,6 +54,7 @@ function parseArgs() {
     displayName: String(args.get("display-name") ?? process.env.AUTH_DISPLAY_NAME ?? "").trim(),
     role: String(args.get("role") ?? process.env.AUTH_ROLE ?? "member").trim(),
     teamSlug: String(args.get("team-slug") ?? process.env.AUTH_TEAM_SLUG ?? DEFAULT_TEAM_SLUG).trim(),
+    noTeam: args.has("no-team") || process.env.AUTH_NO_TEAM === "1",
   };
 }
 
@@ -108,7 +109,7 @@ async function upsertTeamMember(supabase, teamId, userId, role) {
 async function main() {
   loadEnv();
 
-  const { username, password, displayName, role, teamSlug } = parseArgs();
+  const { username, password, displayName, role, teamSlug, noTeam } = parseArgs();
 
   if (!USERNAME_PATTERN.test(username)) {
     throw new Error("Invalid username. Use 3-32 chars: lowercase letter first, then lowercase letters, numbers, or underscore.");
@@ -170,7 +171,7 @@ async function main() {
 
   await upsertProfile(supabase, userId, username, displayName);
 
-  const teamId = await getTeamId(supabase, teamSlug);
+  const teamId = noTeam ? null : await getTeamId(supabase, teamSlug);
 
   if (teamId) {
     await upsertTeamMember(supabase, teamId, userId, role);
@@ -184,6 +185,7 @@ async function main() {
         userId,
         role: teamId ? role : null,
         teamSlug: teamId ? teamSlug : null,
+        noTeam,
         createdAuthUser,
       },
       null,

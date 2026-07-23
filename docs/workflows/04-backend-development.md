@@ -45,6 +45,8 @@
 | BE-014 | 实现 username/password 登录接口 | 已完成 | `POST /api/auth/login`、`src/server/auth/**` | `test_user` 登录 200，错误密码/非法 username 返回 401 |
 | BE-015 | 实现 bearer token 解析 | 已完成 | `src/server/auth/session.ts` | 未带 token 返回 401 |
 | BE-016 | 实现评分写入接口 | 已完成 | `POST /api/ratings`、`src/server/ratings/**` | `test_user` 写入 `red-list-1` 评分成功 |
+| BE-017 | 创建外部测试账号 | 已完成 | `test_external` 无小队账号 | `pnpm auth:create-user -- --no-team` 成功 |
+| BE-018 | 新增登录和评分权限 smoke 脚本 | 已完成 | `scripts/smoke-auth-ratings.mjs`、`pnpm smoke:auth-ratings` | member/external/401/403 路径通过 |
 
 ## 完成记录
 
@@ -59,6 +61,8 @@
 | 2026-07-16 | 实现 username/password 登录接口 | `src/app/api/auth/login/route.ts`、`src/server/auth/**`、`src/server/supabase/auth.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、登录 API smoke test 通过 |
 | 2026-07-16 | 实现评分写入接口 | `src/app/api/ratings/route.ts`、`src/server/auth/session.ts`、`src/server/ratings/**`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、登录后评分 API smoke test 通过 |
 | 2026-07-16 | 远端测试评分写入 | Supabase `ratings` | `test_user` 对 `red-list-1` 写入/更新 `team_member` 评分 `4.2` |
+| 2026-07-23 | 创建外部测试账号并补权限 smoke 脚本 | `scripts/create-auth-user.mjs`、`scripts/smoke-auth-ratings.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
+| 2026-07-23 | 远端权限测试评分写入 | Supabase `ratings` | `test_user` 更新 `team_member` 评分；`test_external` 写入/更新 `external` 评分 |
 
 ## 当前数据库快照
 
@@ -75,7 +79,7 @@
 
 ## 下一步
 
-1. 继续补后台写入接口和更完整的权限测试脚本。
+1. 继续补后台店铺/榜单写入接口。
 2. 后续 integration 接入评分表单时使用 `POST /api/ratings`。
 
 ## 记录规则
