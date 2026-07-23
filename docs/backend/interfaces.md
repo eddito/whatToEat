@@ -183,6 +183,48 @@ async function getListStats(slug: string): Promise<PublicListStats | null>;
 
 ## Route Handlers
 
+### `GET /api/admin/summary`
+
+用途：登录小队成员读取后台概览数据。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 小队成员可读取店铺数、榜单数、评分数、成员数和成员列表。
+
+响应：
+
+```ts
+type AdminSummaryResponse = {
+  team: {
+    name: string;
+    slug: string;
+  };
+  currentUser: {
+    role: "owner" | "member" | "viewer";
+    name: string;
+  };
+  stats: {
+    places: number;
+    lists: number;
+    ratings: number;
+    members: number;
+  };
+  members: Array<{
+    name: string;
+    role: "owner" | "member" | "viewer";
+    joinedAt: string;
+  }>;
+};
+```
+
 ### `POST /api/ratings`
 
 用途：登录用户在店铺详情页提交或更新自己的评分。

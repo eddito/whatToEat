@@ -925,6 +925,99 @@ button {
   gap: 14px;
 }
 
+.admin-grid.four {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.admin-overview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  padding: 20px;
+}
+
+.admin-role-badge {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.admin-role-badge.role-owner,
+.admin-role-badge.role-member {
+  border-color: rgba(34, 116, 90, 0.3);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.admin-metric {
+  align-content: start;
+  min-height: 128px;
+}
+
+.admin-state-panel {
+  justify-items: start;
+  max-width: 520px;
+}
+
+.admin-state-panel > svg {
+  color: var(--red);
+}
+
+.section-header.tight {
+  align-items: start;
+  margin: 0;
+}
+
+.member-table {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 96px;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 14px;
+}
+
+.member-row:last-child {
+  border-bottom: 0;
+}
+
+.member-row.header {
+  background: var(--bg-soft);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.member-row strong,
+.member-row small {
+  display: block;
+}
+
+.member-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
 .task-list {
   display: grid;
   gap: 10px;
@@ -989,7 +1082,8 @@ button {
 
   .grid,
   .list-grid,
-  .admin-grid {
+  .admin-grid,
+  .admin-grid.four {
     grid-template-columns: 1fr;
   }
 
@@ -1116,6 +1210,19 @@ button {
   .task-list li span:last-of-type,
   .task-status {
     grid-column: 2;
+  }
+
+  .admin-overview {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .member-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .member-row.header {
+    display: none;
   }
 }
 
