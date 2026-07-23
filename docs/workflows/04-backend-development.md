@@ -24,7 +24,8 @@
 | B3 | 公开浏览读取层 | 已完成 | `getLists/getList/getPlacesByList/getPlace/getMapPlaces/getListStats` |
 | B4 | username 业务身份模型 | 已完成 | `profiles.username` 和创建用户脚本 |
 | B5 | 认证与评分 | 已完成 | 登录、bearer token、评分写入、权限 smoke |
-| B6 | 后台写入接口 | 进行中 | 店铺新增/编辑、软归档和榜单新增/编辑接口已实现 |
+| B6 | 后台写入接口 | 已完成 | 店铺新增/编辑、软归档和榜单新增/编辑接口已实现 |
+| B7 | 成员管理接口 | 已完成 | owner-only 成员添加、角色调整和移除接口已实现 |
 
 ## 任务进度表
 
@@ -51,6 +52,7 @@
 | BE-019 | 实现后台店铺新增/编辑接口 | 已完成 | `POST /api/admin/places`、`upsertAdminPlace` | member 写入 200，external 403，未登录 401 |
 | BE-020 | 实现后台榜单新增/编辑接口 | 已完成 | `POST /api/admin/lists`、`upsertAdminList` | member 写入 200，external 403，未登录 401 |
 | BE-021 | 实现后台店铺软归档接口 | 已完成 | `POST /api/admin/places/archive`、`places.archived_at` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| BE-022 | 实现后台成员管理接口 | 已完成 | `POST /api/admin/members`、`DELETE /api/admin/members`、`src/server/teams/service.ts` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 
 ## 完成记录
 
@@ -73,6 +75,8 @@
 | 2026-07-23 | 远端后台榜单写入测试 | Supabase `lists` | `admin-smoke-list` 已写入/更新到 `what-to-eat` |
 | 2026-07-23 | 实现后台店铺软归档接口 | `supabase/schema.sql`、`src/app/api/admin/places/archive/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-07-23 | 远端后台店铺归档验证 | Supabase `places.archived_at` | `admin-smoke-place` 归档返回 200、恢复返回 200、external 403、未登录 401；最终已恢复 |
+| 2026-07-23 | 实现后台成员管理接口 | `src/app/api/admin/members/route.ts`、`src/server/teams/repository.ts`、`src/server/teams/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| 2026-07-23 | 远端后台成员管理验证 | Supabase `profiles`、`team_members` | `test_owner` 创建并绑定为 `what-to-eat` owner；`test_member_target` 创建为无小队用户；owner 添加/移除 target 返回 200，member 添加返回 403，未登录添加返回 401；target 最终已移除 |
 
 ## 当前数据库快照
 
@@ -84,13 +88,13 @@
 | `list_places` | 78+ | 店铺和榜单关联，包含后台接口 smoke 测试关联 |
 | `ratings` | 60+ | 初始评分和测试评分 |
 | `import_batches` | 1 | 初始导入批次 |
-| `profiles` | 2+ | `test_user`、`test_external` 等测试账号 |
-| `team_members` | 1+ | 默认小队成员 |
+| `profiles` | 4+ | `test_user`、`test_external`、`test_owner`、`test_member_target` 等测试账号 |
+| `team_members` | 2+ | 默认小队成员和 `test_owner` owner |
 
 ## 下一步
 
-1. 后续 integration 接入后台表单时使用 `POST /api/admin/places`、`POST /api/admin/places/archive` 和 `POST /api/admin/lists`。
-2. 继续补成员管理能力。
+1. 后续 integration 接入后台表单时使用 `POST /api/admin/places`、`POST /api/admin/places/archive`、`POST /api/admin/lists`、`POST /api/admin/members` 和 `DELETE /api/admin/members`。
+2. 继续补导入脚本的增量导入/回滚能力。
 
 ## 记录规则
 

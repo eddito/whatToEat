@@ -88,6 +88,17 @@ Username 规则：
 
 权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
 
+### 成员管理
+
+路径：`src/server/teams/service.ts`
+
+| 函数 | 说明 |
+| --- | --- |
+| `upsertAdminMember(input)` | owner 添加成员或修改成员角色 |
+| `removeAdminMember(input)` | owner 移除成员 |
+
+权限：调用用户必须是目标小队的 `owner`。为避免误操作，owner 不能移除自己，也不能把自己的角色改成非 owner。
+
 ## HTTP 接口
 
 ### `POST /api/auth/login`
@@ -284,6 +295,108 @@ type UpsertAdminListResponse = {
 | 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
 | 404 | `team_not_found` | 创建榜单时目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/members`
+
+路径：`src/app/api/admin/members/route.ts`
+
+用途：owner 添加小队成员或修改成员角色。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type UpsertAdminMemberRequest = {
+  username: string;
+  role: "owner" | "member" | "viewer";
+  teamSlug?: string;
+};
+```
+
+说明：
+- `username` 必须已存在于 `profiles`。
+- `teamSlug` 默认 `what-to-eat`。
+- 调用用户必须是目标小队 `owner`。
+- owner 不能把自己的角色改成非 owner。
+
+成功响应：
+```ts
+type UpsertAdminMemberResponse = {
+  ok: true;
+  member: {
+    username: string;
+    userId: string;
+    role: "owner" | "member" | "viewer";
+    teamSlug: string;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 400 | `invalid_username` | username 格式不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 403 | `self_role_change_not_allowed` | owner 试图把自己的角色改成非 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 404 | `profile_not_found` | 目标 username 不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `DELETE /api/admin/members`
+
+路径：`src/app/api/admin/members/route.ts`
+
+用途：owner 移除小队成员。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type RemoveAdminMemberRequest = {
+  username: string;
+  teamSlug?: string;
+};
+```
+
+说明：
+- `teamSlug` 默认 `what-to-eat`。
+- 调用用户必须是目标小队 `owner`。
+- owner 不能移除自己。
+
+成功响应：
+```ts
+type RemoveAdminMemberResponse = {
+  ok: true;
+  member: {
+    username: string;
+    userId: string;
+    role: null;
+    teamSlug: string;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 400 | `invalid_username` | username 格式不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 403 | `self_remove_not_allowed` | owner 试图移除自己 |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 404 | `profile_not_found` | 目标 username 不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `POST /api/admin/places/archive`

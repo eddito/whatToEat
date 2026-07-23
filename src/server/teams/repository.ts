@@ -8,6 +8,12 @@ export type TeamMembership = {
   role: TeamRole;
 };
 
+export type TeamMemberRecord = {
+  team_id: string;
+  user_id: string;
+  role: TeamRole;
+};
+
 export type TeamRecord = {
   id: string;
   slug: string | null;
@@ -46,6 +52,51 @@ export async function getTeamMembership(teamId: string, userId: string): Promise
   return data as TeamMembership | null;
 }
 
+export async function upsertTeamMember(input: {
+  teamId: string;
+  userId: string;
+  role: TeamRole;
+}): Promise<TeamMemberRecord> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("team_members")
+    .upsert(
+      {
+        team_id: input.teamId,
+        user_id: input.userId,
+        role: input.role,
+      },
+      {
+        onConflict: "team_id,user_id",
+      },
+    )
+    .select("team_id, user_id, role")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as TeamMemberRecord;
+}
+
+export async function deleteTeamMember(input: { teamId: string; userId: string }) {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("team_members")
+    .delete()
+    .eq("team_id", input.teamId)
+    .eq("user_id", input.userId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export function canManageTeamContent(role: TeamRole | null | undefined) {
   return role === "owner" || role === "member";
+}
+
+export function canManageTeamMembers(role: TeamRole | null | undefined) {
+  return role === "owner";
 }
