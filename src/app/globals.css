@@ -700,15 +700,28 @@ button {
 }
 
 .field input,
-.field select {
+.field select,
+.field textarea {
   width: 100%;
-  min-height: 46px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface-strong);
   color: var(--ink);
-  padding: 0 12px;
   box-shadow: var(--shadow-sm);
+  font: inherit;
+}
+
+.field input,
+.field select {
+  min-height: 46px;
+  padding: 0 12px;
+}
+
+.field textarea {
+  min-height: 74px;
+  resize: vertical;
+  padding: 10px 12px;
+  line-height: 1.5;
 }
 
 .field input::placeholder {
@@ -1045,6 +1058,151 @@ button {
   overflow-wrap: anywhere;
 }
 
+.admin-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.admin-place-editor {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-place-list {
+  display: grid;
+  gap: 8px;
+  max-height: 720px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.admin-place-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px;
+  text-align: left;
+}
+
+.admin-place-row.active {
+  border-color: rgba(220, 38, 38, 0.34);
+  background: var(--red-soft);
+}
+
+.admin-place-row strong,
+.admin-place-row small {
+  display: block;
+}
+
+.admin-place-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-status-pill {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-status-pill.visited {
+  border-color: rgba(34, 116, 90, 0.3);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.admin-edit-form {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-edit-form fieldset {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
+}
+
+.admin-edit-form legend {
+  margin-bottom: 4px;
+  padding: 0;
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.admin-edit-form fieldset:disabled {
+  opacity: 0.68;
+}
+
+.admin-edit-form fieldset:disabled input,
+.admin-edit-form fieldset:disabled textarea {
+  cursor: not-allowed;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.admin-checkbox-field {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink);
+  font-weight: 760;
+}
+
+.admin-checkbox-field input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--red);
+}
+
+.admin-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.admin-inline-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.admin-inline-message.error {
+  color: var(--red);
+}
+
+.admin-inline-message.success {
+  color: var(--green);
+}
+
 .task-list {
   display: grid;
   gap: 10px;
@@ -1250,6 +1408,16 @@ button {
 
   .member-row.header {
     display: none;
+  }
+
+  .admin-place-editor,
+  .admin-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-footer {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 
@@ -1752,7 +1920,8 @@ body {
 .sort-badge,
 .filter-chip,
 .field input,
-.field select {
+.field select,
+.field textarea {
   border-radius: 6px;
 }
 

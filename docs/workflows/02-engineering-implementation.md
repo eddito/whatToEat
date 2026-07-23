@@ -218,7 +218,7 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [x] 实现基于种子数据的公开浏览。
 - [x] 实现登录入口页面骨架。
 - [x] 实现公开页面 Supabase 读取适配和 seed fallback。
-- [ ] 实现小队和成员管理。（已完成成员后台概览；成员邀请和角色管理待完善）
+- [ ] 实现小队和成员管理。（已完成成员后台概览和店铺资料维护首片；成员邀请和角色管理待完善）
 - [ ] 实现榜单权限。
 - [ ] 实现评分和混合总分。（已完成登录用户评分写入、我的评分预填、外部评分统计和混合总分联动；评分历史和删除待完善）
 - [x] 生成 Excel 种子数据和导入说明。
@@ -282,3 +282,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-07-16 | 补齐外部评分统计、混合分计算和混合分排序展示 | Codex | 评分展示、榜单排序 |
 | 2026-07-23 | 接入小队成员后台概览和 `/api/admin/summary` 权限接口 | Codex | 后台入口、成员权限校验 |
 | 2026-07-23 | 补齐 `/api/ratings` 我的评分查询和评分表单预填更新状态 | Codex | 评分体验、前后端联调 |
+| 2026-07-23 | 接入后台店铺维护列表和 `/api/admin/places` 店铺资料更新接口 | Codex | 小队成员数据维护 |

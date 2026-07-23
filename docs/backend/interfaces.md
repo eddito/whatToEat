@@ -225,6 +225,88 @@ type AdminSummaryResponse = {
 };
 ```
 
+### `GET /api/admin/places`
+
+用途：登录小队成员读取后台店铺维护列表。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+查询参数：
+
+```txt
+q=<可选，按店名、类型或地区搜索>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 小队成员可读取最多 24 条店铺维护记录。
+
+响应：
+
+```ts
+type AdminPlacesResponse = {
+  places: Array<{
+    id: string; // places.import_key 或 UUID
+    databaseId: string;
+    name: string;
+    category: string;
+    tasteTags: string[];
+    signatureDishes: string;
+    review: string;
+    region: string;
+    locationLabel: string;
+    parkingNote: string;
+    sourceLabel: string;
+    visited: boolean;
+    geocodeStatus: string;
+    updatedAt: string;
+  }>;
+  canEdit: boolean;
+};
+```
+
+### `PATCH /api/admin/places`
+
+用途：小队 `owner` / `member` 更新一条店铺基础资料。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+Content-Type: application/json
+```
+
+请求体：
+
+```ts
+type AdminPlaceUpdateRequest = {
+  placeId: string; // places.import_key 或 UUID
+  name: string;
+  category?: string;
+  tasteTags?: string[];
+  signatureDishes?: string;
+  review?: string;
+  region?: string;
+  locationLabel?: string;
+  parkingNote?: string;
+  sourceLabel?: string;
+  visited?: boolean;
+};
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- `viewer` 返回 `403`。
+- 只能更新当前小队名下的店铺。
+
 ### `GET /api/ratings`
 
 用途：登录用户在店铺详情页读取自己对当前店铺的已有评分，用于表单预填。
