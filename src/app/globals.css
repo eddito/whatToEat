@@ -1065,6 +1065,79 @@ button {
   gap: 10px;
 }
 
+.admin-list-permissions {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.admin-list-selector {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-list-row {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 10px;
+  text-align: left;
+}
+
+.admin-list-row.active {
+  border-color: rgba(220, 38, 38, 0.34);
+  background: var(--red-soft);
+}
+
+.admin-list-row strong,
+.admin-list-row small {
+  display: block;
+}
+
+.admin-list-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-visibility-pill {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.admin-visibility-pill.visibility-private {
+  border-color: rgba(50, 18, 15, 0.2);
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+
+.admin-visibility-pill.visibility-public_view {
+  border-color: rgba(35, 95, 149, 0.28);
+  background: #e8f1fa;
+  color: var(--blue);
+}
+
+.admin-visibility-pill.visibility-public_rate {
+  border-color: rgba(34, 116, 90, 0.3);
+  background: var(--green-soft);
+  color: var(--green);
+}
+
 .admin-place-editor {
   display: grid;
   grid-template-columns: minmax(260px, 0.42fr) minmax(0, 1fr);
@@ -1179,6 +1252,38 @@ button {
   width: 18px;
   height: 18px;
   accent-color: var(--red);
+}
+
+.admin-permission-preview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.admin-permission-preview > div {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.admin-permission-preview strong,
+.admin-permission-preview p {
+  grid-column: 2;
+}
+
+.admin-permission-preview strong {
+  font-size: 14px;
+}
+
+.admin-permission-preview p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .admin-form-footer {
@@ -1410,8 +1515,10 @@ button {
     display: none;
   }
 
+  .admin-list-permissions,
   .admin-place-editor,
-  .admin-form-grid {
+  .admin-form-grid,
+  .admin-permission-preview {
     grid-template-columns: 1fr;
   }
 

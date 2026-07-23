@@ -96,3 +96,7 @@ export async function getAdminContext(request: Request): Promise<AdminContext> {
 export function canEditTeamData(role: AdminRole) {
   return role === "owner" || role === "member";
 }
+
+export function canManageListPermissions(role: AdminRole) {
+  return role === "owner";
+}

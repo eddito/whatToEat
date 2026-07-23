@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Database,
+  Eye,
   ListChecks,
   LockKeyhole,
   Pencil,
@@ -11,6 +12,7 @@ import {
   ShieldCheck,
   Star,
   Store,
+  UserRoundCheck,
   UsersRound,
 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
@@ -64,6 +66,31 @@ type AdminPlacesResponse = {
   error?: string;
 };
 
+type ListVisibility = "private" | "public_view" | "public_rate";
+
+type AdminList = {
+  id: string;
+  databaseId: string;
+  slug: string;
+  name: string;
+  description: string;
+  visibility: ListVisibility;
+  placeCount: number;
+  createdAt: string;
+};
+
+type AdminListsResponse = {
+  lists?: AdminList[];
+  canManage?: boolean;
+  error?: string;
+};
+
+type ListFormState = {
+  name: string;
+  description: string;
+  visibility: ListVisibility;
+};
+
 type PlaceFormState = {
   name: string;
   category: string;
@@ -81,6 +108,18 @@ const roleLabels = {
   owner: "Owner",
   member: "Member",
   viewer: "Viewer",
+};
+
+const visibilityLabels: Record<ListVisibility, string> = {
+  private: "私密",
+  public_view: "公开查看",
+  public_rate: "开放评分",
+};
+
+const visibilityNotes: Record<ListVisibility, string> = {
+  private: "仅小队成员可见。",
+  public_view: "外部访客可查看，登录外部用户不可评分。",
+  public_rate: "外部访客可查看，登录外部用户可评分。",
 };
 
 const emptyPlaceForm: PlaceFormState = {
@@ -133,6 +172,235 @@ function parseTasteTags(value: string) {
     .map((tag) => tag.trim())
     .filter(Boolean)
     .slice(0, 12);
+}
+
+function toListForm(list: AdminList): ListFormState {
+  return {
+    name: list.name,
+    description: list.description,
+    visibility: list.visibility,
+  };
+}
+
+function AdminListPermissions({ token, canManage }: { token: string; canManage: boolean }) {
+  const [lists, setLists] = useState<AdminList[]>([]);
+  const [selectedList, setSelectedList] = useState<AdminList | null>(null);
+  const [form, setForm] = useState<ListFormState>({ name: "", description: "", visibility: "public_rate" });
+  const [loadState, setLoadState] = useState<RequestState>("loading");
+  const [saveState, setSaveState] = useState<RequestState>("idle");
+  const [message, setMessage] = useState("");
+
+  async function loadLists() {
+    setLoadState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/lists", {
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json().catch(() => null)) as AdminListsResponse | null;
+
+    if (!response.ok) {
+      setLoadState("error");
+      setMessage(result?.error ?? "榜单权限加载失败。");
+      return;
+    }
+
+    const nextLists = result?.lists ?? [];
+    setLists(nextLists);
+    setLoadState("success");
+
+    if (nextLists.length === 0) {
+      setSelectedList(null);
+      setForm({ name: "", description: "", visibility: "public_rate" });
+      setMessage("暂无榜单。");
+      return;
+    }
+
+    const nextSelected = selectedList
+      ? nextLists.find((list) => list.id === selectedList.id) ?? nextLists[0]
+      : nextLists[0];
+    setSelectedList(nextSelected);
+    setForm(toListForm(nextSelected));
+  }
+
+  useEffect(() => {
+    void loadLists();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  function selectList(list: AdminList) {
+    setSelectedList(list);
+    setForm(toListForm(list));
+    setSaveState("idle");
+    setMessage("");
+  }
+
+  async function handleSave(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!selectedList || !canManage) {
+      return;
+    }
+
+    setSaveState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/lists", {
+      method: "PATCH",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        listId: selectedList.id,
+        name: form.name,
+        description: form.description,
+        visibility: form.visibility,
+      }),
+    });
+    const result = (await response.json().catch(() => null)) as { error?: string; message?: string; list?: AdminList } | null;
+
+    if (!response.ok || !result?.list) {
+      setSaveState("error");
+      setMessage(result?.error ?? "榜单权限保存失败。");
+      return;
+    }
+
+    setSaveState("success");
+    setMessage(result.message ?? "榜单权限已保存。");
+    setSelectedList(result.list);
+    setForm(toListForm(result.list));
+    setLists((current) => current.map((list) => (list.id === result.list?.id ? result.list : list)));
+  }
+
+  const isBusy = loadState === "loading" || saveState === "loading";
+
+  return (
+    <section className="container section">
+      <div className="admin-panel">
+        <div className="section-header tight">
+          <div>
+            <h2 className="section-title">榜单权限</h2>
+            <p className="section-note">控制榜单是否公开、是否允许外部登录用户评分。</p>
+          </div>
+          <span className={canManage ? "admin-role-badge role-owner" : "admin-role-badge"}>
+            <ShieldCheck aria-hidden="true" size={14} />
+            {canManage ? "Owner 可管理" : "只读"}
+          </span>
+        </div>
+
+        <div className="admin-list-permissions">
+          <div className="admin-list-selector" aria-label="榜单列表">
+            {loadState === "loading" ? (
+              <p className="section-note">正在加载榜单...</p>
+            ) : lists.length === 0 ? (
+              <p className="section-note">暂无榜单。</p>
+            ) : (
+              lists.map((list) => (
+                <button
+                  aria-pressed={selectedList?.id === list.id}
+                  className={selectedList?.id === list.id ? "admin-list-row active" : "admin-list-row"}
+                  key={list.id}
+                  onClick={() => selectList(list)}
+                  type="button"
+                >
+                  <span className="task-icon">
+                    <ListChecks aria-hidden="true" size={16} />
+                  </span>
+                  <span>
+                    <strong>{list.name}</strong>
+                    <small>{list.placeCount} 家店铺</small>
+                  </span>
+                  <span className={`admin-visibility-pill visibility-${list.visibility}`}>
+                    {visibilityLabels[list.visibility]}
+                  </span>
+                </button>
+              ))
+            )}
+          </div>
+
+          <form className="admin-edit-form" onSubmit={handleSave}>
+            <fieldset disabled={!selectedList || !canManage || isBusy}>
+              <legend>{selectedList ? selectedList.name : "选择榜单"}</legend>
+
+              <div className="admin-form-grid">
+                <label className="field">
+                  <span>榜单名称</span>
+                  <input
+                    maxLength={40}
+                    onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+                    required
+                    value={form.name}
+                  />
+                </label>
+                <label className="field">
+                  <span>公开状态</span>
+                  <select
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, visibility: event.target.value as ListVisibility }))
+                    }
+                    value={form.visibility}
+                  >
+                    <option value="private">私密</option>
+                    <option value="public_view">公开查看</option>
+                    <option value="public_rate">开放评分</option>
+                  </select>
+                </label>
+              </div>
+
+              <label className="field">
+                <span>说明</span>
+                <textarea
+                  maxLength={200}
+                  onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
+                  rows={3}
+                  value={form.description}
+                />
+              </label>
+            </fieldset>
+
+            <div className="admin-permission-preview">
+              <div>
+                <span className="task-icon">
+                  <Eye aria-hidden="true" size={16} />
+                </span>
+                <strong>{visibilityLabels[form.visibility]}</strong>
+                <p>{visibilityNotes[form.visibility]}</p>
+              </div>
+              <div>
+                <span className="task-icon">
+                  <UserRoundCheck aria-hidden="true" size={16} />
+                </span>
+                <strong>{canManage ? "可保存变更" : "需要 Owner"}</strong>
+                <p>{canManage ? "保存后公开页和评分权限会立即按新状态生效。" : "当前角色只能查看榜单权限。"}</p>
+              </div>
+            </div>
+
+            <div className="admin-form-footer">
+              <p
+                aria-live="polite"
+                className={
+                  saveState === "error" || loadState === "error"
+                    ? "admin-inline-message error"
+                    : saveState === "success"
+                      ? "admin-inline-message success"
+                      : "admin-inline-message"
+                }
+              >
+                {message || (selectedList ? `创建于 ${formatDate(selectedList.createdAt)}` : "请选择一条榜单。")}
+              </p>
+              <button className="button auth-submit" disabled={!selectedList || !canManage || isBusy} type="submit">
+                <Save aria-hidden="true" size={16} />
+                {saveState === "loading" ? "保存中..." : "保存权限"}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boolean }) {
@@ -565,6 +833,8 @@ export function AdminDashboard() {
           })}
         </div>
       </section>
+
+      {token ? <AdminListPermissions canManage={summary.currentUser.role === "owner"} token={token} /> : null}
 
       {token ? <AdminPlaceMaintenance canEdit={summary.currentUser.role !== "viewer"} token={token} /> : null}
 

@@ -225,6 +225,69 @@ type AdminSummaryResponse = {
 };
 ```
 
+### `GET /api/admin/lists`
+
+用途：登录小队成员读取后台榜单权限列表。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 小队成员可读取榜单名称、说明、公开状态和店铺数。
+
+响应：
+
+```ts
+type AdminListsResponse = {
+  lists: Array<{
+    id: string; // lists.slug
+    databaseId: string;
+    slug: string;
+    name: string;
+    description: string;
+    visibility: "private" | "public_view" | "public_rate";
+    placeCount: number;
+    createdAt: string;
+  }>;
+  canManage: boolean;
+};
+```
+
+### `PATCH /api/admin/lists`
+
+用途：小队 `owner` 更新榜单名称、说明和公开权限。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+Content-Type: application/json
+```
+
+请求体：
+
+```ts
+type AdminListUpdateRequest = {
+  listId: string; // lists.slug 或 UUID
+  name: string;
+  description?: string;
+  visibility: "private" | "public_view" | "public_rate";
+};
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 只有 `owner` 可以更新榜单权限，`member` / `viewer` 返回 `403`。
+- 只能更新当前小队名下的榜单。
+
 ### `GET /api/admin/places`
 
 用途：登录小队成员读取后台店铺维护列表。
