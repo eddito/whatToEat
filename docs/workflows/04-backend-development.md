@@ -10,7 +10,7 @@
 
 ## 后端边界
 
-- 后端代码范围：`supabase/**`、`src/server/**`、`scripts/**`、后端文档。
+- 后端代码范围：`supabase/**`、`src/server/**`、`src/app/api/**`、`scripts/**`、后端文档。
 - 页面和 UI 组件由前端或 integration 分支接入。
 - 认证产品形态：`username + password`，不做免密登录、magic link、OTP。
 
@@ -23,7 +23,8 @@
 | B2 | 初始数据导入 | 已完成 | seed 脚本和初始数据导入能力 |
 | B3 | 公开浏览读取层 | 已完成 | `getLists/getList/getPlacesByList/getPlace/getMapPlaces/getListStats` |
 | B4 | username 业务身份模型 | 已完成 | `profiles.username` 和创建用户脚本 |
-| B5 | 认证、评分、后台写入 | 进行中 | username 登录接口已实现；权限校验、写入接口待实现 |
+| B5 | 认证与评分 | 已完成 | 登录、bearer token、评分写入、权限 smoke |
+| B6 | 后台写入接口 | 进行中 | 店铺新增/编辑接口已实现，榜单管理待实现 |
 
 ## 任务进度表
 
@@ -37,16 +38,17 @@
 | BE-006 | 新增 Supabase server admin client | 已完成 | `src/server/env.ts`、`src/server/supabase/admin.ts` | `tsc --noEmit` |
 | BE-007 | 新增公开浏览 repository | 已完成 | `src/server/places/repository.ts` | `tsc --noEmit` |
 | BE-008 | 新增公开浏览 service 契约 | 已完成 | `src/server/places/service.ts` | `tsc --noEmit` |
-| BE-009 | 建立后端接口文档 | 已完成 | `docs/backend/interfaces.md` | 已记录公开浏览契约 |
+| BE-009 | 建立后端接口文档 | 已完成 | `docs/backend/interfaces.md` | 文档已更新 |
 | BE-010 | 后端切片构建验证 | 已完成 | `pnpm typecheck`、`pnpm build` | `node --check`、`tsc --noEmit`、`next build` 通过 |
 | BE-011 | 增加 username 业务身份模型 | 已完成 | `profiles.username`、username 约束、触发器更新 | `tsc --noEmit`、`next build` |
 | BE-012 | 增加 username 创建用户脚本 | 已完成 | `scripts/create-auth-user.mjs`、`pnpm auth:create-user` | `node --check` |
 | BE-013 | 创建测试登录账号 | 已完成 | `test_user` member 账号 | `pnpm auth:create-user` 成功 |
-| BE-014 | 实现 username/password 登录接口 | 已完成 | `POST /api/auth/login`、`src/server/auth/**` | `test_user` 登录 200，错误密码/非法 username 返回 401 |
+| BE-014 | 实现 username/password 登录接口 | 已完成 | `POST /api/auth/login`、`src/server/auth/**` | 登录 smoke 通过 |
 | BE-015 | 实现 bearer token 解析 | 已完成 | `src/server/auth/session.ts` | 未带 token 返回 401 |
-| BE-016 | 实现评分写入接口 | 已完成 | `POST /api/ratings`、`src/server/ratings/**` | `test_user` 写入 `red-list-1` 评分成功 |
+| BE-016 | 实现评分写入接口 | 已完成 | `POST /api/ratings`、`src/server/ratings/**` | 评分 smoke 通过 |
 | BE-017 | 创建外部测试账号 | 已完成 | `test_external` 无小队账号 | `pnpm auth:create-user -- --no-team` 成功 |
 | BE-018 | 新增登录和评分权限 smoke 脚本 | 已完成 | `scripts/smoke-auth-ratings.mjs`、`pnpm smoke:auth-ratings` | member/external/401/403 路径通过 |
+| BE-019 | 实现后台店铺新增/编辑接口 | 已完成 | `POST /api/admin/places`、`upsertAdminPlace` | member 写入 200，external 403，未登录 401 |
 
 ## 完成记录
 
@@ -63,6 +65,8 @@
 | 2026-07-16 | 远端测试评分写入 | Supabase `ratings` | `test_user` 对 `red-list-1` 写入/更新 `team_member` 评分 `4.2` |
 | 2026-07-23 | 创建外部测试账号并补权限 smoke 脚本 | `scripts/create-auth-user.mjs`、`scripts/smoke-auth-ratings.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
 | 2026-07-23 | 远端权限测试评分写入 | Supabase `ratings` | `test_user` 更新 `team_member` 评分；`test_external` 写入/更新 `external` 评分 |
+| 2026-07-23 | 实现后台店铺新增/编辑接口 | `src/app/api/admin/places/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`src/server/teams/repository.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、API smoke test 通过 |
+| 2026-07-23 | 远端后台店铺写入测试 | Supabase `places`、`list_places` | `admin-smoke-place` 已写入/更新并关联 `red-list` |
 
 ## 当前数据库快照
 
@@ -70,17 +74,17 @@
 | --- | ---: | --- |
 | `teams` | 1 | 默认探店小队 |
 | `lists` | 2 | 红榜、再练练 |
-| `places` | 77 | 初始店铺数据 |
-| `list_places` | 77 | 店铺和榜单关联 |
-| `ratings` | 60 | 已有成员评分 |
+| `places` | 78+ | 初始店铺数据和后台接口 smoke 测试店 |
+| `list_places` | 78+ | 店铺和榜单关联，包含后台接口 smoke 测试关联 |
+| `ratings` | 60+ | 初始评分和测试评分 |
 | `import_batches` | 1 | 初始导入批次 |
-| `profiles` | 1 | Auth 用户资料，业务身份改为 username |
-| `team_members` | 1 | 初始 owner 成员 |
+| `profiles` | 2+ | `test_user`、`test_external` 等测试账号 |
+| `team_members` | 1+ | 默认小队成员 |
 
 ## 下一步
 
-1. 继续补后台店铺/榜单写入接口。
-2. 后续 integration 接入评分表单时使用 `POST /api/ratings`。
+1. 继续补后台榜单管理接口。
+2. 后续 integration 接入后台表单时使用 `POST /api/admin/places`。
 
 ## 记录规则
 

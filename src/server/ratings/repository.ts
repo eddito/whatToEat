@@ -13,10 +13,6 @@ export type RatingTarget = {
   }>;
 };
 
-export type TeamMembership = {
-  role: "owner" | "member" | "viewer";
-};
-
 export type RatingRecord = {
   id: string;
   source: RatingSource;
@@ -68,22 +64,6 @@ export async function getRatingTarget(stablePlaceId: string): Promise<RatingTarg
     teamId: place.team_id,
     publicLists,
   };
-}
-
-export async function getTeamMembership(teamId: string, userId: string): Promise<TeamMembership | null> {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as TeamMembership | null;
 }
 
 export async function upsertUserRating(input: {

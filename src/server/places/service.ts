@@ -1,18 +1,25 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
+  getListBySlug,
   getPlacesForPublicListId,
   getPublicListBySlug,
   getPublicLists,
   getPublicListsForPlace,
+  getPlaceByStableId,
   getPublicPlaceByStableId,
   getRatingsForPlaces,
+  isUuid,
   type ListVisibility,
   type PlaceRecord,
   type PublicListRecord,
   type RatingRecord,
+  upsertListPlace,
+  upsertPlaceRecord,
 } from "@/server/places/repository";
+import { canManageTeamContent, getTeamMembership } from "@/server/teams/repository";
 
 export type PublicListStats = {
   count: number;
@@ -57,6 +64,35 @@ export type PublicMapPlace = {
   longitude?: number;
   latitude?: number;
 };
+
+export type UpsertAdminPlaceInput = {
+  userId: string;
+  id?: string;
+  listSlug: string;
+  importKey?: string;
+  name: string;
+  category?: string | null;
+  tasteTags?: string[];
+  signatureDishes?: string | null;
+  review?: string | null;
+  region?: string | null;
+  locationLabel?: string | null;
+  parkingNote?: string | null;
+  sourceLabel?: string | null;
+  visited?: boolean;
+  longitude?: number | null;
+  latitude?: number | null;
+};
+
+export class PlaceWriteError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "list_not_found" | "place_not_found" | "place_team_mismatch" | "not_allowed",
+  ) {
+    super(message);
+    this.name = "PlaceWriteError";
+  }
+}
 
 function getStablePlaceId(place: PlaceRecord) {
   return place.import_key ?? place.id;
@@ -109,6 +145,15 @@ function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: Rati
     longitude: place.longitude ?? undefined,
     latitude: place.latitude ?? undefined,
   };
+}
+
+function optionalText(value: string | null | undefined) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
+function buildImportKey(listSlug: string) {
+  return `${listSlug}-${randomUUID().slice(0, 8)}`;
 }
 
 function getStatsFromPlaces(places: PublicPlace[]): PublicListStats {
@@ -323,4 +368,59 @@ export async function getPublicPlacePageData(id: string) {
   }
 
   return toLegacyPlace(place);
+}
+
+export async function upsertAdminPlace(input: UpsertAdminPlaceInput): Promise<PublicPlace> {
+  const list = await getListBySlug(input.listSlug);
+
+  if (!list) {
+    throw new PlaceWriteError("List not found.", "list_not_found");
+  }
+
+  const membership = await getTeamMembership(list.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot manage places for this list.", "not_allowed");
+  }
+
+  const existingPlace = input.id
+    ? await getPlaceByStableId(input.id)
+    : input.importKey
+      ? await getPlaceByStableId(input.importKey)
+      : null;
+
+  if (input.id && !existingPlace) {
+    throw new PlaceWriteError("Place not found.", "place_not_found");
+  }
+
+  if (existingPlace && existingPlace.team_id !== list.team_id) {
+    throw new PlaceWriteError("Place does not belong to the target list team.", "place_team_mismatch");
+  }
+
+  const importKey = existingPlace?.import_key ?? input.importKey?.trim() ?? (input.id && !isUuid(input.id) ? input.id : buildImportKey(list.slug));
+  const place = await upsertPlaceRecord({
+    id: existingPlace?.id,
+    teamId: list.team_id,
+    importKey,
+    name: input.name.trim(),
+    category: optionalText(input.category),
+    tasteTags: input.tasteTags ?? [],
+    signatureDishes: optionalText(input.signatureDishes),
+    reviewSummary: optionalText(input.review),
+    region: optionalText(input.region),
+    locationLabel: optionalText(input.locationLabel),
+    parkingNote: optionalText(input.parkingNote),
+    sourceLabel: optionalText(input.sourceLabel),
+    visited: input.visited ?? existingPlace?.visited ?? false,
+    longitude: input.longitude ?? null,
+    latitude: input.latitude ?? null,
+    createdBy: input.userId,
+  });
+
+  await upsertListPlace({
+    listId: list.id,
+    placeId: place.id,
+  });
+
+  return toPublicPlace(place, list, await getRatingsForPlaces([place.id]));
 }

@@ -4,7 +4,6 @@
 
 - 状态：进行中
 - 分支：`codex/backend-dev`
-- 当前切片：公开浏览数据读取 + username 业务身份模型
 - 维护规则：新增或修改后端服务、脚本、Route Handler、Server Action 时，同步更新本文档。
 
 ## 后端边界
@@ -14,15 +13,16 @@
 | 数据库 | `supabase/schema.sql` | 表结构、枚举、RLS、触发器 |
 | 数据访问层 | `src/server/**/repository.ts` | 封装 Supabase 查询，返回数据库记录 |
 | 服务层 | `src/server/**/service.ts` | 输出前端/integration 可用的数据契约 |
-| 脚本 | `scripts/*.mjs` | seed、用户初始化等可重复任务 |
+| API | `src/app/api/**` | HTTP 入参校验、认证、响应 |
+| 脚本 | `scripts/*.mjs` | seed、用户初始化、smoke 验证 |
 
-页面和 UI 组件不在本后端切片内改动。
+页面和 UI 组件不在后端切片内改动。
 
 ## 认证模型
 
-业务侧只使用 `username + password`。
+业务侧只使用 `username + password`，不做免密登录、magic link、OTP。
 
-Supabase Auth 底层仍需要一个 email 或 phone 承载 password auth。后端创建用户脚本会自动生成内部占位 email：
+Supabase Auth 底层仍需要 email 或 phone 承载 password auth。后端创建用户脚本会自动生成内部占位 email：
 
 ```txt
 <username>@users.what-to-eat-today.invalid
@@ -30,17 +30,11 @@ Supabase Auth 底层仍需要一个 email 或 phone 承载 password auth。后�
 
 这个 email 是实现细节，不作为产品账号展示，也不写入 `public.profiles`。
 
-### Username 规则
+Username 规则：
 
 ```txt
 ^[a-z][a-z0-9_]{2,31}$
 ```
-
-- 3 到 32 位。
-- 必须以小写字母开头。
-- 只允许小写字母、数字、下划线。
-- 不要求是邮箱。
-- 按大小写不敏感的唯一索引约束。
 
 ## 环境变量
 
@@ -65,23 +59,11 @@ Supabase Auth 底层仍需要一个 email 或 phone 承载 password auth。后�
 | `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
 | `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
 
-`profiles.email` 已从业务表移除。Supabase `auth.users.email` 仍由 Supabase Auth 内部使用。
+`profiles.email` 已从业务表移除。Supabase `auth.users.email` 仅由 Supabase Auth 内部使用。
 
-## RLS 最小闭环
+## 服务层接口
 
-当前公开浏览切片只开放读取，不开放写入。
-
-| 资源 | 未登录用户权限 |
-| --- | --- |
-| `lists` | 可 `select visibility in ('public_view', 'public_rate')` 的榜单 |
-| `places` | 可 `select` 挂在公开榜单下的店铺 |
-| `list_places` | 可 `select` 公开榜单的关联记录 |
-| `ratings` | 可 `select` 公开店铺的评分，用于统计展示 |
-| `photos` | 可 `select` 公开店铺图片 |
-
-私密榜单、写入、成员管理、后台管理策略留到后续切片。
-
-## 公开浏览服务层接口
+### 公开浏览
 
 路径：`src/server/places/service.ts`
 
@@ -94,73 +76,15 @@ Supabase Auth 底层仍需要一个 email 或 phone 承载 password auth。后�
 | `getMapPlaces()` | 获取地图页需要的公开店铺数据 |
 | `getListStats(slug)` | 获取公开榜单统计 |
 
-## 数据访问层接口
+### 店铺管理
 
-路径：`src/server/places/repository.ts`
+路径：`src/server/places/service.ts`
 
 | 函数 | 说明 |
 | --- | --- |
-| `getPublicLists()` | 查询公开榜单原始记录 |
-| `getPublicListBySlug(slug)` | 按 slug 查询公开榜单 |
-| `getPlacesForPublicListId(listId)` | 查询公开榜单下的店铺关联和店铺记录 |
-| `getPublicPlaceByStableId(id)` | 按 `import_key` 或 UUID 查询店铺 |
-| `getPublicListsForPlace(placeId)` | 查询某店铺所属的公开榜单 |
-| `getRatingsForPlaces(placeIds)` | 批量读取评分记录 |
+| `upsertAdminPlace(input)` | owner/member 新增或编辑店铺，并维护榜单关联 |
 
-## 脚本接口
-
-### `pnpm db:seed`
-
-路径：`scripts/seed-supabase.mjs`
-
-用途：创建默认小队、公开榜单、导入初始店铺、榜单关联和已有评分。
-
-### `pnpm auth:create-user`
-
-路径：`scripts/create-auth-user.mjs`
-
-用途：用 `username + password` 创建或更新业务用户。
-
-示例：
-
-```powershell
-pnpm auth:create-user -- --username yang --password "<password>" --display-name "Yang" --role owner
-```
-
-参数：
-
-| 参数 | 必填 | 说明 |
-| --- | --- | --- |
-| `--username` | 是 | 业务账号，必须符合 username 规则 |
-| `--password` | 是 | 密码，至少 8 位 |
-| `--display-name` | 否 | 展示名，默认等于 username |
-| `--role` | 否 | `owner`、`member`、`viewer`，默认 `member` |
-| `--team-slug` | 否 | 默认 `what-to-eat` |
-| `--no-team` | 否 | 创建外部测试用户，不绑定小队 |
-
-输出不会打印密码。
-
-### `pnpm smoke:auth-ratings`
-
-路径：`scripts/smoke-auth-ratings.mjs`
-
-用途：验证后端登录和评分权限闭环。
-
-前置条件：
-- 本地后端服务运行在 `http://127.0.0.1:3101`，或通过 `BACKEND_SMOKE_URL` 指定。
-- 已创建测试账号：
-  - `test_user / TestUser_2026`，小队 `member`
-  - `test_external / TestExternal_2026`，不绑定小队
-
-验证内容：
-- member 登录成功。
-- external 登录成功。
-- 未带 token 调评分接口返回 401。
-- member 给 `red-list-1` 评分写入 `team_member`。
-- external 给 `red-list-1` 评分写入 `external`。
-- external 给 `retry-list-1` 评分返回 403，因为该榜单是 `public_view`。
-
-注意：该脚本会写入/更新远端 Supabase 测试评分。
+权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
 
 ## HTTP 接口
 
@@ -169,12 +93,6 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 路径：`src/app/api/auth/login/route.ts`
 
 用途：使用业务账号 `username + password` 登录。
-
-说明：
-- 不支持免密登录、magic link、OTP。
-- `username` 不要求是邮箱。
-- 服务端内部会把 username 映射到占位 email，再调用 Supabase password auth。
-- 响应返回 Supabase session token，后续需要登录态的接口使用 `Authorization: Bearer <accessToken>`。
 
 请求体：
 
@@ -215,14 +133,6 @@ type LoginResponse = {
 | 401 | `invalid_credentials` | 密码错误或 Supabase Auth 登录失败 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
-测试账号：
-
-```txt
-username: test_user
-password: TestUser_2026
-role: member
-```
-
 ### `POST /api/ratings`
 
 路径：`src/app/api/ratings/route.ts`
@@ -236,10 +146,11 @@ Authorization: Bearer <accessToken>
 ```
 
 权限规则：
+
 - `owner` / `member`：写入 `team_member` 评分。
 - 非成员登录用户：仅当店铺所在榜单包含 `public_rate` 时写入 `external` 评分。
-- `viewer`：不写 `team_member`，如榜单允许 `public_rate`，按 `external` 处理。
-- 数据库 RLS 仍不直接开放客户端写入；写入由服务端验证 token 后使用 server admin client 完成。
+- `viewer`：不写 `team_member`；如榜单允许 `public_rate`，按 `external` 处理。
+- 数据库 RLS 不直接开放客户端写入；写入由服务端验证 token 后使用 server admin client 完成。
 
 请求体：
 
@@ -248,23 +159,6 @@ type UpsertRatingRequest = {
   placeId: string;
   score: number;
   note?: string | null;
-};
-```
-
-成功响应：
-
-```ts
-type UpsertRatingResponse = {
-  ok: true;
-  rating: {
-    id: string;
-    source: "team_member" | "external";
-    score: number;
-    note: string | null;
-    updated_at: string;
-  };
-  source: "team_member" | "external";
-  role: "owner" | "member" | "viewer" | null;
 };
 ```
 
@@ -279,5 +173,103 @@ type UpsertRatingResponse = {
 | 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
-幂等性：
-- 同一用户对同一店铺、同一评分来源再次提交时更新原评分。
+### `POST /api/admin/places`
+
+路径：`src/app/api/admin/places/route.ts`
+
+用途：owner/member 新增或编辑店铺，并挂到指定榜单。
+
+认证：
+
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type UpsertAdminPlaceRequest = {
+  id?: string;
+  listSlug: string;
+  importKey?: string;
+  name: string;
+  category?: string | null;
+  tasteTags?: string[];
+  signatureDishes?: string | null;
+  review?: string | null;
+  region?: string | null;
+  locationLabel?: string | null;
+  parkingNote?: string | null;
+  sourceLabel?: string | null;
+  visited?: boolean;
+  longitude?: number | null;
+  latitude?: number | null;
+};
+```
+
+说明：
+
+- `id` 可传 `places.import_key` 或 UUID；存在时更新店铺。
+- 新增店铺时如果不传 `importKey`，后端自动生成稳定 key。
+- `listSlug` 必须对应已存在榜单。
+- 调用用户必须是该榜单所在小队的 `owner` 或 `member`。
+
+成功响应：
+
+```ts
+type UpsertAdminPlaceResponse = {
+  ok: true;
+  place: PublicPlace;
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `place_team_mismatch` | 店铺不属于目标榜单所在小队 |
+| 404 | `list_not_found` | 榜单不存在 |
+| 404 | `place_not_found` | 指定店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+## 脚本接口
+
+### `pnpm db:seed`
+
+路径：`scripts/seed-supabase.mjs`
+
+用途：创建默认小队、公开榜单、导入初始店铺、榜单关联和已有评分。
+
+### `pnpm auth:create-user`
+
+路径：`scripts/create-auth-user.mjs`
+
+用途：用 `username + password` 创建或更新业务用户。
+
+示例：
+
+```powershell
+pnpm auth:create-user -- --username yang --password "<password>" --display-name "Yang" --role owner
+```
+
+参数：
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `--username` | 是 | 业务账号，必须符合 username 规则 |
+| `--password` | 是 | 密码，至少 8 位 |
+| `--display-name` | 否 | 展示名，默认等于 username |
+| `--role` | 否 | `owner`、`member`、`viewer`，默认 `member` |
+| `--team-slug` | 否 | 默认 `what-to-eat` |
+| `--no-team` | 否 | 创建外部测试用户，不绑定小队 |
+
+输出不会打印密码。
+
+### `pnpm smoke:auth-ratings`
+
+路径：`scripts/smoke-auth-ratings.mjs`
+
+用途：验证后端登录和评分权限闭环。该脚本会写入/更新远端 Supabase 测试评分。

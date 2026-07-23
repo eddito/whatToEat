@@ -2,10 +2,10 @@ import "server-only";
 
 import {
   getRatingTarget,
-  getTeamMembership,
   upsertUserRating,
   type RatingRecord,
 } from "@/server/ratings/repository";
+import { getTeamMembership } from "@/server/teams/repository";
 
 export type UpsertRatingInput = {
   userId: string;
