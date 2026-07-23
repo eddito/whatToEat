@@ -78,6 +78,7 @@ create table if not exists public.places (
   longitude double precision,
   latitude double precision,
   geocode_status text not null default 'pending',
+  archived_at timestamptz,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -126,6 +127,7 @@ create table if not exists public.ratings (
 );
 
 alter table public.places add column if not exists import_key text;
+alter table public.places add column if not exists archived_at timestamptz;
 alter table public.ratings add column if not exists rater_label text;
 
 create unique index if not exists places_team_import_key_idx

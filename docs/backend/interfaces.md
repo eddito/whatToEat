@@ -55,7 +55,7 @@ Username 规则：
 | `teams` | 小队空间 | `id`、`slug`、`name`、`description` |
 | `team_members` | 成员和角色 | `team_id`、`user_id`、`role` |
 | `lists` | 榜单 | `slug`、`name`、`description`、`visibility` |
-| `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段 |
+| `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段、`archived_at` |
 | `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
 | `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
 
@@ -83,6 +83,7 @@ Username 规则：
 | 函数 | 说明 |
 | --- | --- |
 | `upsertAdminPlace(input)` | owner/member 新增或编辑店铺，并维护榜单关联 |
+| `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
 | `upsertAdminList(input)` | owner/member 新增或编辑榜单 |
 
 权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
@@ -283,6 +284,56 @@ type UpsertAdminListResponse = {
 | 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
 | 404 | `team_not_found` | 创建榜单时目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/places/archive`
+
+路径：`src/app/api/admin/places/archive/route.ts`
+
+用途：owner/member 软归档或恢复店铺。
+
+认证：
+
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type ArchiveAdminPlaceRequest = {
+  id: string;
+  archived?: boolean;
+};
+```
+
+说明：
+
+- `id` 可传 `places.import_key` 或 UUID。
+- `archived` 默认为 `true`。
+- 归档会设置 `places.archived_at`；恢复会置空。
+- 公开读取会过滤已归档店铺。
+
+成功响应：
+
+```ts
+type ArchiveAdminPlaceResponse = {
+  ok: true;
+  place: {
+    id: string;
+    archivedAt: string | null;
+  };
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `place_not_found` | 指定店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ## 脚本接口

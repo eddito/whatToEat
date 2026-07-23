@@ -31,6 +31,7 @@ export type PlaceRecord = {
   longitude: number | null;
   latitude: number | null;
   geocode_status: string;
+  archived_at: string | null;
 };
 
 export type ListPlaceRecord = {
@@ -154,7 +155,8 @@ export async function getPlacesForPublicListId(listId: string) {
         visited,
         longitude,
         latitude,
-        geocode_status
+        geocode_status,
+        archived_at
       )
     `,
     )
@@ -171,7 +173,7 @@ export async function getPlacesForPublicListId(listId: string) {
       sort_order: row.sort_order,
       place: Array.isArray(row.places) ? row.places[0] : row.places,
     }))
-    .filter((row) => row.place) as unknown as ListPlaceRecord[];
+    .filter((row) => row.place && !row.place.archived_at) as unknown as ListPlaceRecord[];
 }
 
 export async function getPublicPlaceByStableId(stableId: string) {
@@ -195,7 +197,44 @@ export async function getPublicPlaceByStableId(stableId: string) {
       visited,
       longitude,
       latitude,
-      geocode_status
+      geocode_status,
+      archived_at
+    `,
+    );
+  const { data, error } = isUuid(stableId)
+    ? await query.eq("id", stableId).is("archived_at", null).maybeSingle()
+    : await query.eq("import_key", stableId).is("archived_at", null).maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PlaceRecord | null;
+}
+
+export async function getPlaceByStableId(stableId: string) {
+  const supabase = createSupabaseAdminClient();
+  const query = supabase
+    .from("places")
+    .select(
+      `
+      id,
+      team_id,
+      import_key,
+      name,
+      category,
+      taste_tags,
+      signature_dishes,
+      review_summary,
+      region,
+      location_label,
+      parking_note,
+      source_label,
+      visited,
+      longitude,
+      latitude,
+      geocode_status,
+      archived_at
     `,
     );
   const { data, error } = isUuid(stableId)
@@ -207,10 +246,6 @@ export async function getPublicPlaceByStableId(stableId: string) {
   }
 
   return data as PlaceRecord | null;
-}
-
-export async function getPlaceByStableId(stableId: string) {
-  return getPublicPlaceByStableId(stableId);
 }
 
 export async function upsertPlaceRecord(input: {
@@ -271,7 +306,8 @@ export async function upsertPlaceRecord(input: {
       visited,
       longitude,
       latitude,
-      geocode_status
+      geocode_status,
+      archived_at
     `,
     )
     .single();
@@ -281,6 +317,32 @@ export async function upsertPlaceRecord(input: {
   }
 
   return data as PlaceRecord;
+}
+
+export async function archivePlaceRecord(input: {
+  placeId: string;
+  archived: boolean;
+}) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("places")
+    .update({
+      archived_at: input.archived ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", input.placeId)
+    .select("id, import_key, archived_at")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as {
+    id: string;
+    import_key: string | null;
+    archived_at: string | null;
+  };
 }
 
 export async function upsertListPlace(input: {

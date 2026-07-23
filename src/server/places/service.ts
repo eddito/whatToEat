@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
+  archivePlaceRecord,
   getListBySlug,
   getPlacesForPublicListId,
   getPublicListBySlug,
@@ -94,6 +95,12 @@ export type UpsertAdminListInput = {
   teamSlug?: string;
 };
 
+export type ArchiveAdminPlaceInput = {
+  userId: string;
+  id: string;
+  archived?: boolean;
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
@@ -103,6 +110,11 @@ export class PlaceWriteError extends Error {
     this.name = "PlaceWriteError";
   }
 }
+
+export type ArchiveAdminPlaceResult = {
+  id: string;
+  archivedAt: string | null;
+};
 
 export class ListWriteError extends Error {
   constructor(
@@ -474,5 +486,29 @@ export async function upsertAdminList(input: UpsertAdminListInput): Promise<Publ
   return {
     ...toListBase(list),
     stats: getStatsFromPlaces(places),
+  };
+}
+
+export async function archiveAdminPlace(input: ArchiveAdminPlaceInput): Promise<ArchiveAdminPlaceResult> {
+  const place = await getPlaceByStableId(input.id);
+
+  if (!place) {
+    throw new PlaceWriteError("Place not found.", "place_not_found");
+  }
+
+  const membership = await getTeamMembership(place.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot manage this place.", "not_allowed");
+  }
+
+  const archived = await archivePlaceRecord({
+    placeId: place.id,
+    archived: input.archived ?? true,
+  });
+
+  return {
+    id: archived.import_key ?? archived.id,
+    archivedAt: archived.archived_at,
   };
 }

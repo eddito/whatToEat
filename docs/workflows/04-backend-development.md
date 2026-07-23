@@ -24,7 +24,7 @@
 | B3 | 公开浏览读取层 | 已完成 | `getLists/getList/getPlacesByList/getPlace/getMapPlaces/getListStats` |
 | B4 | username 业务身份模型 | 已完成 | `profiles.username` 和创建用户脚本 |
 | B5 | 认证与评分 | 已完成 | 登录、bearer token、评分写入、权限 smoke |
-| B6 | 后台写入接口 | 进行中 | 店铺新增/编辑和榜单新增/编辑接口已实现 |
+| B6 | 后台写入接口 | 进行中 | 店铺新增/编辑、软归档和榜单新增/编辑接口已实现 |
 
 ## 任务进度表
 
@@ -50,6 +50,7 @@
 | BE-018 | 新增登录和评分权限 smoke 脚本 | 已完成 | `scripts/smoke-auth-ratings.mjs`、`pnpm smoke:auth-ratings` | member/external/401/403 路径通过 |
 | BE-019 | 实现后台店铺新增/编辑接口 | 已完成 | `POST /api/admin/places`、`upsertAdminPlace` | member 写入 200，external 403，未登录 401 |
 | BE-020 | 实现后台榜单新增/编辑接口 | 已完成 | `POST /api/admin/lists`、`upsertAdminList` | member 写入 200，external 403，未登录 401 |
+| BE-021 | 实现后台店铺软归档接口 | 已完成 | `POST /api/admin/places/archive`、`places.archived_at` | `tsc --noEmit`、`next build` 通过；远端 smoke 待执行最新 schema |
 
 ## 完成记录
 
@@ -70,6 +71,7 @@
 | 2026-07-23 | 远端后台店铺写入测试 | Supabase `places`、`list_places` | `admin-smoke-place` 已写入/更新并关联 `red-list` |
 | 2026-07-23 | 实现后台榜单新增/编辑接口 | `src/app/api/admin/lists/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`src/server/teams/repository.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、API smoke test 通过 |
 | 2026-07-23 | 远端后台榜单写入测试 | Supabase `lists` | `admin-smoke-list` 已写入/更新到 `what-to-eat` |
+| 2026-07-23 | 实现后台店铺软归档接口 | `supabase/schema.sql`、`src/app/api/admin/places/archive/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build` 通过；远端需执行最新 schema 后 smoke |
 
 ## 当前数据库快照
 
@@ -86,8 +88,9 @@
 
 ## 下一步
 
-1. 后续 integration 接入后台表单时使用 `POST /api/admin/places` 和 `POST /api/admin/lists`。
-2. 继续补成员管理或归档能力。
+1. 在 Supabase SQL Editor 执行最新 `supabase/schema.sql`，再远端验证 `POST /api/admin/places/archive`。
+2. 后续 integration 接入后台表单时使用 `POST /api/admin/places`、`POST /api/admin/places/archive` 和 `POST /api/admin/lists`。
+3. 继续补成员管理能力。
 
 ## 记录规则
 
