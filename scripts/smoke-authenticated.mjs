@@ -171,6 +171,33 @@ if (samplePlaceId) {
       ["team_member", "external"].includes(rating.json?.source),
       `source=${rating.json?.source ?? "missing"}`,
   );
+
+  const placeLists = await fetchJson(`/api/admin/place-lists?placeId=${encodeURIComponent(samplePlaceId)}`, {
+    headers: authHeaders,
+  });
+  assertCheck("place list assignments status", placeLists.response.status === 200, `status=${placeLists.response.status}`);
+  assertCheck(
+    "place list assignments data",
+    Array.isArray(placeLists.json?.lists) && placeLists.json.lists.length > 0,
+    `count=${placeLists.json?.lists?.length ?? 0}`,
+  );
+
+  const placeListsPatch = await fetchJson("/api/admin/place-lists", {
+    method: "PATCH",
+    headers: {
+      ...authHeaders,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      placeId: samplePlaceId,
+      lists: (placeLists.json?.lists ?? []).map((list) => ({
+        listId: list.id,
+        included: list.included,
+        sortOrder: list.sortOrder,
+      })),
+    }),
+  });
+  assertCheck("place list assignments save", placeListsPatch.response.status === 200, `status=${placeListsPatch.response.status}`);
 }
 
 const ratingHistory = await fetchJson("/api/ratings/me", {

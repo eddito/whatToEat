@@ -1406,6 +1406,80 @@ button {
   accent-color: var(--red);
 }
 
+.admin-place-lists-box {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.admin-place-lists-head {
+  display: grid;
+  gap: 3px;
+}
+
+.admin-place-lists-head strong {
+  font-size: 14px;
+  font-weight: 850;
+}
+
+.admin-place-lists-head p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-place-list-assignments {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-place-list-assignment {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) 86px;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  padding: 8px 10px;
+}
+
+.admin-place-list-assignment input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--red);
+}
+
+.admin-place-list-assignment strong,
+.admin-place-list-assignment small {
+  display: block;
+}
+
+.admin-place-list-assignment strong {
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.admin-place-list-assignment small {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.admin-place-list-assignment input[type="number"] {
+  min-height: 36px;
+  padding: 0 8px;
+}
+
+.admin-place-lists-box .button {
+  width: fit-content;
+}
+
 .admin-photo-uploader {
   display: grid;
   grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
@@ -1719,6 +1793,15 @@ button {
   .admin-permission-preview,
   .admin-photo-uploader {
     grid-template-columns: 1fr;
+  }
+
+  .admin-place-list-assignment {
+    grid-template-columns: 18px minmax(0, 1fr);
+  }
+
+  .admin-place-list-assignment input[type="number"] {
+    grid-column: 2;
+    width: 100%;
   }
 
   .admin-form-footer {

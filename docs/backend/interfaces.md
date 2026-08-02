@@ -541,6 +541,82 @@ type AdminPlaceUpdateRequest = {
 - `viewer` 返回 `403`。
 - 只能更新当前小队名下的店铺。
 
+### `GET /api/admin/place-lists`
+
+用途：登录小队成员读取某家店铺所属榜单和排序值。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+查询参数：
+
+```txt
+placeId=<places.import_key 或 UUID>
+```
+
+响应：
+
+```ts
+type AdminPlaceListsResponse = {
+  place: {
+    id: string;
+    databaseId: string;
+    name: string;
+  };
+  lists: Array<{
+    id: string; // lists.slug
+    databaseId: string;
+    slug: string;
+    name: string;
+    visibility: "private" | "public_view" | "public_rate";
+    included: boolean;
+    sortOrder: number;
+  }>;
+  canEdit: boolean;
+};
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 小队成员可读取当前小队店铺的榜单归属。
+
+### `PATCH /api/admin/place-lists`
+
+用途：小队 `owner` / `member` 保存某家店铺所属榜单和榜单内排序值。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+Content-Type: application/json
+```
+
+请求体：
+
+```ts
+type AdminPlaceListsUpdateRequest = {
+  placeId: string; // places.import_key 或 UUID
+  lists: Array<{
+    listId: string; // lists.slug 或 UUID
+    included: boolean;
+    sortOrder?: number; // 数字越小越靠前
+  }>;
+};
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- `viewer` 返回 `403`。
+- 只能维护当前小队名下的店铺和榜单。
+- 未勾选的榜单关联会被移除；删除关联不会删除店铺。
+
 ### `POST /api/admin/photos`
 
 用途：小队 `owner` / `member` 为店铺上传图片。
@@ -813,7 +889,7 @@ type MyRatingsResponse = {
 
 用途：
 - 使用 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 和临时测试账号验证登录态接口。
-- 检查后台概览、后台成员管理、后台店铺维护、评分读取、评分历史和榜单权限读取路径。
+- 检查后台概览、后台成员管理、后台店铺维护、店铺榜单归属维护、评分读取、评分历史和榜单权限读取路径。
 - 使用 member 测试账号确认密码重置接口返回 `403`。
 - 当测试账号不是 `owner` 时，检查 `PATCH /api/admin/lists` 和 `POST /api/admin/lists` 返回 `403`。
 - 不读取、不打印 `SUPABASE_SECRET_KEY`。

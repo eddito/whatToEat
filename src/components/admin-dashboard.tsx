@@ -109,6 +109,23 @@ type AdminListsResponse = {
   error?: string;
 };
 
+type AdminPlaceListAssignment = {
+  id: string;
+  databaseId: string;
+  slug: string;
+  name: string;
+  visibility: ListVisibility;
+  included: boolean;
+  sortOrder: number;
+};
+
+type AdminPlaceListsResponse = {
+  lists?: AdminPlaceListAssignment[];
+  canEdit?: boolean;
+  error?: string;
+  message?: string;
+};
+
 type ListFormState = {
   name: string;
   description: string;
@@ -572,9 +589,11 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
   const [searchQuery, setSearchQuery] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoInputKey, setPhotoInputKey] = useState(0);
+  const [placeLists, setPlaceLists] = useState<AdminPlaceListAssignment[]>([]);
   const [loadState, setLoadState] = useState<RequestState>("loading");
   const [saveState, setSaveState] = useState<RequestState>("idle");
   const [uploadState, setUploadState] = useState<RequestState>("idle");
+  const [placeListState, setPlaceListState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
 
   async function loadPlaces(query = searchQuery) {
@@ -602,6 +621,8 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     if (nextPlaces.length === 0) {
       setSelectedPlace(null);
       setForm(emptyPlaceForm);
+      setPlaceLists([]);
+      setPlaceListState("idle");
       setMessage("没有匹配的店铺。");
       return;
     }
@@ -618,11 +639,43 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  async function loadPlaceLists(placeId: string) {
+    setPlaceListState("loading");
+
+    const response = await fetch(`/api/admin/place-lists?placeId=${encodeURIComponent(placeId)}`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json().catch(() => null)) as AdminPlaceListsResponse | null;
+
+    if (!response.ok) {
+      setPlaceListState("error");
+      setPlaceLists([]);
+      setMessage(result?.error ?? "店铺榜单加载失败。");
+      return;
+    }
+
+    setPlaceLists(result?.lists ?? []);
+    setPlaceListState("success");
+  }
+
+  useEffect(() => {
+    if (!selectedPlace) {
+      return;
+    }
+
+    void loadPlaceLists(selectedPlace.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPlace?.id, token]);
+
   function selectPlace(place: AdminPlace) {
     setSelectedPlace(place);
     setForm(toPlaceForm(place));
     setSaveState("idle");
     setUploadState("idle");
+    setPlaceListState("idle");
+    setPlaceLists([]);
     setPhotoFile(null);
     setPhotoInputKey((current) => current + 1);
     setMessage("");
@@ -724,7 +777,52 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     setMessage(result?.message ?? "图片已上传。");
   }
 
-  const isBusy = loadState === "loading" || saveState === "loading" || uploadState === "loading";
+  function updatePlaceList(listId: string, updates: Partial<Pick<AdminPlaceListAssignment, "included" | "sortOrder">>) {
+    setPlaceLists((current) => current.map((list) => (list.id === listId ? { ...list, ...updates } : list)));
+    setPlaceListState("idle");
+  }
+
+  async function handleSavePlaceLists() {
+    if (!selectedPlace || !canEdit) {
+      return;
+    }
+
+    setPlaceListState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/place-lists", {
+      method: "PATCH",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        placeId: selectedPlace.id,
+        lists: placeLists.map((list) => ({
+          listId: list.id,
+          included: list.included,
+          sortOrder: list.sortOrder,
+        })),
+      }),
+    });
+    const result = (await response.json().catch(() => null)) as AdminPlaceListsResponse | null;
+
+    if (!response.ok) {
+      setPlaceListState("error");
+      setMessage(result?.error ?? "店铺榜单保存失败。");
+      return;
+    }
+
+    setPlaceLists(result?.lists ?? []);
+    setPlaceListState("success");
+    setMessage(result?.message ?? "店铺榜单已保存。");
+  }
+
+  const isBusy =
+    loadState === "loading" ||
+    saveState === "loading" ||
+    uploadState === "loading" ||
+    placeListState === "loading";
 
   return (
     <section className="container section">
@@ -885,6 +983,54 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
                 <span>已探店</span>
               </label>
 
+              <div className="admin-place-lists-box">
+                <div className="admin-place-lists-head">
+                  <strong>所属榜单</strong>
+                  <p>勾选榜单并设置排序值，数字越小越靠前。</p>
+                </div>
+
+                {placeListState === "loading" ? (
+                  <p className="section-note">正在加载店铺榜单...</p>
+                ) : placeLists.length === 0 ? (
+                  <p className="section-note">暂无可用榜单。</p>
+                ) : (
+                  <div className="admin-place-list-assignments">
+                    {placeLists.map((list) => (
+                      <label className="admin-place-list-assignment" key={list.id}>
+                        <input
+                          checked={list.included}
+                          onChange={(event) => updatePlaceList(list.id, { included: event.target.checked })}
+                          type="checkbox"
+                        />
+                        <span>
+                          <strong>{list.name}</strong>
+                          <small>{visibilityLabels[list.visibility]}</small>
+                        </span>
+                        <input
+                          aria-label={`${list.name}排序`}
+                          min={0}
+                          onChange={(event) =>
+                            updatePlaceList(list.id, { sortOrder: Number.parseInt(event.target.value || "0", 10) })
+                          }
+                          type="number"
+                          value={list.sortOrder}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                )}
+
+                <button
+                  className="button secondary"
+                  disabled={!selectedPlace || !canEdit || isBusy || placeLists.length === 0}
+                  onClick={handleSavePlaceLists}
+                  type="button"
+                >
+                  <ListChecks aria-hidden="true" size={16} />
+                  {placeListState === "loading" ? "保存中..." : "保存榜单"}
+                </button>
+              </div>
+
               <div className="admin-photo-uploader">
                 {selectedPlace?.coverPhotoUrl ? (
                   <img className="admin-photo-preview" src={selectedPlace.coverPhotoUrl} alt={`${selectedPlace.name}封面`} />
@@ -922,9 +1068,12 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
               <p
                 aria-live="polite"
                 className={
-                  saveState === "error" || loadState === "error" || uploadState === "error"
+                  saveState === "error" ||
+                  loadState === "error" ||
+                  uploadState === "error" ||
+                  placeListState === "error"
                     ? "admin-inline-message error"
-                    : saveState === "success" || uploadState === "success"
+                    : saveState === "success" || uploadState === "success" || placeListState === "success"
                       ? "admin-inline-message success"
                       : "admin-inline-message"
                 }
