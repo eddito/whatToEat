@@ -87,6 +87,7 @@ Username 规则：
 | `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
 | `getAdminArchivedPlaces(input)` | owner/member 读取已归档店铺列表 |
 | `getAdminPlacesByList(input)` | owner/member 读取榜单内店铺管理视图 |
+| `getAdminLists(input)` | owner/member 读取后台榜单列表，包含 private 榜单 |
 | `upsertAdminList(input)` | owner/member 新增或编辑榜单 |
 
 权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
@@ -352,6 +353,41 @@ type UpsertAdminPlaceResponse = {
 | 403 | `place_team_mismatch` | 店铺不属于目标榜单所在小队 |
 | 404 | `list_not_found` | 榜单不存在 |
 | 404 | `place_not_found` | 指定店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/lists`
+
+路径：`src/app/api/admin/lists/route.ts`
+
+用途：owner/member 读取小队全部榜单列表，包含 private/public_view/public_rate，并附带未归档店铺统计。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+
+成功响应：
+```ts
+type GetAdminListsResponse = {
+  ok: true;
+  lists: Array<PublicList & {
+    teamSlug: string;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `POST /api/admin/lists`

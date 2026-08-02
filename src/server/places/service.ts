@@ -6,6 +6,7 @@ import {
   archivePlaceRecord,
   getArchivedPlacesForTeam,
   getListBySlug,
+  getListsForTeam,
   getListsForPlaces,
   getPlacesForListId,
   getPlacesForPublicListId,
@@ -98,6 +99,11 @@ export type UpsertAdminListInput = {
   teamSlug?: string;
 };
 
+export type GetAdminListsInput = {
+  userId: string;
+  teamSlug?: string;
+};
+
 export type ArchiveAdminPlaceInput = {
   userId: string;
   id: string;
@@ -145,6 +151,10 @@ export type AdminArchivedPlace = {
 export type AdminListPlace = PublicPlace & {
   sortOrder: number;
   archivedAt: string | null;
+};
+
+export type AdminList = PublicList & {
+  teamSlug: string;
 };
 
 export class ListWriteError extends Error {
@@ -526,6 +536,40 @@ export async function upsertAdminList(input: UpsertAdminListInput): Promise<Publ
     ...toListBase(list),
     stats: getStatsFromPlaces(places),
   };
+}
+
+export async function getAdminLists(input: GetAdminListsInput): Promise<AdminList[]> {
+  const team = await getTeamBySlug(input.teamSlug?.trim() || "what-to-eat");
+
+  if (!team) {
+    throw new ListWriteError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(team.id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new ListWriteError("Current user cannot read lists for this team.", "not_allowed");
+  }
+
+  const lists = await getListsForTeam(team.id);
+  const listPlaces = await Promise.all(
+    lists.map(async (list) => {
+      const rows = await getPlacesForListId({ listId: list.id });
+      const places = rows.map((row) => row.place);
+      const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+
+      return {
+        list,
+        places: places.map((place) => toPublicPlace(place, list, ratings)),
+      };
+    }),
+  );
+
+  return listPlaces.map(({ list, places }) => ({
+    ...toListBase(list),
+    teamSlug: team.slug ?? "",
+    stats: getStatsFromPlaces(places),
+  }));
 }
 
 export async function archiveAdminPlace(input: ArchiveAdminPlaceInput): Promise<ArchiveAdminPlaceResult> {

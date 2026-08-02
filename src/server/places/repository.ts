@@ -106,6 +106,21 @@ export async function getListBySlug(slug: string) {
   return data as PublicListRecord | null;
 }
 
+export async function getListsForTeam(teamId: string): Promise<PublicListRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("lists")
+    .select("id, team_id, slug, name, description, visibility")
+    .eq("team_id", teamId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as PublicListRecord[];
+}
+
 export async function upsertListRecord(input: {
   id?: string;
   teamId: string;
