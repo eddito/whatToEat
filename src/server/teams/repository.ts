@@ -26,6 +26,11 @@ export type TeamMemberWithProfileRecord = {
   };
 };
 
+export type UserTeamMembershipRecord = {
+  role: TeamRole;
+  team: TeamRecord;
+};
+
 export type TeamRecord = {
   id: string;
   slug: string | null;
@@ -62,6 +67,36 @@ export async function getTeamMembership(teamId: string, userId: string): Promise
   }
 
   return data as TeamMembership | null;
+}
+
+export async function getUserTeamMemberships(userId: string): Promise<UserTeamMembershipRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("team_members")
+    .select(
+      `
+      role,
+      team:teams (
+        id,
+        slug,
+        name,
+        description
+      )
+    `,
+    )
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) => ({
+      role: row.role,
+      team: Array.isArray(row.team) ? row.team[0] : row.team,
+    }))
+    .filter((row) => row.team) as unknown as UserTeamMembershipRecord[];
 }
 
 export async function getTeamMembers(teamId: string): Promise<TeamMemberWithProfileRecord[]> {

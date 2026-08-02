@@ -1,8 +1,9 @@
 import "server-only";
 
-import { getProfileByUsername } from "@/server/auth/repository";
+import { getProfileById, getProfileByUsername } from "@/server/auth/repository";
 import { getInternalEmailForUsername, isValidUsername, normalizeUsername } from "@/server/auth/username";
 import { createSupabaseAuthClient } from "@/server/supabase/auth";
+import { getUserTeamMemberships } from "@/server/teams/repository";
 
 export type UsernameLoginInput = {
   username: string;
@@ -22,6 +23,24 @@ export type UsernameLoginResult = {
   };
 };
 
+export type CurrentUserSession = {
+  user: {
+    id: string;
+    username: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+  };
+  memberships: Array<{
+    role: "owner" | "member" | "viewer";
+    team: {
+      id: string;
+      slug: string | null;
+      name: string;
+      description: string | null;
+    };
+  }>;
+};
+
 export class AuthError extends Error {
   constructor(
     message: string,
@@ -29,6 +48,16 @@ export class AuthError extends Error {
   ) {
     super(message);
     this.name = "AuthError";
+  }
+}
+
+export class CurrentUserError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "profile_not_found",
+  ) {
+    super(message);
+    this.name = "CurrentUserError";
   }
 }
 
@@ -66,5 +95,34 @@ export async function loginWithUsername(input: UsernameLoginInput): Promise<User
       displayName: profile.display_name ?? profile.username,
       avatarUrl: profile.avatar_url,
     },
+  };
+}
+
+export async function getCurrentUserSession(userId: string): Promise<CurrentUserSession> {
+  const [profile, memberships] = await Promise.all([
+    getProfileById(userId),
+    getUserTeamMemberships(userId),
+  ]);
+
+  if (!profile) {
+    throw new CurrentUserError("Profile not found.", "profile_not_found");
+  }
+
+  return {
+    user: {
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.display_name,
+      avatarUrl: profile.avatar_url,
+    },
+    memberships: memberships.map((membership) => ({
+      role: membership.role,
+      team: {
+        id: membership.team.id,
+        slug: membership.team.slug,
+        name: membership.team.name,
+        description: membership.team.description,
+      },
+    })),
   };
 }

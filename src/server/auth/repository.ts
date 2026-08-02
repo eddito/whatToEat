@@ -23,3 +23,18 @@ export async function getProfileByUsername(username: string) {
 
   return data as ProfileRecord | null;
 }
+
+export async function getProfileById(id: string) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("id, username, display_name, avatar_url")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as ProfileRecord | null;
+}

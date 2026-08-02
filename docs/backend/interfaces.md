@@ -170,6 +170,48 @@ type LoginResponse = {
 | 401 | `invalid_credentials` | 密码错误或 Supabase Auth 登录失败 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `GET /api/auth/me`
+
+路径：`src/app/api/auth/me/route.ts`
+
+用途：读取当前登录用户资料和小队角色，用于前端恢复登录态和判断后台权限。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+成功响应：
+```ts
+type CurrentUserResponse = {
+  ok: true;
+  session: {
+    user: {
+      id: string;
+      username: string;
+      displayName: string | null;
+      avatarUrl: string | null;
+    };
+    memberships: Array<{
+      role: "owner" | "member" | "viewer";
+      team: {
+        id: string;
+        slug: string | null;
+        name: string;
+        description: string | null;
+      };
+    }>;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 404 | `profile_not_found` | Auth 用户缺少业务 profile |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `POST /api/ratings`
 
 路径：`src/app/api/ratings/route.ts`
