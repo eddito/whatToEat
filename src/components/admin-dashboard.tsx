@@ -115,6 +115,10 @@ type ListFormState = {
   visibility: ListVisibility;
 };
 
+type CreateListFormState = ListFormState & {
+  slug: string;
+};
+
 type PlaceFormState = {
   name: string;
   category: string;
@@ -210,8 +214,16 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
   const [lists, setLists] = useState<AdminList[]>([]);
   const [selectedList, setSelectedList] = useState<AdminList | null>(null);
   const [form, setForm] = useState<ListFormState>({ name: "", description: "", visibility: "public_rate" });
+  const [createForm, setCreateForm] = useState<CreateListFormState>({
+    slug: "",
+    name: "",
+    description: "",
+    visibility: "private",
+  });
   const [loadState, setLoadState] = useState<RequestState>("loading");
   const [saveState, setSaveState] = useState<RequestState>("idle");
+  const [createState, setCreateState] = useState<RequestState>("idle");
+  const [deleteState, setDeleteState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
 
   async function loadLists() {
@@ -258,7 +270,42 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
     setSelectedList(list);
     setForm(toListForm(list));
     setSaveState("idle");
+    setDeleteState("idle");
     setMessage("");
+  }
+
+  async function handleCreate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canManage) {
+      return;
+    }
+
+    setCreateState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/lists", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(createForm),
+    });
+    const result = (await response.json().catch(() => null)) as { error?: string; message?: string; list?: AdminList } | null;
+
+    if (!response.ok || !result?.list) {
+      setCreateState("error");
+      setMessage(result?.error ?? "榜单创建失败。");
+      return;
+    }
+
+    setLists((current) => [...current, result.list as AdminList]);
+    setSelectedList(result.list);
+    setForm(toListForm(result.list));
+    setCreateForm({ slug: "", name: "", description: "", visibility: "private" });
+    setCreateState("success");
+    setMessage(result.message ?? "榜单已创建。");
   }
 
   async function handleSave(event: FormEvent<HTMLFormElement>) {
@@ -299,7 +346,44 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
     setLists((current) => current.map((list) => (list.id === result.list?.id ? result.list : list)));
   }
 
-  const isBusy = loadState === "loading" || saveState === "loading";
+  async function handleDelete() {
+    if (!selectedList || !canManage) {
+      return;
+    }
+
+    const confirmed = window.confirm(`删除榜单 ${selectedList.name}？榜单内的店铺不会被删除。`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteState("loading");
+    setMessage("");
+
+    const response = await fetch(`/api/admin/lists?listId=${encodeURIComponent(selectedList.id)}`, {
+      method: "DELETE",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+
+    if (!response.ok) {
+      setDeleteState("error");
+      setMessage(result?.error ?? "榜单删除失败。");
+      return;
+    }
+
+    const nextLists = lists.filter((list) => list.id !== selectedList.id);
+    const nextSelected = nextLists[0] ?? null;
+    setLists(nextLists);
+    setSelectedList(nextSelected);
+    setForm(nextSelected ? toListForm(nextSelected) : { name: "", description: "", visibility: "public_rate" });
+    setDeleteState("success");
+    setMessage(result?.message ?? "榜单已删除。");
+  }
+
+  const isBusy = loadState === "loading" || saveState === "loading" || createState === "loading" || deleteState === "loading";
 
   return (
     <section className="container section">
@@ -343,6 +427,51 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
                 </button>
               ))
             )}
+          </div>
+
+          <div className="admin-list-create-box">
+            <strong>新建榜单</strong>
+            <form className="admin-list-create-form" onSubmit={handleCreate}>
+              <label className="field">
+                <span>Slug</span>
+                <input
+                  disabled={!canManage || isBusy}
+                  maxLength={48}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, slug: event.target.value }))}
+                  placeholder="new-list"
+                  required
+                  value={createForm.slug}
+                />
+              </label>
+              <label className="field">
+                <span>名称</span>
+                <input
+                  disabled={!canManage || isBusy}
+                  maxLength={40}
+                  onChange={(event) => setCreateForm((current) => ({ ...current, name: event.target.value }))}
+                  required
+                  value={createForm.name}
+                />
+              </label>
+              <label className="field">
+                <span>状态</span>
+                <select
+                  disabled={!canManage || isBusy}
+                  onChange={(event) =>
+                    setCreateForm((current) => ({ ...current, visibility: event.target.value as ListVisibility }))
+                  }
+                  value={createForm.visibility}
+                >
+                  <option value="private">私密</option>
+                  <option value="public_view">公开查看</option>
+                  <option value="public_rate">开放评分</option>
+                </select>
+              </label>
+              <button className="button secondary" disabled={!canManage || isBusy} type="submit">
+                <ListChecks aria-hidden="true" size={16} />
+                {createState === "loading" ? "创建中..." : "创建"}
+              </button>
+            </form>
           </div>
 
           <form className="admin-edit-form" onSubmit={handleSave}>
@@ -406,9 +535,9 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
               <p
                 aria-live="polite"
                 className={
-                  saveState === "error" || loadState === "error"
+                  saveState === "error" || loadState === "error" || createState === "error" || deleteState === "error"
                     ? "admin-inline-message error"
-                    : saveState === "success"
+                    : saveState === "success" || createState === "success" || deleteState === "success"
                       ? "admin-inline-message success"
                       : "admin-inline-message"
                 }
@@ -418,6 +547,15 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
               <button className="button auth-submit" disabled={!selectedList || !canManage || isBusy} type="submit">
                 <Save aria-hidden="true" size={16} />
                 {saveState === "loading" ? "保存中..." : "保存权限"}
+              </button>
+              <button
+                className="button secondary member-remove-button"
+                disabled={!selectedList || !canManage || isBusy || lists.length <= 1}
+                onClick={handleDelete}
+                type="button"
+              >
+                <Trash2 aria-hidden="true" size={15} />
+                {deleteState === "loading" ? "删除中..." : "删除榜单"}
               </button>
             </div>
           </form>

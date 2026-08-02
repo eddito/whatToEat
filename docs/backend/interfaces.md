@@ -404,6 +404,59 @@ type AdminListUpdateRequest = {
 - 只有 `owner` 可以更新榜单权限，`member` / `viewer` 返回 `403`。
 - 只能更新当前小队名下的榜单。
 
+### `POST /api/admin/lists`
+
+用途：小队 `owner` 创建新的榜单。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+Content-Type: application/json
+```
+
+请求体：
+
+```ts
+type AdminListCreateRequest = {
+  slug: string; // 仅小写字母、数字和中划线，例如 weekend-hotpot
+  name: string;
+  description?: string;
+  visibility?: "private" | "public_view" | "public_rate";
+};
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 只有 `owner` 可以创建榜单，`member` / `viewer` 返回 `403`。
+- `slug` 在当前小队内唯一，重复时返回 `409`。
+
+### `DELETE /api/admin/lists`
+
+用途：小队 `owner` 删除榜单。删除榜单不会删除店铺。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+查询参数：
+
+```txt
+listId=<lists.slug 或 UUID>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 只有 `owner` 可以删除榜单，`member` / `viewer` 返回 `403`。
+- 小队至少保留一个榜单。
+- 只能删除当前小队名下的榜单。
+
 ### `GET /api/admin/places`
 
 用途：登录小队成员读取后台店铺维护列表。
@@ -762,7 +815,7 @@ type MyRatingsResponse = {
 - 使用 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 和临时测试账号验证登录态接口。
 - 检查后台概览、后台成员管理、后台店铺维护、评分读取、评分历史和榜单权限读取路径。
 - 使用 member 测试账号确认密码重置接口返回 `403`。
-- 当测试账号不是 `owner` 时，检查 `PATCH /api/admin/lists` 返回 `403`。
+- 当测试账号不是 `owner` 时，检查 `PATCH /api/admin/lists` 和 `POST /api/admin/lists` 返回 `403`。
 - 不读取、不打印 `SUPABASE_SECRET_KEY`。
 
 输入：
@@ -773,7 +826,7 @@ type MyRatingsResponse = {
 运行示例：
 
 ```powershell
-$env:SMOKE_AUTH_USERNAME="test_user"
+$env:SMOKE_AUTH_USERNAME="testuser@users.what-to-eat-today.invalid"
 $env:SMOKE_AUTH_PASSWORD="<password>"
 pnpm smoke:auth
 ```

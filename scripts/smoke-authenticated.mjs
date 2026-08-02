@@ -198,7 +198,7 @@ const passwordResetForbidden = await fetchJson("/api/admin/members/password", {
     "content-type": "application/json",
   },
   body: JSON.stringify({
-    account: "test_user@users.what-to-eat-today.invalid",
+    account: "testuser@users.what-to-eat-today.invalid",
     password: "NoChange_2026",
   }),
 });
@@ -231,6 +231,20 @@ const lists = await fetchJson("/api/admin/lists", {
     });
 
     assertCheck("member cannot manage lists", forbiddenPatch.response.status === 403, `status=${forbiddenPatch.response.status}`);
+
+    const forbiddenCreate = await fetchJson("/api/admin/lists", {
+      method: "POST",
+      headers: {
+        ...authHeaders,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        slug: "member-smoke-list",
+        name: "Member Smoke List",
+        visibility: "private",
+      }),
+    });
+    assertCheck("member cannot create lists", forbiddenCreate.response.status === 403, `status=${forbiddenCreate.response.status}`);
   }
 
   await withMutedFetchErrorLog(() => supabase.auth.signOut());
