@@ -66,6 +66,7 @@
 | BE-029 | 实现当前用户登录态接口 | 已完成 | `GET /api/auth/me`、`getCurrentUserSession` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-030 | 实现 refresh token 换新接口 | 已完成 | `POST /api/auth/refresh`、`refreshSession` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-031 | 实现后台榜单列表接口 | 已完成 | `GET /api/admin/lists`、`getAdminLists` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| BE-032 | 补齐远端 seed 导入批次追踪 | 已完成 | 远端 `places/list_places/ratings.import_batch_id` | `pnpm db:seed` 和 `GET /api/admin/import-batches?limit=3` 验证通过 |
 
 ## 完成记录
 
@@ -108,6 +109,8 @@
 | 2026-08-02 | 远端 refresh token 换新验证 | Supabase Auth、`profiles` | `POST /api/auth/refresh`：有效 refresh token 返回 200 且返回新 token，非法 token 返回 401，缺少 token 返回 400 |
 | 2026-08-02 | 实现后台榜单列表接口 | `src/app/api/admin/lists/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-08-02 | 远端后台榜单列表验证 | Supabase `teams`、`team_members`、`lists`、`places`、`ratings` | `GET /api/admin/lists`：owner/member 返回 200，external 返回 403，未登录返回 401，不存在小队返回 404；当前返回 3 个榜单并包含 `red-list` |
+| 2026-08-02 | 补齐远端 seed 导入批次追踪 | Supabase `import_batches`、`places`、`list_places`、`ratings` | `pnpm db:seed` 创建批次 `2f6b5e12-f2aa-4440-997a-d538302b5372`；更新 77 个店铺、77 个榜单关联、60 条评分，跳过 94 个空评分，无新增数据，无归档数据 |
+| 2026-08-02 | 验证导入批次后台可读 | `GET /api/admin/import-batches?limit=3` | 最新批次返回 200，计数为 `places:77`、`listPlaces:77`、`ratings:60` |
 
 ## 当前数据库快照
 
@@ -118,15 +121,15 @@
 | `places` | 78+ | 初始店铺数据和后台接口 smoke 测试店 |
 | `list_places` | 78+ | 店铺和榜单关联，包含后台接口 smoke 测试关联 |
 | `ratings` | 60+ | 初始评分和测试评分 |
-| `import_batches` | 1+ | 初始导入批次；schema 已支持 operation/status/summary/finished_at/rolled_back_at |
+| `import_batches` | 2+ | 初始导入批次和最新 seed 追踪批次；schema 已支持 operation/status/summary/finished_at/rolled_back_at |
 | `profiles` | 4+ | `test_user`、`test_external`、`test_owner`、`test_member_target` 等测试账号 |
 | `team_members` | 2+ | 默认小队成员和 `test_owner` owner |
 
 ## 下一步
 
 1. 后续 integration 接入后台表单时使用 `POST /api/admin/places`、`POST /api/admin/places/archive`、`POST /api/admin/lists`、`POST /api/admin/members` 和 `DELETE /api/admin/members`。
-2. 如需给现有远端 seed 数据补齐最新 `import_batch_id`，运行 `pnpm db:seed`；如需先检查归档缺失项，运行 `pnpm db:seed -- --archive-missing --dry-run`。
-3. 后续可以补后台只读管理数据接口，例如成员列表、已归档店铺列表和榜单内店铺管理视图。
+2. 后续如需检查归档缺失项，运行 `pnpm db:seed -- --archive-missing --dry-run`。
+3. 后续可以继续补后台管理写入能力，例如榜单内店铺排序、评分管理和更细的成员角色策略。
 
 ## 记录规则
 
