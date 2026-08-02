@@ -514,3 +514,30 @@ type RatingResponse = {
 输出：
 - 每个检查项的 `PASS` / `FAIL`。
 - 只输出数量和布尔结果，不输出密钥。
+
+### `pnpm smoke:auth`
+
+路径：`scripts/smoke-authenticated.mjs`
+
+用途：
+- 使用 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 和临时测试账号验证登录态接口。
+- 检查后台概览、后台店铺维护、评分读取和榜单权限读取路径。
+- 当测试账号不是 `owner` 时，检查 `PATCH /api/admin/lists` 返回 `403`。
+- 不读取、不打印 `SUPABASE_SECRET_KEY`。
+
+输入：
+- `.env.local`
+- `SMOKE_AUTH_USERNAME`
+- `SMOKE_AUTH_PASSWORD`
+
+运行示例：
+
+```powershell
+$env:SMOKE_AUTH_USERNAME="test_user"
+$env:SMOKE_AUTH_PASSWORD="<password>"
+pnpm smoke:auth
+```
+
+输出：
+- 每个检查项的 `PASS` / `FAIL`。
+- 只输出接口状态、角色、数量和评分来源，不输出 token 或密码。

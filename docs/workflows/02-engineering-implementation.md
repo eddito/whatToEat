@@ -224,7 +224,7 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [x] 生成 Excel 种子数据和导入说明。
 - [x] 建立公开页面和 Supabase 公开读取 smoke 检查。
 - [ ] 实现图片上传。
-- [ ] 完成测试。
+- [ ] 完成测试。（已补公开页面、Supabase 公开读取和登录态后台 smoke；权限矩阵和 Playwright 关键路径待完善）
 - [ ] 交付部署清单。
 
 ## 验收标准
@@ -284,3 +284,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-07-23 | 补齐 `/api/ratings` 我的评分查询和评分表单预填更新状态 | Codex | 评分体验、前后端联调 |
 | 2026-07-23 | 接入后台店铺维护列表和 `/api/admin/places` 店铺资料更新接口 | Codex | 小队成员数据维护 |
 | 2026-07-23 | 接入后台榜单权限面板和 `/api/admin/lists` Owner 更新接口 | Codex | 榜单权限、公开评分控制 |
+| 2026-08-02 | 新增登录态 smoke 脚本覆盖后台概览、店铺维护、评分读取和榜单权限 | Codex | 测试闭环、联调稳定性 |
