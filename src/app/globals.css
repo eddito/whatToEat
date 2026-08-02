@@ -1127,7 +1127,7 @@ button {
 
 .member-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px 96px;
+  grid-template-columns: minmax(0, 1fr) 132px 96px auto;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--line);
@@ -1155,6 +1155,38 @@ button {
   color: var(--muted);
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+
+.admin-member-add-form,
+.admin-member-password-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 0.5fr) auto;
+  align-items: end;
+  gap: 10px;
+}
+
+.admin-member-password-form {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.member-role-select {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  color: var(--ink);
+  padding: 0 8px;
+  font: inherit;
+}
+
+.member-remove-button {
+  min-height: 40px;
+  border-color: rgba(221, 55, 42, 0.28);
+  color: var(--red);
 }
 
 .admin-search-form {
@@ -1652,6 +1684,11 @@ button {
 
   .member-row.header {
     display: none;
+  }
+
+  .admin-member-add-form,
+  .admin-member-password-form {
+    grid-template-columns: 1fr;
   }
 
   .admin-list-permissions,

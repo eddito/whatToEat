@@ -235,6 +235,112 @@ type AdminSummaryResponse = {
 };
 ```
 
+### `GET /api/admin/members`
+
+用途：登录小队成员读取成员管理列表。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- 小队成员可读取成员名称、邮箱、角色和加入时间。
+- 只有 `owner` 的响应中 `canManage` 为 `true`。
+
+响应：
+
+```ts
+type AdminMembersResponse = {
+  members: Array<{
+    id: string;
+    name: string;
+    email: string;
+    role: "owner" | "member" | "viewer";
+    joinedAt: string;
+  }>;
+  canManage: boolean;
+  currentUserId: string;
+};
+```
+
+### `POST /api/admin/members`
+
+用途：小队 `owner` 将已有 Auth 用户添加为小队成员。
+
+请求体：
+
+```ts
+type AdminMemberAddRequest = {
+  account: string; // 邮箱、手机号或用户名
+  role: "owner" | "member" | "viewer";
+};
+```
+
+权限规则：
+
+- 只有 `owner` 可以添加成员。
+- 账号必须已存在于 Supabase Auth。
+- 已在小队中的账号返回 `409`。
+
+### `PATCH /api/admin/members`
+
+用途：小队 `owner` 更新成员角色。
+
+请求体：
+
+```ts
+type AdminMemberRoleRequest = {
+  userId: string;
+  role: "owner" | "member" | "viewer";
+};
+```
+
+权限规则：
+
+- 只有 `owner` 可以更新成员角色。
+- 不能在这里修改自己的角色。
+- 小队至少保留一个 `owner`。
+
+### `DELETE /api/admin/members`
+
+用途：小队 `owner` 移除成员。
+
+查询参数：
+
+```txt
+userId=<auth.users.id>
+```
+
+权限规则：
+
+- 只有 `owner` 可以移除成员。
+- 不能在这里移除自己。
+- 小队至少保留一个 `owner`。
+
+### `PATCH /api/admin/members/password`
+
+用途：小队 `owner` 重置当前小队成员密码。
+
+请求体：
+
+```ts
+type AdminMemberPasswordRequest = {
+  account: string; // 仅邮箱或手机号
+  password: string; // 8-72 位
+};
+```
+
+权限规则：
+
+- 只有 `owner` 可以重置成员密码。
+- `account` 只接受邮箱或手机号，不接受中文、用户名或其它账号格式。
+- 只能重置当前小队成员的密码。
+
 ### `GET /api/admin/lists`
 
 用途：登录小队成员读取后台榜单权限列表。
@@ -654,7 +760,8 @@ type MyRatingsResponse = {
 
 用途：
 - 使用 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 和临时测试账号验证登录态接口。
-- 检查后台概览、后台店铺维护、评分读取、评分历史和榜单权限读取路径。
+- 检查后台概览、后台成员管理、后台店铺维护、评分读取、评分历史和榜单权限读取路径。
+- 使用 member 测试账号确认密码重置接口返回 `403`。
 - 当测试账号不是 `owner` 时，检查 `PATCH /api/admin/lists` 返回 `403`。
 - 不读取、不打印 `SUPABASE_SECRET_KEY`。
 

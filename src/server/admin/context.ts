@@ -100,3 +100,7 @@ export function canEditTeamData(role: AdminRole) {
 export function canManageListPermissions(role: AdminRole) {
   return role === "owner";
 }
+
+export function canManageMembers(role: AdminRole) {
+  return role === "owner";
+}

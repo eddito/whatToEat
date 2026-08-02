@@ -185,6 +185,25 @@ const photoUploadValidation = await fetchJson("/api/admin/photos", {
 });
 assertCheck("photo upload validation", photoUploadValidation.response.status === 400, `status=${photoUploadValidation.response.status}`);
 
+const members = await fetchJson("/api/admin/members", {
+  headers: authHeaders,
+});
+assertCheck("admin members status", members.response.status === 200, `status=${members.response.status}`);
+assertCheck("admin members data", Array.isArray(members.json?.members), `count=${members.json?.members?.length ?? 0}`);
+
+const passwordResetForbidden = await fetchJson("/api/admin/members/password", {
+  method: "PATCH",
+  headers: {
+    ...authHeaders,
+    "content-type": "application/json",
+  },
+  body: JSON.stringify({
+    account: "test_user@users.what-to-eat-today.invalid",
+    password: "NoChange_2026",
+  }),
+});
+assertCheck("member cannot reset passwords", passwordResetForbidden.response.status === 403, `status=${passwordResetForbidden.response.status}`);
+
 const lists = await fetchJson("/api/admin/lists", {
   headers: authHeaders,
 });

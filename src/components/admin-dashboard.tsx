@@ -13,12 +13,16 @@ import {
   ShieldCheck,
   Star,
   Store,
+  Trash2,
   Upload,
+  UserPlus,
   UserRoundCheck,
   UsersRound,
 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
+
+type AdminRole = "owner" | "member" | "viewer";
 
 type AdminSummary = {
   team: {
@@ -26,7 +30,8 @@ type AdminSummary = {
     slug: string;
   };
   currentUser: {
-    role: "owner" | "member" | "viewer";
+    id: string;
+    role: AdminRole;
     name: string;
   };
   stats: {
@@ -37,13 +42,28 @@ type AdminSummary = {
   };
   members: Array<{
     name: string;
-    role: "owner" | "member" | "viewer";
+    role: AdminRole;
     joinedAt: string;
   }>;
 };
 
 type LoadState = "loading" | "ready" | "signed-out" | "forbidden" | "error";
 type RequestState = "idle" | "loading" | "success" | "error";
+
+type AdminMember = {
+  id: string;
+  name: string;
+  email: string;
+  role: AdminRole;
+  joinedAt: string;
+};
+
+type AdminMembersResponse = {
+  members?: AdminMember[];
+  canManage?: boolean;
+  currentUserId?: string;
+  error?: string;
+};
 
 type AdminPlace = {
   id: string;
@@ -108,7 +128,7 @@ type PlaceFormState = {
   visited: boolean;
 };
 
-const roleLabels = {
+const roleLabels: Record<AdminRole, string> = {
   owner: "Owner",
   member: "Member",
   viewer: "Viewer",
@@ -786,6 +806,329 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
   );
 }
 
+function AdminMemberManagement({ token, canManage }: { token: string; canManage: boolean }) {
+  const [members, setMembers] = useState<AdminMember[]>([]);
+  const [currentUserId, setCurrentUserId] = useState("");
+  const [account, setAccount] = useState("");
+  const [newRole, setNewRole] = useState<AdminRole>("member");
+  const [passwordAccount, setPasswordAccount] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [loadState, setLoadState] = useState<RequestState>("loading");
+  const [saveState, setSaveState] = useState<RequestState>("idle");
+  const [passwordState, setPasswordState] = useState<RequestState>("idle");
+  const [message, setMessage] = useState("");
+
+  async function loadMembers() {
+    setLoadState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/members", {
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json().catch(() => null)) as AdminMembersResponse | null;
+
+    if (!response.ok) {
+      setLoadState("error");
+      setMessage(result?.error ?? "成员列表加载失败。");
+      return;
+    }
+
+    setMembers(result?.members ?? []);
+    setCurrentUserId(result?.currentUserId ?? "");
+    setLoadState("success");
+  }
+
+  useEffect(() => {
+    void loadMembers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
+  async function handleAddMember(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canManage || !account.trim()) {
+      return;
+    }
+
+    setSaveState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/members", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        account,
+        role: newRole,
+      }),
+    });
+    const result = (await response.json().catch(() => null)) as AdminMembersResponse & { message?: string };
+
+    if (!response.ok) {
+      setSaveState("error");
+      setMessage(result?.error ?? "成员添加失败。");
+      return;
+    }
+
+    setMembers(result.members ?? []);
+    setAccount("");
+    setNewRole("member");
+    setSaveState("success");
+    setMessage(result.message ?? "成员已添加。");
+  }
+
+  async function handleRoleChange(member: AdminMember, role: AdminRole) {
+    if (!canManage || member.id === currentUserId || member.role === role) {
+      return;
+    }
+
+    setSaveState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/members", {
+      method: "PATCH",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        userId: member.id,
+        role,
+      }),
+    });
+    const result = (await response.json().catch(() => null)) as AdminMembersResponse & { message?: string };
+
+    if (!response.ok) {
+      setSaveState("error");
+      setMessage(result?.error ?? "成员角色保存失败。");
+      return;
+    }
+
+    setMembers(result.members ?? []);
+    setSaveState("success");
+    setMessage(result.message ?? "成员角色已保存。");
+  }
+
+  async function handleRemoveMember(member: AdminMember) {
+    if (!canManage || member.id === currentUserId) {
+      return;
+    }
+
+    const confirmed = window.confirm(`移除成员 ${member.name}？`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setSaveState("loading");
+    setMessage("");
+
+    const response = await fetch(`/api/admin/members?userId=${encodeURIComponent(member.id)}`, {
+      method: "DELETE",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json().catch(() => null)) as AdminMembersResponse & { message?: string };
+
+    if (!response.ok) {
+      setSaveState("error");
+      setMessage(result?.error ?? "成员移除失败。");
+      return;
+    }
+
+    setMembers(result.members ?? []);
+    setSaveState("success");
+    setMessage(result.message ?? "成员已移除。");
+  }
+
+  async function handlePasswordReset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!canManage || !passwordAccount.trim() || newPassword.length < 8) {
+      return;
+    }
+
+    setPasswordState("loading");
+    setMessage("");
+
+    const response = await fetch("/api/admin/members/password", {
+      method: "PATCH",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        account: passwordAccount,
+        password: newPassword,
+      }),
+    });
+    const result = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+
+    if (!response.ok) {
+      setPasswordState("error");
+      setMessage(result?.error ?? "密码重置失败。");
+      return;
+    }
+
+    setPasswordAccount("");
+    setNewPassword("");
+    setPasswordState("success");
+    setMessage(result?.message ?? "成员密码已重置。");
+  }
+
+  const isBusy = loadState === "loading" || saveState === "loading" || passwordState === "loading";
+
+  return (
+    <section className="container section">
+      <div className="admin-panel">
+        <div className="section-header tight">
+          <div>
+            <h2 className="section-title">成员</h2>
+            <p className="section-note">Owner 可添加已有账号、调整角色和移除成员。</p>
+          </div>
+          <span className={canManage ? "admin-role-badge role-owner" : "admin-role-badge"}>
+            <UsersRound aria-hidden="true" size={14} />
+            {canManage ? "Owner 可管理" : "只读"}
+          </span>
+        </div>
+
+        <form className="admin-member-add-form" onSubmit={handleAddMember}>
+          <label className="field">
+            <span>账号</span>
+            <input
+              disabled={!canManage || isBusy}
+              onChange={(event) => setAccount(event.target.value)}
+              placeholder="邮箱、手机号或用户名"
+              type="text"
+              value={account}
+            />
+          </label>
+          <label className="field">
+            <span>角色</span>
+            <select
+              disabled={!canManage || isBusy}
+              onChange={(event) => setNewRole(event.target.value as AdminRole)}
+              value={newRole}
+            >
+              <option value="member">Member</option>
+              <option value="viewer">Viewer</option>
+              <option value="owner">Owner</option>
+            </select>
+          </label>
+          <button className="button secondary" disabled={!canManage || isBusy || !account.trim()} type="submit">
+            <UserPlus aria-hidden="true" size={16} />
+            {saveState === "loading" ? "添加中..." : "添加成员"}
+          </button>
+        </form>
+
+        <form className="admin-member-password-form" onSubmit={handlePasswordReset}>
+          <label className="field">
+            <span>邮箱或手机号</span>
+            <input
+              disabled={!canManage || isBusy}
+              inputMode="email"
+              onChange={(event) => setPasswordAccount(event.target.value)}
+              placeholder="仅支持邮箱或手机号"
+              type="text"
+              value={passwordAccount}
+            />
+          </label>
+          <label className="field">
+            <span>新密码</span>
+            <input
+              autoComplete="new-password"
+              disabled={!canManage || isBusy}
+              minLength={8}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="至少 8 位"
+              type="password"
+              value={newPassword}
+            />
+          </label>
+          <button
+            className="button secondary"
+            disabled={!canManage || isBusy || !passwordAccount.trim() || newPassword.length < 8}
+            type="submit"
+          >
+            <LockKeyhole aria-hidden="true" size={16} />
+            {passwordState === "loading" ? "重置中..." : "重置密码"}
+          </button>
+        </form>
+
+        <div className="member-table" role="table" aria-label="小队成员">
+          <div className="member-row header" role="row">
+            <span role="columnheader">成员</span>
+            <span role="columnheader">角色</span>
+            <span role="columnheader">加入</span>
+            <span role="columnheader">操作</span>
+          </div>
+          {loadState === "loading" ? (
+            <p className="section-note">正在加载成员...</p>
+          ) : members.length === 0 ? (
+            <p className="section-note">暂无成员。</p>
+          ) : (
+            members.map((member) => {
+              const isSelf = member.id === currentUserId;
+
+              return (
+                <div className="member-row" key={member.id} role="row">
+                  <span role="cell">
+                    <strong>{member.name}</strong>
+                    <small>{member.email || "未记录邮箱"}</small>
+                  </span>
+                  <span role="cell">
+                    <select
+                      aria-label={`${member.name} 角色`}
+                      className="member-role-select"
+                      disabled={!canManage || isBusy || isSelf}
+                      onChange={(event) => void handleRoleChange(member, event.target.value as AdminRole)}
+                      value={member.role}
+                    >
+                      <option value="owner">Owner</option>
+                      <option value="member">Member</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                  </span>
+                  <span role="cell">{formatDate(member.joinedAt)}</span>
+                  <span role="cell">
+                    <button
+                      className="button secondary member-remove-button"
+                      disabled={!canManage || isBusy || isSelf}
+                      onClick={() => void handleRemoveMember(member)}
+                      type="button"
+                    >
+                      <Trash2 aria-hidden="true" size={15} />
+                      移除
+                    </button>
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        <p
+          aria-live="polite"
+          className={
+            saveState === "error" || loadState === "error" || passwordState === "error"
+              ? "admin-inline-message error"
+              : saveState === "success" || passwordState === "success"
+                ? "admin-inline-message success"
+                : "admin-inline-message"
+          }
+        >
+          {message || (canManage ? "修改会立即影响后台权限。" : "当前角色只能查看成员。")}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export function AdminDashboard() {
   const supabase = getBrowserSupabase();
   const [state, setState] = useState<LoadState>("loading");
@@ -926,32 +1269,7 @@ export function AdminDashboard() {
 
       {token ? <AdminPlaceMaintenance canEdit={summary.currentUser.role !== "viewer"} token={token} /> : null}
 
-      <section className="container section">
-        <div className="admin-panel">
-          <div className="section-header tight">
-            <div>
-              <h2 className="section-title">成员</h2>
-              <p className="section-note">当前先开放只读成员列表，角色管理会在下一切片补上。</p>
-            </div>
-          </div>
-          <div className="member-table" role="table" aria-label="小队成员">
-            <div className="member-row header" role="row">
-              <span role="columnheader">成员</span>
-              <span role="columnheader">角色</span>
-              <span role="columnheader">加入</span>
-            </div>
-            {summary.members.map((member) => (
-              <div className="member-row" key={`${member.name}-${member.joinedAt}`} role="row">
-                <span role="cell">
-                  <strong>{member.name}</strong>
-                </span>
-                <span role="cell">{roleLabels[member.role]}</span>
-                <span role="cell">{formatDate(member.joinedAt)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {token ? <AdminMemberManagement canManage={summary.currentUser.role === "owner"} token={token} /> : null}
     </>
   );
 }

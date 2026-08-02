@@ -218,13 +218,13 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [x] 实现基于种子数据的公开浏览。
 - [x] 实现登录入口页面骨架。
 - [x] 实现公开页面 Supabase 读取适配和 seed fallback。
-- [ ] 实现小队和成员管理。（已完成成员后台概览和店铺资料维护首片；成员邀请和角色管理待完善）
+- [ ] 实现小队和成员管理。（已完成成员后台概览、添加已有账号、角色管理、移除成员和 owner 重置成员密码；邮件邀请待完善）
 - [ ] 实现榜单权限。（已完成后台榜单权限查看和 Owner 权限更新接口；榜单创建、删除和排序待完善）
 - [x] 实现评分和混合总分。（已完成登录用户评分写入、我的评分预填、外部评分统计、混合总分联动、删除自己的评分和评分历史）
 - [x] 生成 Excel 种子数据和导入说明。
 - [x] 建立公开页面和 Supabase 公开读取 smoke 检查。
 - [x] 实现图片上传。（后台上传、photos 写入、公开封面读取已完成；Storage bucket 需部署时创建）
-- [ ] 完成测试。（已补公开页面、Supabase 公开读取和登录态后台 smoke；权限矩阵和 Playwright 关键路径待完善）
+- [ ] 完成测试。（已补公开页面、Supabase 公开读取和登录态后台 smoke，覆盖成员、榜单、店铺、评分和图片权限；Playwright 关键路径待完善）
 - [ ] 交付部署清单。
 
 ## 验收标准
@@ -289,3 +289,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-08-02 | 新增 `/ratings` 评分历史页和 `/api/ratings/me` 最近评分接口 | Codex | 评分历史、个人记录 |
 | 2026-08-02 | 新增后台店铺图片上传接口、上传控件和公开封面展示 | Codex | 图片上传、公开读取 |
 | 2026-08-02 | 补齐 Supabase RLS 写策略覆盖成员数据、榜单、评分和图片 | Codex | RLS、权限边界 |
+| 2026-08-02 | 新增后台成员管理和 owner 重置成员密码接口 | Codex | 成员角色、账号维护 |
