@@ -1,7 +1,21 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserFromAuthorizationHeader, SessionError } from "@/server/auth/session";
-import { PlaceWriteError, upsertAdminPlace } from "@/server/places/service";
+import { getAdminPlaces, PlaceWriteError, upsertAdminPlace } from "@/server/places/service";
+
+const includeArchivedQuerySchema = z
+  .enum(["true", "false"])
+  .transform((value) => value === "true")
+  .optional();
+
+const adminPlacesQuerySchema = z.object({
+  teamSlug: z.string().min(1).optional(),
+  query: z.string().min(1).optional(),
+  category: z.string().min(1).optional(),
+  region: z.string().min(1).optional(),
+  includeArchived: includeArchivedQuerySchema,
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+});
 
 const upsertPlaceRequestSchema = z.object({
   id: z.string().min(1).optional(),
@@ -20,6 +34,70 @@ const upsertPlaceRequestSchema = z.object({
   longitude: z.number().nullable().optional(),
   latitude: z.number().nullable().optional(),
 });
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const parsed = adminPlacesQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+
+  if (!parsed.success) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "invalid_request",
+        message: "Admin places query is invalid.",
+      },
+      { status: 400 },
+    );
+  }
+
+  try {
+    const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
+    const places = await getAdminPlaces({
+      userId: user.id,
+      ...parsed.data,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      places,
+    });
+  } catch (error) {
+    if (error instanceof SessionError) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "unauthorized",
+          message: error.message,
+        },
+        { status: 401 },
+      );
+    }
+
+    if (error instanceof PlaceWriteError) {
+      const status = error.code === "team_not_found" ? 404 : 403;
+
+      return NextResponse.json(
+        {
+          ok: false,
+          error: error.code,
+          message: error.message,
+        },
+        { status },
+      );
+    }
+
+    console.error(error);
+
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "internal_error",
+        message: "Unexpected admin places read error.",
+      },
+      { status: 500 },
+    );
+  }
+}
 
 export async function POST(request: Request) {
   let body: unknown;

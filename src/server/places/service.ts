@@ -10,6 +10,7 @@ import {
   getListsForTeam,
   getListsForPlaces,
   getPlacesForListId,
+  getPlacesForTeam,
   getPlacesForPublicListId,
   getPublicListBySlug,
   getPublicLists,
@@ -123,6 +124,16 @@ export type GetAdminPlaceInput = {
   id: string;
 };
 
+export type GetAdminPlacesInput = {
+  userId: string;
+  teamSlug?: string;
+  query?: string;
+  category?: string;
+  region?: string;
+  includeArchived?: boolean;
+  limit?: number;
+};
+
 export type GetAdminListPlacesInput = {
   userId: string;
   slug: string;
@@ -183,6 +194,13 @@ export type AdminPlaceDetail = PublicPlace & {
     name: string;
     visibility: ListVisibility;
   }>;
+};
+
+export type AdminPlaceSummary = PublicPlace & {
+  teamId: string;
+  listSlugs: string[];
+  listNames: string[];
+  archivedAt: string | null;
 };
 
 export class ListWriteError extends Error {
@@ -712,6 +730,87 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
       visibility: row.list.visibility,
     })),
   };
+}
+
+function placeMatchesQuery(place: PlaceRecord, query: string) {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  return [
+    place.id,
+    place.import_key,
+    place.name,
+    place.category,
+    place.region,
+    place.location_label,
+    place.signature_dishes,
+    place.review_summary,
+    place.source_label,
+    ...(place.taste_tags ?? []),
+  ]
+    .filter(Boolean)
+    .some((value) => String(value).toLocaleLowerCase().includes(normalizedQuery));
+}
+
+export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminPlaceSummary[]> {
+  const team = await getTeamBySlug(input.teamSlug?.trim() || "what-to-eat");
+
+  if (!team) {
+    throw new PlaceWriteError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(team.id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot read places for this team.", "not_allowed");
+  }
+
+  const limit = clampLimit(input.limit);
+  const places = (
+    await getPlacesForTeam({
+      teamId: team.id,
+      category: optionalText(input.category),
+      region: optionalText(input.region),
+      includeArchived: input.includeArchived,
+      limit: input.query ? 200 : limit,
+    })
+  )
+    .filter((place) => placeMatchesQuery(place, input.query ?? ""))
+    .slice(0, limit);
+  const [listRows, ratings] = await Promise.all([
+    getListsForPlaces(places.map((place) => place.id)),
+    getRatingsForPlaces(places.map((place) => place.id)),
+  ]);
+  const listsByPlace = new Map<string, PublicListRecord[]>();
+
+  for (const row of listRows) {
+    const lists = listsByPlace.get(row.place_id) ?? [];
+    lists.push(row.list);
+    listsByPlace.set(row.place_id, lists);
+  }
+
+  return places.map((place) => {
+    const lists = listsByPlace.get(place.id) ?? [];
+    const primaryList = lists[0] ?? {
+      id: "",
+      team_id: place.team_id,
+      slug: "",
+      name: "",
+      description: null,
+      visibility: "private" as ListVisibility,
+    };
+
+    return {
+      ...toPublicPlace(place, primaryList, ratings),
+      teamId: place.team_id,
+      listSlugs: lists.map((list) => list.slug),
+      listNames: lists.map((list) => list.name),
+      archivedAt: place.archived_at,
+    };
+  });
 }
 
 export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Promise<AdminListPlace[]> {

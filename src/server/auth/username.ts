@@ -1,4 +1,4 @@
-export const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,31}$/;
+export const USERNAME_PATTERN = /^[a-z][a-z0-9]{2,31}$/;
 
 export function normalizeUsername(username: string) {
   return username.trim().toLowerCase();

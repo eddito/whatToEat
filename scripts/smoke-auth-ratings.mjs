@@ -1,7 +1,7 @@
 const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
-const MEMBER_USERNAME = "test_user";
+const MEMBER_USERNAME = "testuser";
 const MEMBER_PASSWORD = "TestUser_2026";
-const EXTERNAL_USERNAME = "test_external";
+const EXTERNAL_USERNAME = "testexternal";
 const EXTERNAL_PASSWORD = "TestExternal_2026";
 
 function getBaseUrl() {

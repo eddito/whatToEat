@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { createClient } from "@supabase/supabase-js";
 
 const root = process.cwd();
-const USERNAME_PATTERN = /^[a-z][a-z0-9_]{2,31}$/;
+const USERNAME_PATTERN = /^[a-z][a-z0-9]{2,31}$/;
 const DEFAULT_TEAM_SLUG = "what-to-eat";
 
 function loadEnv() {
@@ -35,6 +35,10 @@ function parseArgs() {
   for (let index = 0; index < entries.length; index += 1) {
     const entry = entries[index];
 
+    if (entry === "--") {
+      continue;
+    }
+
     if (!entry.startsWith("--")) {
       continue;
     }
@@ -52,6 +56,8 @@ function parseArgs() {
     username: String(args.get("username") ?? process.env.AUTH_USERNAME ?? "").trim().toLowerCase(),
     password: String(args.get("password") ?? process.env.AUTH_PASSWORD ?? ""),
     displayName: String(args.get("display-name") ?? process.env.AUTH_DISPLAY_NAME ?? "").trim(),
+    contactEmail: String(args.get("contact-email") ?? process.env.AUTH_CONTACT_EMAIL ?? "").trim().toLowerCase(),
+    contactPhone: String(args.get("contact-phone") ?? process.env.AUTH_CONTACT_PHONE ?? "").trim().replace(/[\s-]/g, ""),
     role: String(args.get("role") ?? process.env.AUTH_ROLE ?? "member").trim(),
     teamSlug: String(args.get("team-slug") ?? process.env.AUTH_TEAM_SLUG ?? DEFAULT_TEAM_SLUG).trim(),
     noTeam: args.has("no-team") || process.env.AUTH_NO_TEAM === "1",
@@ -60,6 +66,14 @@ function parseArgs() {
 
 function getInternalEmail(username) {
   return `${username}@users.what-to-eat-today.invalid`;
+}
+
+function isValidEmail(value) {
+  return !value || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function isValidPhone(value) {
+  return !value || /^\+?[0-9]{6,20}$/.test(value);
 }
 
 async function getTeamId(supabase, slug) {
@@ -72,12 +86,14 @@ async function getTeamId(supabase, slug) {
   return data?.id ?? null;
 }
 
-async function upsertProfile(supabase, userId, username, displayName) {
+async function upsertProfile(supabase, userId, username, displayName, contactEmail, contactPhone) {
   const { error } = await supabase.from("profiles").upsert(
     {
       id: userId,
       username,
       display_name: displayName || username,
+      contact_email: contactEmail || null,
+      contact_phone: contactPhone || null,
     },
     {
       onConflict: "id",
@@ -109,14 +125,22 @@ async function upsertTeamMember(supabase, teamId, userId, role) {
 async function main() {
   loadEnv();
 
-  const { username, password, displayName, role, teamSlug, noTeam } = parseArgs();
+  const { username, password, displayName, contactEmail, contactPhone, role, teamSlug, noTeam } = parseArgs();
 
   if (!USERNAME_PATTERN.test(username)) {
-    throw new Error("Invalid username. Use 3-32 chars: lowercase letter first, then lowercase letters, numbers, or underscore.");
+    throw new Error("Invalid username. Use 3-32 chars: lowercase letter first, then lowercase letters or numbers.");
   }
 
   if (password.length < 8) {
     throw new Error("Password must be at least 8 characters.");
+  }
+
+  if (!isValidEmail(contactEmail)) {
+    throw new Error("Invalid contact email.");
+  }
+
+  if (!isValidPhone(contactPhone)) {
+    throw new Error("Invalid contact phone. Use 6-20 digits, optionally starting with +.");
   }
 
   if (!["owner", "member", "viewer"].includes(role)) {
@@ -144,6 +168,8 @@ async function main() {
       user_metadata: {
         username,
         display_name: displayName || username,
+        contact_email: contactEmail || null,
+        contact_phone: contactPhone || null,
       },
     });
 
@@ -158,6 +184,8 @@ async function main() {
       user_metadata: {
         username,
         display_name: displayName || username,
+        contact_email: contactEmail || null,
+        contact_phone: contactPhone || null,
       },
     });
 
@@ -169,7 +197,7 @@ async function main() {
     createdAuthUser = true;
   }
 
-  await upsertProfile(supabase, userId, username, displayName);
+  await upsertProfile(supabase, userId, username, displayName, contactEmail, contactPhone);
 
   const teamId = noTeam ? null : await getTeamId(supabase, teamSlug);
 
@@ -183,6 +211,8 @@ async function main() {
         ok: true,
         username,
         userId,
+        contactEmail: contactEmail || null,
+        contactPhone: contactPhone || null,
         role: teamId ? role : null,
         teamSlug: teamId ? teamSlug : null,
         noTeam,

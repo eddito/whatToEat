@@ -377,6 +377,63 @@ export async function getArchivedPlacesForTeam(input: {
   return (data ?? []) as PlaceRecord[];
 }
 
+export async function getPlacesForTeam(input: {
+  teamId: string;
+  category?: string | null;
+  region?: string | null;
+  includeArchived?: boolean;
+  limit: number;
+}): Promise<PlaceRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  let query = supabase
+    .from("places")
+    .select(
+      `
+      id,
+      team_id,
+      import_key,
+      name,
+      category,
+      taste_tags,
+      signature_dishes,
+      review_summary,
+      region,
+      location_label,
+      parking_note,
+      source_label,
+      visited,
+      longitude,
+      latitude,
+      geocode_status,
+      archived_at
+    `,
+    )
+    .eq("team_id", input.teamId);
+
+  if (!input.includeArchived) {
+    query = query.is("archived_at", null);
+  }
+
+  if (input.category) {
+    query = query.eq("category", input.category);
+  }
+
+  if (input.region) {
+    query = query.eq("region", input.region);
+  }
+
+  const { data, error } = await query
+    .order("updated_at", { ascending: false })
+    .order("name", { ascending: true })
+    .limit(input.limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as PlaceRecord[];
+}
+
 export async function upsertPlaceRecord(input: {
   id?: string;
   teamId: string;

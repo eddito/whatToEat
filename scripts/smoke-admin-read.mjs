@@ -1,9 +1,9 @@
 const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
-const OWNER_USERNAME = "test_owner";
+const OWNER_USERNAME = "testowner";
 const OWNER_PASSWORD = "TestOwner_2026";
-const MEMBER_USERNAME = "test_user";
+const MEMBER_USERNAME = "testuser";
 const MEMBER_PASSWORD = "TestUser_2026";
-const EXTERNAL_USERNAME = "test_external";
+const EXTERNAL_USERNAME = "testexternal";
 const EXTERNAL_PASSWORD = "TestExternal_2026";
 
 function getBaseUrl() {
@@ -106,6 +106,18 @@ async function main() {
   assert((listPlaces.body?.places?.length ?? 0) > 0, "Admin list places should include places", listPlaces);
 
   const firstPlaceId = listPlaces.body.places[0].id;
+  const adminPlaces = await expectStatus(
+    "owner admin places",
+    `/api/admin/places?query=${encodeURIComponent(firstPlaceId)}&limit=5`,
+    owner.accessToken,
+    200,
+  );
+  assert(
+    adminPlaces.body?.places?.some((item) => item.id === firstPlaceId),
+    "Admin places should support querying by stable place id/name fields",
+    adminPlaces,
+  );
+
   const place = await expectStatus("owner admin place detail", `/api/admin/places/${firstPlaceId}`, owner.accessToken, 200);
   assert(place.body?.place?.id === firstPlaceId, "Admin place detail should return requested place", place);
 
@@ -141,6 +153,7 @@ async function main() {
           "owner login and /api/auth/me",
           "refresh token",
           "admin lists",
+          "admin places",
           "admin list places",
           "admin place detail",
           "admin place ratings",

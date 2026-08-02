@@ -26,13 +26,33 @@ create table if not exists public.profiles (
   username text,
   display_name text,
   avatar_url text,
+  contact_email text,
+  contact_phone text,
   created_at timestamptz not null default now()
 );
 
 alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists contact_email text;
+alter table public.profiles add column if not exists contact_phone text;
 update public.profiles
-set username = 'user_' || left(replace(id::text, '-', ''), 12)
+set username = 'user' || left(replace(id::text, '-', ''), 12)
 where username is null;
+update public.profiles
+set username = lower(regexp_replace(username, '[^a-z0-9]', '', 'g'))
+where username !~ '^[a-z][a-z0-9]{2,31}$'
+  and lower(regexp_replace(username, '[^a-z0-9]', '', 'g')) ~ '^[a-z][a-z0-9]{2,31}$';
+update public.profiles
+set username = 'user' || left(replace(id::text, '-', ''), 12)
+where username !~ '^[a-z][a-z0-9]{2,31}$';
+update auth.users
+set
+  email = public.profiles.username || '@users.what-to-eat-today.invalid',
+  raw_user_meta_data = coalesce(auth.users.raw_user_meta_data, '{}'::jsonb)
+    || jsonb_build_object('username', public.profiles.username)
+from public.profiles
+where auth.users.id = public.profiles.id
+  and auth.users.email like '%@users.what-to-eat-today.invalid'
+  and auth.users.email <> public.profiles.username || '@users.what-to-eat-today.invalid';
 alter table public.profiles alter column username set not null;
 alter table public.profiles drop column if exists email;
 
@@ -42,7 +62,15 @@ create unique index profiles_username_lower_idx
 
 alter table public.profiles drop constraint if exists profiles_username_format_chk;
 alter table public.profiles add constraint profiles_username_format_chk
-  check (username ~ '^[a-z][a-z0-9_]{2,31}$');
+  check (username ~ '^[a-z][a-z0-9]{2,31}$');
+
+alter table public.profiles drop constraint if exists profiles_contact_email_format_chk;
+alter table public.profiles add constraint profiles_contact_email_format_chk
+  check (contact_email is null or contact_email ~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$');
+
+alter table public.profiles drop constraint if exists profiles_contact_phone_format_chk;
+alter table public.profiles add constraint profiles_contact_phone_format_chk
+  check (contact_phone is null or contact_phone ~ '^\+?[0-9]{6,20}$');
 
 create table if not exists public.teams (
   id uuid primary key default gen_random_uuid(),
@@ -233,22 +261,26 @@ declare
 begin
   candidate_username := lower(trim(coalesce(new.raw_user_meta_data ->> 'username', '')));
 
-  if candidate_username !~ '^[a-z][a-z0-9_]{2,31}$' then
-    candidate_username := 'user_' || left(replace(new.id::text, '-', ''), 12);
+  if candidate_username !~ '^[a-z][a-z0-9]{2,31}$' then
+    candidate_username := 'user' || left(replace(new.id::text, '-', ''), 12);
   end if;
 
-  insert into public.profiles (id, username, display_name, avatar_url)
+  insert into public.profiles (id, username, display_name, avatar_url, contact_email, contact_phone)
   values (
     new.id,
     candidate_username,
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'name'),
-    new.raw_user_meta_data ->> 'avatar_url'
+    new.raw_user_meta_data ->> 'avatar_url',
+    nullif(lower(trim(coalesce(new.raw_user_meta_data ->> 'contact_email', ''))), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data ->> 'contact_phone', '')), '')
   )
   on conflict (id) do update
   set
     username = coalesce(public.profiles.username, excluded.username),
     display_name = coalesce(public.profiles.display_name, excluded.display_name),
-    avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url);
+    avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url),
+    contact_email = coalesce(public.profiles.contact_email, excluded.contact_email),
+    contact_phone = coalesce(public.profiles.contact_phone, excluded.contact_phone);
 
   return new;
 end;

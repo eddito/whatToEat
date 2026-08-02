@@ -70,6 +70,9 @@
 | BE-033 | 实现榜单内店铺排序接口 | 已完成 | `POST /api/admin/lists/[slug]/places/order`、`reorderAdminListPlaces` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-034 | 实现后台店铺详情接口 | 已完成 | `GET /api/admin/places/[id]`、`getAdminPlace` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-035 | 新增后台只读 smoke 脚本 | 已完成 | `pnpm smoke:admin-read`、`scripts/smoke-admin-read.mjs` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
+| BE-036 | 实现后台店铺列表查询接口 | 已完成 | `GET /api/admin/places`、`getAdminPlaces` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
+| BE-037 | 实现账号联系方式校验修改密码接口 | 已完成 | `POST /api/auth/change-password`、`profiles.contact_email/contact_phone`、username 规则收紧 | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:change-password` 通过 |
+| BE-038 | 新增修改密码 smoke 脚本 | 已完成 | `pnpm smoke:change-password`、`scripts/smoke-change-password.mjs` | `node --check`、`tsc --noEmit`、`pnpm smoke:change-password` 通过 |
 
 ## 完成记录
 
@@ -119,6 +122,11 @@
 | 2026-08-02 | 实现后台店铺详情接口 | `src/app/api/admin/places/[id]/route.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-08-02 | 远端后台店铺详情验证 | Supabase `places`、`list_places`、`lists`、`ratings` | `GET /api/admin/places/red-list-1`：owner/member 返回 200，external 返回 403，未登录返回 401，不存在店铺返回 404；响应包含 `teamId` 和所属榜单 |
 | 2026-08-02 | 新增后台只读 smoke 脚本 | `scripts/smoke-admin-read.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
+| 2026-08-02 | 实现后台店铺列表查询接口 | `src/app/api/admin/places/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
+| 2026-08-02 | 实现账号联系方式校验修改密码接口 | `supabase/schema.sql`、`src/app/api/auth/change-password/route.ts`、`src/server/auth/**`、`scripts/create-auth-user.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:change-password` 通过 |
+| 2026-08-02 | 收紧测试账号命名规则 | `scripts/smoke-auth-ratings.mjs`、`scripts/smoke-admin-read.mjs`、`supabase/schema.sql` | 执行新 schema 后，历史测试账号会从 `test_user/test_external/test_owner/test_member_target` 迁移为 `testuser/testexternal/testowner/testmembertarget` |
+| 2026-08-02 | 更新远端测试账号联系方式 | Supabase Auth、`profiles`、`team_members` | `testuser/testowner/testexternal` 已按新 username 规则更新，并写入 `contact_email/contact_phone` |
+| 2026-08-02 | 远端修改密码闭环验证 | Supabase Auth、`profiles.contact_email` | `pnpm smoke:change-password` 通过：错误邮箱返回 `contact_mismatch`，正确邮箱可修改密码，旧密码失效，新密码可登录，最后恢复 `TestUser_2026` |
 
 ## 当前数据库快照
 
@@ -130,8 +138,8 @@
 | `list_places` | 78+ | 店铺和榜单关联，包含后台接口 smoke 测试关联 |
 | `ratings` | 60+ | 初始评分和测试评分 |
 | `import_batches` | 2+ | 初始导入批次和最新 seed 追踪批次；schema 已支持 operation/status/summary/finished_at/rolled_back_at |
-| `profiles` | 4+ | `test_user`、`test_external`、`test_owner`、`test_member_target` 等测试账号 |
-| `team_members` | 2+ | 默认小队成员和 `test_owner` owner |
+| `profiles` | 4+ | `testuser`、`testexternal`、`testowner`、`testmembertarget` 等测试账号 |
+| `team_members` | 2+ | 默认小队成员和 `testowner` owner |
 
 ## 下一步
 

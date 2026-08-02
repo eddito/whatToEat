@@ -33,8 +33,9 @@ Supabase Auth 底层仍需要 email 或 phone 承载 password auth。后端创�
 Username 规则：
 
 ```txt
-^[a-z][a-z0-9_]{2,31}$
+^[a-z][a-z0-9]{2,31}$
 ```
+改为只允许小写英文字母和数字：账号名必须以小写英文字母开头，不允许下划线、中文或其他特殊字符。
 
 ## 环境变量
 
@@ -51,7 +52,7 @@ Username 规则：
 
 | 表 | 用途 | 当前字段 |
 | --- | --- | --- |
-| `profiles` | 业务用户资料 | `id`、`username`、`display_name`、`avatar_url`、`created_at` |
+| `profiles` | 业务用户资料 | `id`、`username`、`display_name`、`avatar_url`、`contact_email`、`contact_phone`、`created_at` |
 | `teams` | 小队空间 | `id`、`slug`、`name`、`description` |
 | `team_members` | 成员和角色 | `team_id`、`user_id`、`role` |
 | `lists` | 榜单 | `slug`、`name`、`description`、`visibility` |
@@ -85,6 +86,7 @@ Username 规则：
 | --- | --- |
 | `upsertAdminPlace(input)` | owner/member 新增或编辑店铺，并维护榜单关联 |
 | `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
+| `getAdminPlaces(input)` | owner/member 按团队读取后台店铺列表，支持关键词/分类/区域/归档筛选 |
 | `getAdminArchivedPlaces(input)` | owner/member 读取已归档店铺列表 |
 | `getAdminPlace(input)` | owner/member 读取店铺后台详情 |
 | `getAdminPlacesByList(input)` | owner/member 读取榜单内店铺管理视图 |
@@ -171,6 +173,48 @@ type LoginResponse = {
 | 401 | `invalid_username` | username 格式不合法 |
 | 401 | `profile_not_found` | 账号不存在 |
 | 401 | `invalid_credentials` | 密码错误或 Supabase Auth 登录失败 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/auth/change-password`
+
+路径：`src/app/api/auth/change-password/route.ts`
+
+用途：通过业务账号和已绑定的邮箱或手机号校验身份，校验通过后修改账号密码。该接口不使用免密登录、magic link 或 OTP。
+
+请求体：
+
+```ts
+type ChangePasswordRequest = {
+  username: string;
+  contact: string;
+  newPassword: string;
+};
+```
+
+说明：
+- `username` 必须符合账号规则：首位小写英文字母，后续仅允许小写英文字母或数字，3-32 位。
+- `contact` 可以是邮箱或手机号，必须匹配 `profiles.contact_email` 或 `profiles.contact_phone`。
+- `newPassword` 至少 8 位。
+
+成功响应：
+```ts
+type ChangePasswordResponse = {
+  ok: true;
+  user: {
+    username: string;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或缺少 username/contact/newPassword |
+| 400 | `contact_mismatch` | contact 不是合法邮箱/手机号，或与账号不匹配 |
+| 400 | `weak_password` | 新密码少于 8 位 |
+| 401 | `invalid_username` | username 格式不合法 |
+| 401 | `profile_not_found` | username 不存在 |
+| 401 | `contact_not_configured` | 账号未绑定可校验的邮箱或手机号 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `GET /api/auth/me`
@@ -293,6 +337,49 @@ type UpsertRatingRequest = {
 | 403 | `place_not_public` | 店铺不在公开榜单中 |
 | 403 | `rating_not_allowed` | 当前用户无权评分 |
 | 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/places`
+
+路径：`src/app/api/admin/places/route.ts`
+
+用途：owner/member 按小队读取后台店铺列表，供后台店铺管理、选店和搜索使用。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+| `query` | 否 | 关键词，匹配店铺 `id/import_key/name/category/region/location/taste_tags` 等字段 |
+| `category` | 否 | 精确匹配店铺分类 |
+| `region` | 否 | 精确匹配区域 |
+| `includeArchived` | 否 | 是否包含已归档店铺，仅支持 `true`/`false`，默认 `false` |
+| `limit` | 否 | 返回数量，1-200，默认 50 |
+
+成功响应：
+```ts
+type GetAdminPlacesResponse = {
+  ok: true;
+  places: Array<PublicPlace & {
+    teamId: string;
+    listSlugs: string[];
+    listNames: string[];
+    archivedAt: string | null;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `POST /api/admin/places`
@@ -952,6 +1039,8 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 | `--username` | 是 | 业务账号，必须符合 username 规则 |
 | `--password` | 是 | 密码，至少 8 位 |
 | `--display-name` | 否 | 展示名，默认等于 username |
+| `--contact-email` | 否 | 账号找回/修改密码校验邮箱 |
+| `--contact-phone` | 否 | 账号找回/修改密码校验手机号 |
 | `--role` | 否 | `owner`、`member`、`viewer`，默认 `member` |
 | `--team-slug` | 否 | 默认 `what-to-eat` |
 | `--no-team` | 否 | 创建外部测试用户，不绑定小队 |
@@ -964,6 +1053,27 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 
 用途：验证后端登录和评分权限闭环。该脚本会写入/更新远端 Supabase 测试评分。
 
+### `pnpm smoke:change-password`
+
+路径：`scripts/smoke-change-password.mjs`
+
+用途：验证账号联系方式校验修改密码闭环。脚本会把 `testuser` 临时改为新密码，确认旧密码失效、新密码可登录，最后恢复原密码。
+
+默认测试账号：
+```txt
+username: testuser
+contactEmail: testuser@example.com
+originalPassword: TestUser_2026
+temporaryPassword: TempUser_2026
+```
+
+覆盖：
+- `POST /api/auth/change-password`
+- `POST /api/auth/login`
+- 错误联系方式返回 `contact_mismatch`
+- 正确联系方式可修改密码
+- 测试结束恢复原密码
+
 ### `pnpm smoke:admin-read`
 
 路径：`scripts/smoke-admin-read.mjs`
@@ -975,6 +1085,7 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 - `GET /api/auth/me`
 - `POST /api/auth/refresh`
 - `GET /api/admin/lists`
+- `GET /api/admin/places`
 - `GET /api/admin/lists/[slug]/places`
 - `GET /api/admin/places/[id]`
 - `GET /api/admin/places/[id]/ratings`
