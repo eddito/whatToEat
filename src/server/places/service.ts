@@ -6,6 +6,7 @@ import {
   archivePlaceRecord,
   getArchivedPlacesForTeam,
   getListBySlug,
+  getListPlaceLinks,
   getListsForTeam,
   getListsForPlaces,
   getPlacesForListId,
@@ -24,6 +25,7 @@ import {
   upsertListPlace,
   upsertListRecord,
   upsertPlaceRecord,
+  updateListPlaceSortOrders,
 } from "@/server/places/repository";
 import { canManageTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
 
@@ -122,6 +124,12 @@ export type GetAdminListPlacesInput = {
   includeArchived?: boolean;
 };
 
+export type ReorderAdminListPlacesInput = {
+  userId: string;
+  slug: string;
+  placeIds: string[];
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
@@ -153,6 +161,11 @@ export type AdminListPlace = PublicPlace & {
   archivedAt: string | null;
 };
 
+export type ReorderAdminListPlacesResult = {
+  listSlug: string;
+  updated: number;
+};
+
 export type AdminList = PublicList & {
   teamSlug: string;
 };
@@ -164,6 +177,16 @@ export class ListWriteError extends Error {
   ) {
     super(message);
     this.name = "ListWriteError";
+  }
+}
+
+export class ListPlaceOrderError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "list_not_found" | "not_allowed" | "duplicate_place_id" | "place_not_in_list",
+  ) {
+    super(message);
+    this.name = "ListPlaceOrderError";
   }
 }
 
@@ -663,4 +686,52 @@ export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Prom
     sortOrder: row.sort_order,
     archivedAt: row.place.archived_at,
   }));
+}
+
+export async function reorderAdminListPlaces(
+  input: ReorderAdminListPlacesInput,
+): Promise<ReorderAdminListPlacesResult> {
+  const list = await getListBySlug(input.slug.trim());
+
+  if (!list) {
+    throw new ListPlaceOrderError("List not found.", "list_not_found");
+  }
+
+  const membership = await getTeamMembership(list.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new ListPlaceOrderError("Current user cannot reorder places for this list.", "not_allowed");
+  }
+
+  const stableIds = input.placeIds.map((placeId) => placeId.trim()).filter(Boolean);
+
+  if (new Set(stableIds).size !== stableIds.length) {
+    throw new ListPlaceOrderError("Place ids must be unique.", "duplicate_place_id");
+  }
+
+  const [links, places] = await Promise.all([
+    getListPlaceLinks(list.id),
+    Promise.all(stableIds.map((stableId) => getPlaceByStableId(stableId))),
+  ]);
+  const linkPlaceIds = new Set(links.map((link) => link.place_id));
+  const orders = places.map((place, index) => {
+    if (!place || place.team_id !== list.team_id || !linkPlaceIds.has(place.id)) {
+      throw new ListPlaceOrderError("All places must already belong to the target list.", "place_not_in_list");
+    }
+
+    return {
+      placeId: place.id,
+      sortOrder: index,
+    };
+  });
+
+  await updateListPlaceSortOrders({
+    listId: list.id,
+    orders,
+  });
+
+  return {
+    listSlug: list.slug,
+    updated: orders.length,
+  };
 }

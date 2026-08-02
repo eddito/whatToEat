@@ -88,6 +88,7 @@ Username 规则：
 | `getAdminArchivedPlaces(input)` | owner/member 读取已归档店铺列表 |
 | `getAdminPlacesByList(input)` | owner/member 读取榜单内店铺管理视图 |
 | `getAdminLists(input)` | owner/member 读取后台榜单列表，包含 private 榜单 |
+| `reorderAdminListPlaces(input)` | owner/member 调整榜单内店铺排序 |
 | `upsertAdminList(input)` | owner/member 新增或编辑榜单 |
 
 权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
@@ -804,6 +805,56 @@ type GetAdminListPlacesResponse = {
 | HTTP | `error` | 场景 |
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member |
+| 404 | `list_not_found` | 榜单不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/lists/[slug]/places/order`
+
+路径：`src/app/api/admin/lists/[slug]/places/order/route.ts`
+
+用途：owner/member 调整某个榜单内已有店铺的排序。该接口只更新 `list_places.sort_order`，不会新增榜单关联。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `slug` | 榜单 slug |
+
+请求体：
+```ts
+type ReorderAdminListPlacesRequest = {
+  placeIds: string[];
+};
+```
+
+说明：
+- `placeIds` 按目标展示顺序传入。
+- 每个 id 可为 `places.import_key` 或 UUID。
+- 所有店铺必须已经属于目标榜单。
+
+成功响应：
+```ts
+type ReorderAdminListPlacesResponse = {
+  ok: true;
+  result: {
+    listSlug: string;
+    updated: number;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 400 | `duplicate_place_id` | `placeIds` 内有重复 id |
+| 400 | `place_not_in_list` | 店铺不存在、跨小队，或不属于目标榜单 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member |
 | 404 | `list_not_found` | 榜单不存在 |

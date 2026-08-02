@@ -40,6 +40,12 @@ export type ListPlaceRecord = {
   place: PlaceRecord;
 };
 
+export type ListPlaceLinkRecord = {
+  list_id: string;
+  place_id: string;
+  sort_order: number;
+};
+
 export type PlaceListRecord = {
   place_id: string;
   list: PublicListRecord;
@@ -242,6 +248,21 @@ export async function getPlacesForListId(input: {
       place: Array.isArray(row.places) ? row.places[0] : row.places,
     }))
     .filter((row) => row.place && (input.includeArchived || !row.place.archived_at)) as unknown as ListPlaceRecord[];
+}
+
+export async function getListPlaceLinks(listId: string): Promise<ListPlaceLinkRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("list_places")
+    .select("list_id, place_id, sort_order")
+    .eq("list_id", listId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ListPlaceLinkRecord[];
 }
 
 export async function getPublicPlaceByStableId(stableId: string) {
@@ -465,6 +486,34 @@ export async function upsertListPlace(input: {
       place_id: input.placeId,
       sort_order: input.sortOrder ?? 0,
     },
+    {
+      onConflict: "list_id,place_id",
+    },
+  );
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function updateListPlaceSortOrders(input: {
+  listId: string;
+  orders: Array<{
+    placeId: string;
+    sortOrder: number;
+  }>;
+}) {
+  if (input.orders.length === 0) {
+    return;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("list_places").upsert(
+    input.orders.map((order) => ({
+      list_id: input.listId,
+      place_id: order.placeId,
+      sort_order: order.sortOrder,
+    })),
     {
       onConflict: "list_id,place_id",
     },

@@ -67,6 +67,7 @@
 | BE-030 | 实现 refresh token 换新接口 | 已完成 | `POST /api/auth/refresh`、`refreshSession` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-031 | 实现后台榜单列表接口 | 已完成 | `GET /api/admin/lists`、`getAdminLists` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-032 | 补齐远端 seed 导入批次追踪 | 已完成 | 远端 `places/list_places/ratings.import_batch_id` | `pnpm db:seed` 和 `GET /api/admin/import-batches?limit=3` 验证通过 |
+| BE-033 | 实现榜单内店铺排序接口 | 已完成 | `POST /api/admin/lists/[slug]/places/order`、`reorderAdminListPlaces` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 
 ## 完成记录
 
@@ -111,6 +112,8 @@
 | 2026-08-02 | 远端后台榜单列表验证 | Supabase `teams`、`team_members`、`lists`、`places`、`ratings` | `GET /api/admin/lists`：owner/member 返回 200，external 返回 403，未登录返回 401，不存在小队返回 404；当前返回 3 个榜单并包含 `red-list` |
 | 2026-08-02 | 补齐远端 seed 导入批次追踪 | Supabase `import_batches`、`places`、`list_places`、`ratings` | `pnpm db:seed` 创建批次 `2f6b5e12-f2aa-4440-997a-d538302b5372`；更新 77 个店铺、77 个榜单关联、60 条评分，跳过 94 个空评分，无新增数据，无归档数据 |
 | 2026-08-02 | 验证导入批次后台可读 | `GET /api/admin/import-batches?limit=3` | 最新批次返回 200，计数为 `places:77`、`listPlaces:77`、`ratings:60` |
+| 2026-08-02 | 实现榜单内店铺排序接口 | `src/app/api/admin/lists/[slug]/places/order/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| 2026-08-02 | 远端榜单内店铺排序验证 | Supabase `list_places` | 临时交换 `red-list` 前两个店铺后读取顺序生效，再恢复原顺序；owner/member 返回 200，external 返回 403，未登录返回 401，重复 id 返回 400 |
 
 ## 当前数据库快照
 
