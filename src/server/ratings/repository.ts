@@ -21,6 +21,18 @@ export type RatingRecord = {
   updated_at: string;
 };
 
+export type AdminRatingRecord = RatingRecord & {
+  user_id: string | null;
+  rater_label: string | null;
+  created_at: string;
+  profile: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  } | null;
+};
+
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export async function getRatingTarget(stablePlaceId: string): Promise<RatingTarget | null> {
@@ -108,4 +120,37 @@ export async function upsertUserRating(input: {
   }
 
   return data as RatingRecord;
+}
+
+export async function getRatingsForPlace(placeId: string): Promise<AdminRatingRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("ratings")
+    .select(
+      `
+      id,
+      user_id,
+      source,
+      rater_label,
+      score,
+      note,
+      created_at,
+      updated_at,
+      profile:profiles (
+        id,
+        username,
+        display_name,
+        avatar_url
+      )
+    `,
+    )
+    .eq("place_id", placeId)
+    .order("source", { ascending: true })
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as unknown as AdminRatingRecord[];
 }

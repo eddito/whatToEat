@@ -113,6 +113,16 @@ Username 规则：
 
 权限：调用用户必须是目标小队的 `owner`。
 
+### 评分管理
+
+路径：`src/server/ratings/service.ts`
+
+| 函数 | 说明 |
+| --- | --- |
+| `getAdminPlaceRatings(input)` | owner/member 读取店铺评分明细 |
+
+权限：调用用户必须是目标店铺所在小队的 `owner` 或 `member`。
+
 ## HTTP 接口
 
 ### `POST /api/auth/login`
@@ -594,6 +604,50 @@ type GetAdminArchivedPlacesResponse = {
 | 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
 | 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/places/[id]/ratings`
+
+路径：`src/app/api/admin/places/[id]/ratings/route.ts`
+
+用途：owner/member 读取店铺评分明细，用于后台查看团队评分、外部评分和备注。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type GetAdminPlaceRatingsResponse = {
+  ok: true;
+  ratings: Array<{
+    id: string;
+    userId: string | null;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    source: "team_member" | "external";
+    raterLabel: string | null;
+    score: number;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `rating_not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `GET /api/admin/lists/[slug]/places`
