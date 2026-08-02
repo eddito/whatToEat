@@ -28,7 +28,7 @@
 | B7 | 成员管理接口 | 已完成 | owner-only 成员添加、角色调整和移除接口已实现 |
 | B8 | 导入脚本运维能力 | 已完成 | seed dry-run、批次追踪、归档缺失项和按批次回滚 |
 | B9 | 导入批次后台读取 | 已完成 | owner-only 导入批次列表和关联数据计数接口 |
-| B10 | 后台只读管理数据 | 进行中 | 成员列表、后台榜单列表、已归档店铺、榜单内店铺管理视图和店铺评分明细接口已实现 |
+| B10 | 后台只读管理数据 | 进行中 | 成员列表、后台榜单列表、店铺详情、已归档店铺、榜单内店铺管理视图和店铺评分明细接口已实现 |
 | B11 | 登录态读取 | 已完成 | 当前用户资料、小队角色和 refresh token 换新接口已实现 |
 
 ## 任务进度表
@@ -68,6 +68,7 @@
 | BE-031 | 实现后台榜单列表接口 | 已完成 | `GET /api/admin/lists`、`getAdminLists` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-032 | 补齐远端 seed 导入批次追踪 | 已完成 | 远端 `places/list_places/ratings.import_batch_id` | `pnpm db:seed` 和 `GET /api/admin/import-batches?limit=3` 验证通过 |
 | BE-033 | 实现榜单内店铺排序接口 | 已完成 | `POST /api/admin/lists/[slug]/places/order`、`reorderAdminListPlaces` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| BE-034 | 实现后台店铺详情接口 | 已完成 | `GET /api/admin/places/[id]`、`getAdminPlace` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 
 ## 完成记录
 
@@ -114,6 +115,8 @@
 | 2026-08-02 | 验证导入批次后台可读 | `GET /api/admin/import-batches?limit=3` | 最新批次返回 200，计数为 `places:77`、`listPlaces:77`、`ratings:60` |
 | 2026-08-02 | 实现榜单内店铺排序接口 | `src/app/api/admin/lists/[slug]/places/order/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-08-02 | 远端榜单内店铺排序验证 | Supabase `list_places` | 临时交换 `red-list` 前两个店铺后读取顺序生效，再恢复原顺序；owner/member 返回 200，external 返回 403，未登录返回 401，重复 id 返回 400 |
+| 2026-08-02 | 实现后台店铺详情接口 | `src/app/api/admin/places/[id]/route.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| 2026-08-02 | 远端后台店铺详情验证 | Supabase `places`、`list_places`、`lists`、`ratings` | `GET /api/admin/places/red-list-1`：owner/member 返回 200，external 返回 403，未登录返回 401，不存在店铺返回 404；响应包含 `teamId` 和所属榜单 |
 
 ## 当前数据库快照
 

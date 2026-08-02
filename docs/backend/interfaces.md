@@ -86,6 +86,7 @@ Username 规则：
 | `upsertAdminPlace(input)` | owner/member 新增或编辑店铺，并维护榜单关联 |
 | `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
 | `getAdminArchivedPlaces(input)` | owner/member 读取已归档店铺列表 |
+| `getAdminPlace(input)` | owner/member 读取店铺后台详情 |
 | `getAdminPlacesByList(input)` | owner/member 读取榜单内店铺管理视图 |
 | `getAdminLists(input)` | owner/member 读取后台榜单列表，包含 private 榜单 |
 | `reorderAdminListPlaces(input)` | owner/member 调整榜单内店铺排序 |
@@ -680,6 +681,46 @@ type ArchiveAdminPlaceResponse = {
 | 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
 | 404 | `place_not_found` | 指定店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/places/[id]`
+
+路径：`src/app/api/admin/places/[id]/route.ts`
+
+用途：owner/member 读取店铺后台详情，包含基础字段、归档状态、所属榜单和团队评分汇总。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type GetAdminPlaceResponse = {
+  ok: true;
+  place: PublicPlace & {
+    teamId: string;
+    archivedAt: string | null;
+    lists: Array<{
+      slug: string;
+      name: string;
+      visibility: "private" | "public_view" | "public_rate";
+    }>;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `GET /api/admin/places/archived`

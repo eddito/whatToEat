@@ -118,6 +118,11 @@ export type GetAdminArchivedPlacesInput = {
   limit?: number;
 };
 
+export type GetAdminPlaceInput = {
+  userId: string;
+  id: string;
+};
+
 export type GetAdminListPlacesInput = {
   userId: string;
   slug: string;
@@ -168,6 +173,16 @@ export type ReorderAdminListPlacesResult = {
 
 export type AdminList = PublicList & {
   teamSlug: string;
+};
+
+export type AdminPlaceDetail = PublicPlace & {
+  teamId: string;
+  archivedAt: string | null;
+  lists: Array<{
+    slug: string;
+    name: string;
+    visibility: ListVisibility;
+  }>;
 };
 
 export class ListWriteError extends Error {
@@ -659,6 +674,44 @@ export async function getAdminArchivedPlaces(input: GetAdminArchivedPlacesInput)
       archivedAt: place.archived_at as string,
     };
   });
+}
+
+export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPlaceDetail> {
+  const place = await getPlaceByStableId(input.id);
+
+  if (!place) {
+    throw new PlaceWriteError("Place not found.", "place_not_found");
+  }
+
+  const membership = await getTeamMembership(place.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot read this place.", "not_allowed");
+  }
+
+  const [listRows, ratings] = await Promise.all([
+    getListsForPlaces([place.id]),
+    getRatingsForPlaces([place.id]),
+  ]);
+  const primaryList = listRows[0]?.list ?? {
+    id: "",
+    team_id: place.team_id,
+    slug: "",
+    name: "",
+    description: null,
+    visibility: "private" as ListVisibility,
+  };
+
+  return {
+    ...toPublicPlace(place, primaryList, ratings),
+    teamId: place.team_id,
+    archivedAt: place.archived_at,
+    lists: listRows.map((row) => ({
+      slug: row.list.slug,
+      name: row.list.name,
+      visibility: row.list.visibility,
+    })),
+  };
 }
 
 export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Promise<AdminListPlace[]> {
