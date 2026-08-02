@@ -66,7 +66,10 @@ export async function GET(request: Request) {
     return context.response;
   }
 
-  const search = new URL(request.url).searchParams.get("q")?.trim();
+  const url = new URL(request.url);
+  const search = (url.searchParams.get("q") ?? url.searchParams.get("query"))?.trim();
+  const requestedLimit = Number(url.searchParams.get("limit") ?? 24);
+  const limit = Number.isFinite(requestedLimit) ? Math.min(Math.max(Math.trunc(requestedLimit), 1), 100) : 24;
   let query = context.supabase
     .from("places")
     .select(
@@ -74,11 +77,11 @@ export async function GET(request: Request) {
     )
     .eq("team_id", context.team.id)
     .order("updated_at", { ascending: false })
-    .limit(24);
+    .limit(limit);
 
   if (search) {
     const escaped = search.replaceAll("%", "\\%").replaceAll("_", "\\_");
-    query = query.or(`name.ilike.%${escaped}%,category.ilike.%${escaped}%,region.ilike.%${escaped}%`);
+    query = query.or(`import_key.ilike.%${escaped}%,name.ilike.%${escaped}%,category.ilike.%${escaped}%,region.ilike.%${escaped}%`);
   }
 
   const { data, error } = await query;

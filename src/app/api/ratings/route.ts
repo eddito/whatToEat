@@ -48,6 +48,7 @@ type RatingContext =
   | {
       ok: true;
       place: PlaceRecord;
+      role: "owner" | "member" | "viewer" | null;
       source: RatingSource;
       user: User;
     }
@@ -86,7 +87,7 @@ async function getRatingContext(request: Request, placeId: string): Promise<Rati
     return { ok: false, response: NextResponse.json({ error: "这个榜单暂未开放外部评分。" }, { status: 403 }) };
   }
 
-  return { ok: true, place, source, user: userData.user };
+  return { ok: true, place, role: membership?.role ?? null, source, user: userData.user };
 }
 
 export async function GET(request: Request) {
@@ -114,6 +115,7 @@ export async function GET(request: Request) {
         }
       : null,
     source: context.source,
+    role: context.role,
   });
 }
 
@@ -145,6 +147,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     rating,
     source: context.source,
+    role: context.role,
     message: existingRating ? "评分已更新。" : "评分已提交。",
   });
 }

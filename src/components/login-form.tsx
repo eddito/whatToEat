@@ -3,28 +3,20 @@
 import { LockKeyhole, UserRound } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getLoginCredentials, isUsernameAccount, PHONE_PATTERN } from "@/lib/accounts";
 import { getBrowserSupabase } from "@/lib/supabase";
 
 type LoginState = "idle" | "loading" | "success" | "error";
-const USERNAME_EMAIL_DOMAIN = "users.what-to-eat-today.invalid";
 
 function getSafeNextPath() {
   const next = new URLSearchParams(window.location.search).get("next");
   return next && next.startsWith("/") && !next.startsWith("//") ? next : "/";
 }
 
-function getLoginCredentials(account: string, password: string) {
+function isLoginAccountFormatValid(account: string) {
   const loginAccount = account.trim();
 
-  if (loginAccount.includes("@")) {
-    return { email: loginAccount, password };
-  }
-
-  if (/^\+?\d{6,15}$/.test(loginAccount)) {
-    return { phone: loginAccount, password };
-  }
-
-  return { email: `${loginAccount}@${USERNAME_EMAIL_DOMAIN}`, password };
+  return loginAccount.includes("@") || PHONE_PATTERN.test(loginAccount) || isUsernameAccount(loginAccount);
 }
 
 export function LoginForm() {
@@ -48,7 +40,7 @@ export function LoginForm() {
       return message || "登录失败，请检查账号密码后重试。";
     }
 
-    return "使用账号密码登录。账号可以是用户名、邮箱或手机号，登录状态会保存在当前浏览器中。";
+    return "使用账号密码登录。用户名仅支持小写字母和数字，不能包含中文或特殊字符。";
   }, [message, state, supabase]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -60,6 +52,12 @@ export function LoginForm() {
 
     setState("loading");
     setMessage("");
+
+    if (!isLoginAccountFormatValid(account)) {
+      setState("error");
+      setMessage("账号格式不正确：请输入邮箱、手机号，或 3-32 位小写字母/数字用户名。");
+      return;
+    }
 
     const { error } = await supabase.auth.signInWithPassword(getLoginCredentials(account, password));
 

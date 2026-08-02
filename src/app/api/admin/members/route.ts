@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { PHONE_PATTERN, USERNAME_EMAIL_DOMAIN, USERNAME_PATTERN } from "@/lib/accounts";
 import { canManageMembers, getAdminContext, type AdminRole } from "@/server/admin/context";
 
 const roleSchema = z.enum(["owner", "member", "viewer"]);
+const emailSchema = z.string().trim().email().max(160);
+const phoneSchema = z.string().trim().regex(PHONE_PATTERN);
+const usernameSchema = z.string().trim().regex(USERNAME_PATTERN);
 const AddMemberBody = z.object({
   account: z.string().trim().min(1).max(160),
   role: roleSchema.default("member"),
@@ -27,6 +31,27 @@ function getUserLabel(user: {
   if (typeof username === "string" && username.trim()) return username.trim();
   if (typeof displayName === "string" && displayName.trim()) return displayName.trim();
   return user.email || user.phone || "未命名账号";
+}
+
+function getUsername(user: { email?: string; user_metadata?: Record<string, unknown> }) {
+  const username = user.user_metadata?.username;
+
+  if (typeof username === "string" && username.trim()) {
+    return username.trim();
+  }
+
+  const email = user.email?.toLowerCase() ?? "";
+  const suffix = `@${USERNAME_EMAIL_DOMAIN}`;
+
+  return email.endsWith(suffix) ? email.slice(0, -suffix.length) : null;
+}
+
+function isValidMemberAccount(account: string) {
+  return (
+    emailSchema.safeParse(account).success ||
+    phoneSchema.safeParse(account).success ||
+    usernameSchema.safeParse(account).success
+  );
 }
 
 async function getOwnerCount(context: Extract<Awaited<ReturnType<typeof getAdminContext>>, { ok: true }>) {
@@ -71,9 +96,12 @@ async function listMembers(context: Extract<Awaited<ReturnType<typeof getAdminCo
 
     return {
       id: member.user_id,
+      userId: member.user_id,
+      username: getUsername(authUser ?? {}),
       name: getProfileName(profile, getUserLabel(authUser ?? {})),
       email: email || phone,
       role: member.role as AdminRole,
+      teamSlug: context.team.slug,
       joinedAt: member.created_at,
     };
   });
@@ -127,6 +155,13 @@ export async function POST(request: Request) {
 
   if (!parsed.success) {
     return NextResponse.json({ error: "成员参数不正确。" }, { status: 400 });
+  }
+
+  if (!isValidMemberAccount(parsed.data.account)) {
+    return NextResponse.json(
+      { error: "账号必须是邮箱、手机号，或 3-32 位小写字母/数字用户名，不能包含中文或其它特殊字符。" },
+      { status: 400 },
+    );
   }
 
   const user = await findAuthUserByAccount(context, parsed.data.account);

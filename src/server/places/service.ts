@@ -274,7 +274,7 @@ function getCoverPhotoUrl(placeId: string, photos: PhotoRecord[]) {
     .sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order)[0]?.url;
 }
 
-function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: RatingRecord[], photos: PhotoRecord[]): PublicPlace {
+function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: RatingRecord[], photos: PhotoRecord[] = []): PublicPlace {
   const ratingSummary = buildRatingSummary(place.id, ratings);
 
   return {

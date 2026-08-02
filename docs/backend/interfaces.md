@@ -583,14 +583,16 @@ Authorization: Bearer <accessToken>
 
 ```ts
 type UpsertAdminMemberRequest = {
-  username: string;
+  username?: string;
+  account?: string;
   role: "owner" | "member" | "viewer";
   teamSlug?: string;
 };
 ```
 
 说明：
-- `username` 必须已存在于 `profiles`。
+- `username` 必须已存在于 `profiles`；前端后台也可传 `account`，支持邮箱、手机号，或 3-32 位小写字母/数字用户名。
+- 用户名不能包含中文或其它特殊字符。
 - `teamSlug` 默认 `what-to-eat`。
 - 调用用户必须是目标小队 `owner`。
 - owner 不能把自己的角色改成非 owner。

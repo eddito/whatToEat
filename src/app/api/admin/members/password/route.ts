@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { PHONE_PATTERN } from "@/lib/accounts";
 import { canManageMembers, getAdminContext } from "@/server/admin/context";
 
 const emailSchema = z.string().trim().email().max(160);
-const phoneSchema = z.string().trim().regex(/^\+?\d{6,15}$/);
+const phoneSchema = z.string().trim().regex(PHONE_PATTERN);
 const PasswordBody = z.object({
   account: z.string().trim().min(1).max(160),
   password: z.string().min(8).max(72),
