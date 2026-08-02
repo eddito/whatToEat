@@ -59,6 +59,15 @@ export type RatingRecord = {
   score: number;
 };
 
+export type PhotoRecord = {
+  id: string;
+  place_id: string;
+  url: string;
+  is_cover: boolean;
+  sort_order: number;
+  created_at: string;
+};
+
 const PUBLIC_VISIBILITIES: ListVisibility[] = ["public_view", "public_rate"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -659,4 +668,25 @@ export async function getRatingsForPlaces(placeIds: string[]) {
   }
 
   return data as RatingRecord[];
+}
+
+export async function getPhotosForPlaces(placeIds: string[]): Promise<PhotoRecord[]> {
+  if (placeIds.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("photos")
+    .select("id, place_id, url, is_cover, sort_order, created_at")
+    .in("place_id", placeIds)
+    .order("is_cover", { ascending: false })
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as PhotoRecord[];
 }

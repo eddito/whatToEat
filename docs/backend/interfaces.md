@@ -59,6 +59,7 @@ Username 规则：
 | `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段、`archived_at` |
 | `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
 | `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
+| `photos` | 店铺图片 | `place_id`、`url`、`is_cover`、`sort_order` |
 | `import_batches` | 导入批次 | `team_id`、`source_name`、`operation`、`status`、`summary`、`finished_at`、`rolled_back_at` |
 
 `profiles.email` 已从业务表移除。Supabase `auth.users.email` 仅由 Supabase Auth 内部使用。
@@ -77,6 +78,14 @@ Username 规则：
 | `getPlace(id)` | 获取公开店铺详情，`id` 可以是 `places.import_key` 或 UUID |
 | `getMapPlaces()` | 获取地图页需要的公开店铺数据 |
 | `getListStats(slug)` | 获取公开榜单统计 |
+
+`PublicPlace` 通用照片字段：
+```ts
+type PublicPlacePhotoFields = {
+  coverPhotoUrl?: string;
+  photoCount: number;
+};
+```
 
 ### 店铺管理
 
@@ -878,6 +887,12 @@ type GetAdminPlaceResponse = {
   place: PublicPlace & {
     teamId: string;
     archivedAt: string | null;
+    photos: Array<{
+      id: string;
+      url: string;
+      isCover: boolean;
+      sortOrder: number;
+    }>;
     lists: Array<{
       slug: string;
       name: string;

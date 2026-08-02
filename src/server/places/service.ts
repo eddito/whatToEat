@@ -12,6 +12,7 @@ import {
   getPlacesForListId,
   getPlacesForTeam,
   getPlacesForPublicListId,
+  getPhotosForPlaces,
   getPublicListBySlug,
   getPublicLists,
   getPublicListsForPlace,
@@ -20,6 +21,7 @@ import {
   getRatingsForPlaces,
   isUuid,
   type ListVisibility,
+  type PhotoRecord,
   type PlaceRecord,
   type PublicListRecord,
   type RatingRecord,
@@ -60,8 +62,17 @@ export type PublicPlace = {
   visited: boolean;
   memberScores: Record<string, number>;
   teamScore: number;
+  coverPhotoUrl?: string;
+  photoCount: number;
   longitude?: number;
   latitude?: number;
+};
+
+export type PublicPlacePhoto = {
+  id: string;
+  url: string;
+  isCover: boolean;
+  sortOrder: number;
 };
 
 export type PublicMapPlace = {
@@ -189,6 +200,7 @@ export type AdminList = PublicList & {
 export type AdminPlaceDetail = PublicPlace & {
   teamId: string;
   archivedAt: string | null;
+  photos: PublicPlacePhoto[];
   lists: Array<{
     slug: string;
     name: string;
@@ -252,8 +264,44 @@ function buildRatingSummary(placeId: string, ratings: RatingRecord[]) {
   };
 }
 
-function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: RatingRecord[]): PublicPlace {
+function toPublicPlacePhoto(photo: PhotoRecord): PublicPlacePhoto {
+  return {
+    id: photo.id,
+    url: photo.url,
+    isCover: photo.is_cover,
+    sortOrder: photo.sort_order,
+  };
+}
+
+function getSortedPhotos(photos: PhotoRecord[]) {
+  return [...photos].sort(
+    (a, b) =>
+      Number(b.is_cover) - Number(a.is_cover) ||
+      a.sort_order - b.sort_order ||
+      a.created_at.localeCompare(b.created_at),
+  );
+}
+
+function getPhotosByPlace(photos: PhotoRecord[]) {
+  const photosByPlace = new Map<string, PhotoRecord[]>();
+
+  for (const photo of photos) {
+    const current = photosByPlace.get(photo.place_id) ?? [];
+    current.push(photo);
+    photosByPlace.set(photo.place_id, current);
+  }
+
+  return photosByPlace;
+}
+
+function toPublicPlace(
+  place: PlaceRecord,
+  list: PublicListRecord,
+  ratings: RatingRecord[],
+  photos: PhotoRecord[] = [],
+): PublicPlace {
   const ratingSummary = buildRatingSummary(place.id, ratings);
+  const sortedPhotos = getSortedPhotos(photos);
 
   return {
     id: getStablePlaceId(place),
@@ -271,6 +319,8 @@ function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: Rati
     visited: place.visited,
     memberScores: ratingSummary.memberScores,
     teamScore: ratingSummary.teamScore,
+    coverPhotoUrl: sortedPhotos[0]?.url,
+    photoCount: sortedPhotos.length,
     longitude: place.longitude ?? undefined,
     latitude: place.latitude ?? undefined,
   };
@@ -310,9 +360,11 @@ function clampLimit(limit: number | undefined) {
 async function getPublicPlacesForListRecord(list: PublicListRecord) {
   const rows = await getPlacesForPublicListId(list.id);
   const places = rows.map((row) => row.place);
-  const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+  const placeIds = places.map((place) => place.id);
+  const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+  const photosByPlace = getPhotosByPlace(photos);
 
-  return places.map((place) => toPublicPlace(place, list, ratings));
+  return places.map((place) => toPublicPlace(place, list, ratings, photosByPlace.get(place.id)));
 }
 
 export async function getLists(): Promise<PublicList[]> {
@@ -368,9 +420,9 @@ export async function getPlace(id: string): Promise<PublicPlace | null> {
     return null;
   }
 
-  const ratings = await getRatingsForPlaces([place.id]);
+  const [ratings, photos] = await Promise.all([getRatingsForPlaces([place.id]), getPhotosForPlaces([place.id])]);
 
-  return toPublicPlace(place, lists[0], ratings);
+  return toPublicPlace(place, lists[0], ratings, photos);
 }
 
 export async function getMapPlaces(): Promise<PublicMapPlace[]> {
@@ -468,6 +520,7 @@ export function getListStatsFromPlaces(places: Place[]): PublicListStats {
         杨: place.memberScores.yang,
         陈: place.memberScores.chen,
       },
+      photoCount: 0,
     })),
   );
 }
@@ -612,11 +665,13 @@ export async function getAdminLists(input: GetAdminListsInput): Promise<AdminLis
     lists.map(async (list) => {
       const rows = await getPlacesForListId({ listId: list.id });
       const places = rows.map((row) => row.place);
-      const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+      const placeIds = places.map((place) => place.id);
+      const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+      const photosByPlace = getPhotosByPlace(photos);
 
       return {
         list,
-        places: places.map((place) => toPublicPlace(place, list, ratings)),
+        places: places.map((place) => toPublicPlace(place, list, ratings, photosByPlace.get(place.id))),
       };
     }),
   );
@@ -707,9 +762,10 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
     throw new PlaceWriteError("Current user cannot read this place.", "not_allowed");
   }
 
-  const [listRows, ratings] = await Promise.all([
+  const [listRows, ratings, photos] = await Promise.all([
     getListsForPlaces([place.id]),
     getRatingsForPlaces([place.id]),
+    getPhotosForPlaces([place.id]),
   ]);
   const primaryList = listRows[0]?.list ?? {
     id: "",
@@ -721,9 +777,10 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
   };
 
   return {
-    ...toPublicPlace(place, primaryList, ratings),
+    ...toPublicPlace(place, primaryList, ratings, photos),
     teamId: place.team_id,
     archivedAt: place.archived_at,
+    photos: getSortedPhotos(photos).map(toPublicPlacePhoto),
     lists: listRows.map((row) => ({
       slug: row.list.slug,
       name: row.list.name,
@@ -780,11 +837,14 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
   )
     .filter((place) => placeMatchesQuery(place, input.query ?? ""))
     .slice(0, limit);
-  const [listRows, ratings] = await Promise.all([
+  const placeIds = places.map((place) => place.id);
+  const [listRows, ratings, photos] = await Promise.all([
     getListsForPlaces(places.map((place) => place.id)),
-    getRatingsForPlaces(places.map((place) => place.id)),
+    getRatingsForPlaces(placeIds),
+    getPhotosForPlaces(placeIds),
   ]);
   const listsByPlace = new Map<string, PublicListRecord[]>();
+  const photosByPlace = getPhotosByPlace(photos);
 
   for (const row of listRows) {
     const lists = listsByPlace.get(row.place_id) ?? [];
@@ -804,7 +864,7 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
     };
 
     return {
-      ...toPublicPlace(place, primaryList, ratings),
+      ...toPublicPlace(place, primaryList, ratings, photosByPlace.get(place.id)),
       teamId: place.team_id,
       listSlugs: lists.map((list) => list.slug),
       listNames: lists.map((list) => list.name),
@@ -831,10 +891,12 @@ export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Prom
     includeArchived: input.includeArchived,
   });
   const places = rows.map((row) => row.place);
-  const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+  const placeIds = places.map((place) => place.id);
+  const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+  const photosByPlace = getPhotosByPlace(photos);
 
   return rows.map((row) => ({
-    ...toPublicPlace(row.place, list, ratings),
+    ...toPublicPlace(row.place, list, ratings, photosByPlace.get(row.place.id)),
     sortOrder: row.sort_order,
     archivedAt: row.place.archived_at,
   }));
