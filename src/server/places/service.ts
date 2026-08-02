@@ -4,7 +4,9 @@ import { randomUUID } from "node:crypto";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
   archivePlaceRecord,
+  getArchivedPlacesForTeam,
   getListBySlug,
+  getListsForPlaces,
   getPlacesForPublicListId,
   getPublicListBySlug,
   getPublicLists,
@@ -101,10 +103,16 @@ export type ArchiveAdminPlaceInput = {
   archived?: boolean;
 };
 
+export type GetAdminArchivedPlacesInput = {
+  userId: string;
+  teamSlug?: string;
+  limit?: number;
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
-    public readonly code: "list_not_found" | "place_not_found" | "place_team_mismatch" | "not_allowed",
+    public readonly code: "team_not_found" | "list_not_found" | "place_not_found" | "place_team_mismatch" | "not_allowed",
   ) {
     super(message);
     this.name = "PlaceWriteError";
@@ -114,6 +122,17 @@ export class PlaceWriteError extends Error {
 export type ArchiveAdminPlaceResult = {
   id: string;
   archivedAt: string | null;
+};
+
+export type AdminArchivedPlace = {
+  id: string;
+  name: string;
+  category: string;
+  region: string;
+  locationLabel: string;
+  listSlugs: string[];
+  listNames: string[];
+  archivedAt: string;
 };
 
 export class ListWriteError extends Error {
@@ -200,6 +219,14 @@ function getStatsFromPlaces(places: PublicPlace[]): PublicListStats {
     scoredCount: scored.length,
     avgScore: Number(avg.toFixed(1)),
   };
+}
+
+function clampLimit(limit: number | undefined) {
+  if (!limit || !Number.isFinite(limit)) {
+    return 50;
+  }
+
+  return Math.min(Math.max(Math.trunc(limit), 1), 200);
 }
 
 async function getPublicPlacesForListRecord(list: PublicListRecord) {
@@ -511,4 +538,46 @@ export async function archiveAdminPlace(input: ArchiveAdminPlaceInput): Promise<
     id: archived.import_key ?? archived.id,
     archivedAt: archived.archived_at,
   };
+}
+
+export async function getAdminArchivedPlaces(input: GetAdminArchivedPlacesInput): Promise<AdminArchivedPlace[]> {
+  const team = await getTeamBySlug(input.teamSlug?.trim() || "what-to-eat");
+
+  if (!team) {
+    throw new PlaceWriteError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(team.id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot read archived places for this team.", "not_allowed");
+  }
+
+  const places = await getArchivedPlacesForTeam({
+    teamId: team.id,
+    limit: clampLimit(input.limit),
+  });
+  const listRows = await getListsForPlaces(places.map((place) => place.id));
+  const listsByPlace = new Map<string, PublicListRecord[]>();
+
+  for (const row of listRows) {
+    const lists = listsByPlace.get(row.place_id) ?? [];
+    lists.push(row.list);
+    listsByPlace.set(row.place_id, lists);
+  }
+
+  return places.map((place) => {
+    const lists = listsByPlace.get(place.id) ?? [];
+
+    return {
+      id: place.import_key ?? place.id,
+      name: place.name,
+      category: place.category ?? "",
+      region: place.region ?? "",
+      locationLabel: place.location_label ?? "",
+      listSlugs: lists.map((list) => list.slug),
+      listNames: lists.map((list) => list.name),
+      archivedAt: place.archived_at as string,
+    };
+  });
 }

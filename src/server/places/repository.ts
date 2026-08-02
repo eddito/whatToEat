@@ -40,6 +40,11 @@ export type ListPlaceRecord = {
   place: PlaceRecord;
 };
 
+export type PlaceListRecord = {
+  place_id: string;
+  list: PublicListRecord;
+};
+
 export type RatingRecord = {
   id: string;
   place_id: string;
@@ -248,6 +253,46 @@ export async function getPlaceByStableId(stableId: string) {
   return data as PlaceRecord | null;
 }
 
+export async function getArchivedPlacesForTeam(input: {
+  teamId: string;
+  limit: number;
+}): Promise<PlaceRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("places")
+    .select(
+      `
+      id,
+      team_id,
+      import_key,
+      name,
+      category,
+      taste_tags,
+      signature_dishes,
+      review_summary,
+      region,
+      location_label,
+      parking_note,
+      source_label,
+      visited,
+      longitude,
+      latitude,
+      geocode_status,
+      archived_at
+    `,
+    )
+    .eq("team_id", input.teamId)
+    .not("archived_at", "is", null)
+    .order("archived_at", { ascending: false })
+    .limit(input.limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as PlaceRecord[];
+}
+
 export async function upsertPlaceRecord(input: {
   id?: string;
   teamId: string;
@@ -392,6 +437,41 @@ export async function getPublicListsForPlace(placeId: string) {
   return data
     .map((row) => (Array.isArray(row.lists) ? row.lists[0] : row.lists))
     .filter((list) => list && PUBLIC_VISIBILITIES.includes(list.visibility)) as PublicListRecord[];
+}
+
+export async function getListsForPlaces(placeIds: string[]): Promise<PlaceListRecord[]> {
+  if (placeIds.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("list_places")
+    .select(
+      `
+      place_id,
+      lists (
+        id,
+        team_id,
+        slug,
+        name,
+        description,
+        visibility
+      )
+    `,
+    )
+    .in("place_id", placeIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) => ({
+      place_id: row.place_id,
+      list: Array.isArray(row.lists) ? row.lists[0] : row.lists,
+    }))
+    .filter((row) => row.list) as unknown as PlaceListRecord[];
 }
 
 export async function getRatingsForPlaces(placeIds: string[]) {
