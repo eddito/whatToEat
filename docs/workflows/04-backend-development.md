@@ -54,7 +54,7 @@
 | BE-020 | 实现后台榜单新增/编辑接口 | 已完成 | `POST /api/admin/lists`、`upsertAdminList` | member 写入 200，external 403，未登录 401 |
 | BE-021 | 实现后台店铺软归档接口 | 已完成 | `POST /api/admin/places/archive`、`places.archived_at` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-022 | 实现后台成员管理接口 | 已完成 | `POST /api/admin/members`、`DELETE /api/admin/members`、`src/server/teams/service.ts` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
-| BE-023 | 增强 Supabase seed 导入脚本 | 已完成 | `scripts/seed-supabase.mjs`、`import_batches` 批次字段、`import_batch_id` 追踪字段 | `node --check`、`tsc --noEmit`、`next build`；远端 dry-run 因本机到 Supabase TLS 连接失败未完成 |
+| BE-023 | 增强 Supabase seed 导入脚本 | 已完成 | `scripts/seed-supabase.mjs`、`import_batches` 批次字段、`import_batch_id` 追踪字段 | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm db:seed:dry-run` 通过 |
 
 ## 完成记录
 
@@ -79,7 +79,8 @@
 | 2026-07-23 | 远端后台店铺归档验证 | Supabase `places.archived_at` | `admin-smoke-place` 归档返回 200、恢复返回 200、external 403、未登录 401；最终已恢复 |
 | 2026-07-23 | 实现后台成员管理接口 | `src/app/api/admin/members/route.ts`、`src/server/teams/repository.ts`、`src/server/teams/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-07-23 | 远端后台成员管理验证 | Supabase `profiles`、`team_members` | `test_owner` 创建并绑定为 `what-to-eat` owner；`test_member_target` 创建为无小队用户；owner 添加/移除 target 返回 200，member 添加返回 403，未登录添加返回 401；target 最终已移除 |
-| 2026-08-02 | 增强 seed 导入脚本 | `supabase/schema.sql`、`scripts/seed-supabase.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过；远端 dry-run 因本机到 Supabase TLS 握手失败未完成 |
+| 2026-08-02 | 增强 seed 导入脚本 | `supabase/schema.sql`、`scripts/seed-supabase.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过 |
+| 2026-08-02 | 验证远端 seed dry-run | Supabase `lists`、`places`、`list_places`、`ratings`、`import_batches` | `pnpm db:seed:dry-run` 通过；计划更新 2 个榜单、77 个店铺、77 个榜单关联、60 条评分，跳过 94 个空评分，不新增数据 |
 
 ## 当前数据库快照
 
@@ -97,7 +98,7 @@
 ## 下一步
 
 1. 后续 integration 接入后台表单时使用 `POST /api/admin/places`、`POST /api/admin/places/archive`、`POST /api/admin/lists`、`POST /api/admin/members` 和 `DELETE /api/admin/members`。
-2. 执行最新 `supabase/schema.sql` 后，运行 `pnpm db:seed:dry-run` 验证远端导入计划。
+2. 如需给现有远端 seed 数据补齐最新 `import_batch_id`，运行 `pnpm db:seed`；如需先检查归档缺失项，运行 `pnpm db:seed -- --archive-missing --dry-run`。
 
 ## 记录规则
 
