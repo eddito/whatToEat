@@ -935,6 +935,89 @@ button {
   background: rgba(221, 55, 42, 0.08);
 }
 
+.ratings-page {
+  padding-bottom: 48px;
+}
+
+.my-ratings-panel,
+.my-ratings-list,
+.my-rating-main {
+  display: grid;
+  gap: 14px;
+}
+
+.my-rating-card {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-sm);
+  padding: 14px;
+}
+
+.my-rating-score {
+  display: grid;
+  min-height: 64px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--gold-soft);
+  color: var(--gold);
+}
+
+.my-rating-score strong {
+  font-family:
+    "JetBrains Mono",
+    ui-monospace,
+    monospace;
+  font-size: 24px;
+}
+
+.my-rating-main h3,
+.my-rating-main p {
+  margin: 0;
+}
+
+.my-rating-main h3 {
+  font-size: 17px;
+}
+
+.my-rating-main p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.my-rating-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.my-rating-meta span {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 4px;
+  border-radius: 6px;
+  background: var(--bg-soft);
+  color: var(--muted);
+  padding: 0 8px;
+  font-size: 12px;
+  font-weight: 760;
+}
+
+.my-rating-meta span:first-child {
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.my-rating-link {
+  min-width: 72px;
+}
+
 .rating-login-box {
   display: grid;
   gap: 12px;
@@ -2519,6 +2602,19 @@ body {
 
   .section .grid {
     grid-template-columns: 1fr;
+  }
+
+  .my-rating-card {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .my-rating-score {
+    min-height: 54px;
+  }
+
+  .my-rating-link {
+    width: 100%;
   }
 
   .auth-link {

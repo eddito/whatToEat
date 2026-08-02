@@ -479,6 +479,48 @@ type RatingDeleteResponse = {
 };
 ```
 
+### `GET /api/ratings/me`
+
+用途：登录用户读取自己的最近评分历史。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 只返回当前登录账号自己的评分记录。
+- 小队成员可以看到自己在私密或公开榜单中的队内评分。
+- 外部用户只看到仍有关联公开榜单的评分记录。
+
+响应：
+
+```ts
+type MyRatingsResponse = {
+  ratings: Array<{
+    id: string;
+    score: number;
+    note: string | null;
+    source: "team_member" | "external";
+    updatedAt: string;
+    place: {
+      id: string;
+      name: string;
+      category: string;
+      region: string;
+    };
+    list: {
+      slug: string;
+      name: string;
+      visibility: "private" | "public_view" | "public_rate";
+    };
+  }>;
+};
+```
+
 ## 数据访问层接口
 
 路径：`src/server/places/repository.ts`
@@ -552,7 +594,7 @@ type RatingDeleteResponse = {
 
 用途：
 - 使用 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 和临时测试账号验证登录态接口。
-- 检查后台概览、后台店铺维护、评分读取和榜单权限读取路径。
+- 检查后台概览、后台店铺维护、评分读取、评分历史和榜单权限读取路径。
 - 当测试账号不是 `owner` 时，检查 `PATCH /api/admin/lists` 返回 `403`。
 - 不读取、不打印 `SUPABASE_SECRET_KEY`。
 

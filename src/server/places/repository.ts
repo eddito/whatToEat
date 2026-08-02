@@ -48,6 +48,58 @@ export type RatingRecord = {
   note: string | null;
 };
 
+export type UserRatingHistoryRecord = RatingRecord & {
+  updated_at: string;
+  places:
+    | {
+        id: string;
+        team_id: string;
+        import_key: string | null;
+        name: string;
+        category: string | null;
+        region: string | null;
+        list_places:
+          | Array<{
+              lists:
+                | {
+                    slug: string;
+                    name: string;
+                    visibility: ListVisibility;
+                  }
+                | Array<{
+                    slug: string;
+                    name: string;
+                    visibility: ListVisibility;
+                  }>
+                | null;
+            }>
+          | null;
+      }
+    | Array<{
+        id: string;
+        team_id: string;
+        import_key: string | null;
+        name: string;
+        category: string | null;
+        region: string | null;
+        list_places: Array<{
+          lists:
+            | {
+                slug: string;
+                name: string;
+                visibility: ListVisibility;
+              }
+            | Array<{
+                slug: string;
+                name: string;
+                visibility: ListVisibility;
+              }>
+            | null;
+        }> | null;
+      }>
+    | null;
+};
+
 export type TeamMembershipRecord = {
   role: "owner" | "member" | "viewer";
 };
@@ -241,6 +293,47 @@ export async function getUserRatingForPlace(placeId: string, userId: string, sou
   }
 
   return data as RatingRecord | null;
+}
+
+export async function getUserRatingHistory(userId: string, limit = 30) {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("ratings")
+    .select(
+      `
+      id,
+      place_id,
+      source,
+      rater_label,
+      score,
+      note,
+      updated_at,
+      places (
+        id,
+        team_id,
+        import_key,
+        name,
+        category,
+        region,
+        list_places (
+          lists (
+            slug,
+            name,
+            visibility
+          )
+        )
+      )
+    `,
+    )
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    throw error;
+  }
+
+  return data as unknown as UserRatingHistoryRecord[];
 }
 
 export async function upsertUserRating(input: {

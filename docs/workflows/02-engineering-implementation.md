@@ -220,7 +220,7 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [x] 实现公开页面 Supabase 读取适配和 seed fallback。
 - [ ] 实现小队和成员管理。（已完成成员后台概览和店铺资料维护首片；成员邀请和角色管理待完善）
 - [ ] 实现榜单权限。（已完成后台榜单权限查看和 Owner 权限更新接口；榜单创建、删除和排序待完善）
-- [ ] 实现评分和混合总分。（已完成登录用户评分写入、我的评分预填、外部评分统计、混合总分联动和删除自己的评分；评分历史待完善）
+- [x] 实现评分和混合总分。（已完成登录用户评分写入、我的评分预填、外部评分统计、混合总分联动、删除自己的评分和评分历史）
 - [x] 生成 Excel 种子数据和导入说明。
 - [x] 建立公开页面和 Supabase 公开读取 smoke 检查。
 - [ ] 实现图片上传。
@@ -286,3 +286,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-07-23 | 接入后台榜单权限面板和 `/api/admin/lists` Owner 更新接口 | Codex | 榜单权限、公开评分控制 |
 | 2026-08-02 | 新增登录态 smoke 脚本覆盖后台概览、店铺维护、评分读取和榜单权限 | Codex | 测试闭环、联调稳定性 |
 | 2026-08-02 | 新增 `/api/ratings` 删除接口和详情页删除自己评分入口 | Codex | 评分维护、成员体验 |
+| 2026-08-02 | 新增 `/ratings` 评分历史页和 `/api/ratings/me` 最近评分接口 | Codex | 评分历史、个人记录 |

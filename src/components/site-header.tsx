@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClipboardList, Compass, LayoutDashboard, MapPinned, Trophy } from "lucide-react";
+import { ClipboardList, Compass, LayoutDashboard, MapPinned, Star, Trophy } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { AuthStatus } from "./auth-status";
 import { BrandMark } from "./brand-mark";
@@ -11,6 +11,7 @@ const navItems = [
   { href: "/lists/red-list", label: "红榜", icon: Trophy },
   { href: "/lists/retry-list", label: "再练练", icon: ClipboardList },
   { href: "/map", label: "地图", icon: MapPinned },
+  { href: "/ratings", label: "评分", icon: Star },
   { href: "/admin", label: "后台", icon: LayoutDashboard },
 ];
 

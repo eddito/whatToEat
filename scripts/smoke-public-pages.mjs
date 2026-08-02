@@ -6,6 +6,7 @@ const checks = [
   { path: "/lists/retry-list", includes: ["再练练", "当前显示"] },
   { path: "/places/red-list-15", includes: ["评分", "地图"] },
   { path: "/map", includes: ["地图探索"] },
+  { path: "/ratings", includes: ["评分历史"] },
   { path: "/login", includes: ["登录后参与评分和管理"] },
 ];
 

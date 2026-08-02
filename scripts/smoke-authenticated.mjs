@@ -161,21 +161,27 @@ async function main() {
 
   const samplePlaceId = places.json?.places?.[0]?.id;
 
-  if (samplePlaceId) {
-    const rating = await fetchJson(`/api/ratings?placeId=${encodeURIComponent(samplePlaceId)}`, {
-      headers: authHeaders,
-    });
-    assertCheck("rating lookup status", rating.response.status === 200, `status=${rating.response.status}`);
+if (samplePlaceId) {
+  const rating = await fetchJson(`/api/ratings?placeId=${encodeURIComponent(samplePlaceId)}`, {
+    headers: authHeaders,
+  });
+  assertCheck("rating lookup status", rating.response.status === 200, `status=${rating.response.status}`);
     assertCheck(
       "rating lookup source",
       ["team_member", "external"].includes(rating.json?.source),
       `source=${rating.json?.source ?? "missing"}`,
-    );
-  }
+  );
+}
 
-  const lists = await fetchJson("/api/admin/lists", {
-    headers: authHeaders,
-  });
+const ratingHistory = await fetchJson("/api/ratings/me", {
+  headers: authHeaders,
+});
+assertCheck("rating history status", ratingHistory.response.status === 200, `status=${ratingHistory.response.status}`);
+assertCheck("rating history data", Array.isArray(ratingHistory.json?.ratings), `count=${ratingHistory.json?.ratings?.length ?? 0}`);
+
+const lists = await fetchJson("/api/admin/lists", {
+  headers: authHeaders,
+});
   assertCheck("admin lists status", lists.response.status === 200, `status=${lists.response.status}`);
   assertCheck(
     "admin lists data",
