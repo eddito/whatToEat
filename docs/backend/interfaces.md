@@ -4,7 +4,6 @@
 
 - 状态：进行中
 - 分支：`codex/backend-dev`
-- 当前切片：公开浏览数据读取
 - 维护规则：新增或修改后端服务、脚本、Route Handler、Server Action 时，同步更新本文档。
 
 ## 后端边界
@@ -14,9 +13,29 @@
 | 数据库 | `supabase/schema.sql` | 表结构、枚举、RLS、触发器 |
 | 数据访问层 | `src/server/**/repository.ts` | 封装 Supabase 查询，返回数据库记录 |
 | 服务层 | `src/server/**/service.ts` | 输出前端/integration 可用的数据契约 |
-| 脚本 | `scripts/*.mjs` | seed、初始化等可重复任务 |
+| API | `src/app/api/**` | HTTP 入参校验、认证、响应 |
+| 脚本 | `scripts/*.mjs` | seed、用户初始化、smoke 验证 |
 
-页面和 UI 组件不在本切片内改动；integration 分支后续再决定如何从 seed 切到 Supabase，并保留失败回退。
+页面和 UI 组件不在后端切片内改动。
+
+## 认证模型
+
+业务侧只使用 `username + password`，不做免密登录、magic link、OTP。
+
+Supabase Auth 底层仍需要 email 或 phone 承载 password auth。后端创建用户脚本会自动生成内部占位 email：
+
+```txt
+<username>@users.what-to-eat-today.invalid
+```
+
+这个 email 是实现细节，不作为产品账号展示，也不写入 `public.profiles`。
+
+Username 规则：
+
+```txt
+^[a-z][a-z0-9]{2,31}$
+```
+改为只允许小写英文字母和数字：账号名必须以小写英文字母开头，不允许下划线、中文或其他特殊字符。
 
 ## 环境变量
 
@@ -25,812 +44,949 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | server/client | 是 | Supabase Project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | client | 是 | 浏览器端公开 key，后续 Auth/RLS 验证使用 |
 | `SUPABASE_SECRET_KEY` | server only | 是 | 服务端 admin client 和脚本使用，不暴露到客户端 |
-| `SUPABASE_PLACE_PHOTOS_BUCKET` | server only | 否 | 店铺图片 Storage bucket，默认 `place-photos` |
 | `NEXT_PUBLIC_APP_URL` | server/client | 是 | 本地或线上应用地址 |
 | `NEXT_PUBLIC_MAP_PROVIDER` | client | 是 | 当前为 `amap` |
 | `NEXT_PUBLIC_AMAP_KEY` | client | 是 | 高德地图 key |
 
 ## 数据库契约
 
-### 核心表
-
-| 表 | 用途 | 当前切片字段是否够用 |
+| 表 | 用途 | 当前字段 |
 | --- | --- | --- |
-| `teams` | 小队空间 | 够用：`id`、`slug`、`name`、`description` |
-| `profiles` | Auth 用户资料 | 够用：`id`、`email`、`display_name`、`avatar_url` |
-| `team_members` | 成员和角色 | 够用：`team_id`、`user_id`、`role` |
-| `lists` | 榜单 | 够用：`slug`、`name`、`description`、`visibility` |
-| `places` | 店铺 | 够用：基础信息、口味、评价、停车、来源、地图字段 |
-| `list_places` | 榜单和店铺关联 | 够用：`list_id`、`place_id`、`sort_order` |
-| `ratings` | 评分 | 够用：`source`、`rater_label`、`score`、`note` |
+| `profiles` | 业务用户资料 | `id`、`username`、`display_name`、`avatar_url`、`contact_email`、`contact_phone`、`created_at` |
+| `teams` | 小队空间 | `id`、`slug`、`name`、`description` |
+| `team_members` | 成员和角色 | `team_id`、`user_id`、`role` |
+| `lists` | 榜单 | `slug`、`name`、`description`、`visibility` |
+| `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段、`archived_at` |
+| `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
+| `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
+| `import_batches` | 导入批次 | `team_id`、`source_name`、`operation`、`status`、`summary`、`finished_at`、`rolled_back_at` |
 
-### RLS 最小闭环
-
-公开读取由 RLS 负责；后台 Route Handler 仍会用服务端密钥和当前登录用户 token 做二次校验。schema 同时提供最小写策略，避免后续客户端直连 Supabase 时越权。
-
-| 资源 | 未登录用户权限 |
-| --- | --- |
-| `lists` | 可 `select visibility in ('public_view', 'public_rate')` 的榜单 |
-| `places` | 可 `select` 挂在公开榜单下的店铺 |
-| `list_places` | 可 `select` 公开榜单的关联记录 |
-| `ratings` | 可 `select` 公开店铺的评分，用于统计展示 |
-| `photos` | 可 `select` 公开店铺图片 |
-
-| 资源 | 登录用户写权限 |
-| --- | --- |
-| `profiles` | 用户可创建/更新自己的 profile |
-| `teams` | owner 可更新小队 |
-| `team_members` | owner 可管理成员关系 |
-| `lists` | owner 可管理榜单 |
-| `places` | owner/member 可管理店铺 |
-| `list_places` | owner/member 可管理榜单店铺关联 |
-| `ratings` | owner/member 可提交队内评分；外部用户可给 `public_rate` 店铺评分；用户可更新/删除自己的评分 |
-| `photos` | owner/member 可管理当前小队店铺图片 |
-
-## 公开浏览数据契约
-
-### `PublicList`
-
-```ts
-type PublicList = {
-  slug: string;
-  name: string;
-  description: string;
-  visibility: "private" | "public_view" | "public_rate";
-  stats: {
-    count: number;
-    scoredCount: number;
-    avgScore: number;
-  };
-};
-```
-
-### `PublicPlace`
-
-```ts
-type PublicPlace = {
-  id: string;
-  listSlug: string;
-  listName: string;
-  name: string;
-  category: string;
-  tasteTags: string[];
-  signatureDishes: string;
-  review: string;
-  region: string;
-  locationLabel: string;
-  parkingNote: string;
-  sourceLabel: string;
-  visited: boolean;
-  memberScores: Record<string, number>;
-  teamScore: number;
-  externalScore: number;
-  externalRatingCount: number;
-  mixedScore: number;
-  longitude?: number;
-  latitude?: number;
-};
-```
-
-说明：`id` 优先使用 `places.import_key`，用于兼容当前 `/places/red-list-1` 这类 URL；没有 `import_key` 时回退到数据库 UUID。
-
-### `PublicMapPlace`
-
-```ts
-type PublicMapPlace = {
-  id: string;
-  name: string;
-  region: string;
-  category: string;
-  score: number;
-  longitude?: number;
-  latitude?: number;
-};
-```
+`profiles.email` 已从业务表移除。Supabase `auth.users.email` 仅由 Supabase Auth 内部使用。
 
 ## 服务层接口
 
+### 公开浏览
+
 路径：`src/server/places/service.ts`
-
-### `getLists()`
-
-获取公开榜单列表，包含统计信息。
-
-```ts
-async function getLists(): Promise<PublicList[]>;
-```
-
-### `getList(slug)`
-
-获取单个公开榜单和统计信息。
-
-```ts
-async function getList(slug: string): Promise<PublicList | null>;
-```
-
-### `getPlacesByList(slug)`
-
-获取某个公开榜单下的店铺。
-
-```ts
-async function getPlacesByList(slug: string): Promise<PublicPlace[]>;
-```
-
-### `getPlace(id)`
-
-获取公开店铺详情。`id` 可以是 `places.import_key` 或 UUID。
-
-```ts
-async function getPlace(id: string): Promise<PublicPlace | null>;
-```
-
-### `getMapPlaces()`
-
-获取地图页需要的公开店铺数据。
-
-```ts
-async function getMapPlaces(): Promise<PublicMapPlace[]>;
-```
-
-### `getListStats(slug)`
-
-获取公开榜单统计。
-
-```ts
-async function getListStats(slug: string): Promise<PublicListStats | null>;
-```
-
-## 兼容函数
-
-为 integration 分支渐进迁移，服务层暂时保留旧应用模型适配函数：
 
 | 函数 | 说明 |
 | --- | --- |
-| `getPublicPlaceData()` | 返回旧 `ListSummary[]` 和 `Place[]` |
-| `getPublicListPageData(slug)` | 返回旧榜单页数据结构 |
-| `getPublicPlacePageData(id)` | 返回旧店铺详情数据结构 |
-| `getListStatsFromPlaces(places)` | 旧 `Place[]` 统计函数 |
+| `getLists()` | 获取公开榜单列表，包含统计信息 |
+| `getList(slug)` | 获取单个公开榜单和统计信息 |
+| `getPlacesByList(slug)` | 获取某个公开榜单下的店铺 |
+| `getPlace(id)` | 获取公开店铺详情，`id` 可以是 `places.import_key` 或 UUID |
+| `getMapPlaces()` | 获取地图页需要的公开店铺数据 |
+| `getListStats(slug)` | 获取公开榜单统计 |
 
-## Route Handlers
+### 店铺管理
 
-### `GET /api/admin/summary`
+路径：`src/server/places/service.ts`
 
-用途：登录小队成员读取后台概览数据。
+| 函数 | 说明 |
+| --- | --- |
+| `upsertAdminPlace(input)` | owner/member 新增或编辑店铺，并维护榜单关联 |
+| `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
+| `getAdminPlaces(input)` | owner/member 按团队读取后台店铺列表，支持关键词/分类/区域/归档筛选 |
+| `getAdminArchivedPlaces(input)` | owner/member 读取已归档店铺列表 |
+| `getAdminPlace(input)` | owner/member 读取店铺后台详情 |
+| `getAdminPlacesByList(input)` | owner/member 读取榜单内店铺管理视图 |
+| `getAdminLists(input)` | owner/member 读取后台榜单列表，包含 private 榜单 |
+| `reorderAdminListPlaces(input)` | owner/member 调整榜单内店铺排序 |
+| `upsertAdminList(input)` | owner/member 新增或编辑榜单 |
 
-请求头：
+权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
 
-```txt
-Authorization: Bearer <Supabase access token>
-```
+### 成员管理
 
-权限规则：
+路径：`src/server/teams/service.ts`
 
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 小队成员可读取店铺数、榜单数、评分数、成员数和成员列表。
+| 函数 | 说明 |
+| --- | --- |
+| `getAdminMembers(input)` | owner 读取小队成员列表 |
+| `upsertAdminMember(input)` | owner 添加成员或修改成员角色 |
+| `removeAdminMember(input)` | owner 移除成员 |
 
-响应：
+权限：调用用户必须是目标小队的 `owner`。为避免误操作，owner 不能移除自己，也不能把自己的角色改成非 owner。
+
+### 导入批次
+
+路径：`src/server/imports/service.ts`
+
+| 函数 | 说明 |
+| --- | --- |
+| `getAdminImportBatches(input)` | owner 读取导入批次列表和关联数据计数 |
+
+权限：调用用户必须是目标小队的 `owner`。
+
+### 评分管理
+
+路径：`src/server/ratings/service.ts`
+
+| 函数 | 说明 |
+| --- | --- |
+| `getAdminPlaceRatings(input)` | owner/member 读取店铺评分明细 |
+
+权限：调用用户必须是目标店铺所在小队的 `owner` 或 `member`。
+
+## HTTP 接口
+
+### `POST /api/auth/login`
+
+路径：`src/app/api/auth/login/route.ts`
+
+用途：使用业务账号 `username + password` 登录。
+
+请求体：
 
 ```ts
-type AdminSummaryResponse = {
-  team: {
-    name: string;
-    slug: string;
+type LoginRequest = {
+  username: string;
+  password: string;
+};
+```
+
+成功响应：
+
+```ts
+type LoginResponse = {
+  ok: true;
+  session: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number | null;
+    tokenType: string;
+    user: {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl: string | null;
+    };
   };
-  currentUser: {
-    role: "owner" | "member" | "viewer";
-    name: string;
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或缺少 username/password |
+| 401 | `invalid_username` | username 格式不合法 |
+| 401 | `profile_not_found` | 账号不存在 |
+| 401 | `invalid_credentials` | 密码错误或 Supabase Auth 登录失败 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/auth/change-password`
+
+路径：`src/app/api/auth/change-password/route.ts`
+
+用途：通过业务账号和已绑定的邮箱或手机号校验身份，校验通过后修改账号密码。该接口不使用免密登录、magic link 或 OTP。
+
+请求体：
+
+```ts
+type ChangePasswordRequest = {
+  username: string;
+  contact: string;
+  newPassword: string;
+};
+```
+
+说明：
+- `username` 必须符合账号规则：首位小写英文字母，后续仅允许小写英文字母或数字，3-32 位。
+- `contact` 可以是邮箱或手机号，必须匹配 `profiles.contact_email` 或 `profiles.contact_phone`。
+- `newPassword` 至少 8 位。
+
+成功响应：
+```ts
+type ChangePasswordResponse = {
+  ok: true;
+  user: {
+    username: string;
   };
-  stats: {
-    places: number;
-    lists: number;
-    ratings: number;
-    members: number;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或缺少 username/contact/newPassword |
+| 400 | `contact_mismatch` | contact 不是合法邮箱/手机号，或与账号不匹配 |
+| 400 | `weak_password` | 新密码少于 8 位 |
+| 401 | `invalid_username` | username 格式不合法 |
+| 401 | `profile_not_found` | username 不存在 |
+| 401 | `contact_not_configured` | 账号未绑定可校验的邮箱或手机号 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/auth/me`
+
+路径：`src/app/api/auth/me/route.ts`
+
+用途：读取当前登录用户资料和小队角色，用于前端恢复登录态和判断后台权限。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+成功响应：
+```ts
+type CurrentUserResponse = {
+  ok: true;
+  session: {
+    user: {
+      id: string;
+      username: string;
+      displayName: string | null;
+      avatarUrl: string | null;
+    };
+    memberships: Array<{
+      role: "owner" | "member" | "viewer";
+      team: {
+        id: string;
+        slug: string | null;
+        name: string;
+        description: string | null;
+      };
+    }>;
   };
-  members: Array<{
-    name: string;
-    role: "owner" | "member" | "viewer";
-    joinedAt: string;
-  }>;
 };
 ```
 
-### `GET /api/admin/members`
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 404 | `profile_not_found` | Auth 用户缺少业务 profile |
+| 500 | `internal_error` | 未预期服务端错误 |
 
-用途：登录小队成员读取成员管理列表。
+### `POST /api/auth/refresh`
 
-请求头：
+路径：`src/app/api/auth/refresh/route.ts`
 
-```txt
-Authorization: Bearer <Supabase access token>
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 小队成员可读取成员名称、邮箱、角色和加入时间。
-- 只有 `owner` 的响应中 `canManage` 为 `true`。
-
-响应：
-
-```ts
-type AdminMembersResponse = {
-  members: Array<{
-    id: string;
-    name: string;
-    email: string;
-    role: "owner" | "member" | "viewer";
-    joinedAt: string;
-  }>;
-  canManage: boolean;
-  currentUserId: string;
-};
-```
-
-### `POST /api/admin/members`
-
-用途：小队 `owner` 将已有 Auth 用户添加为小队成员。
+用途：使用 refresh token 换取新的 access token 和 refresh token。
 
 请求体：
-
 ```ts
-type AdminMemberAddRequest = {
-  account: string; // 邮箱、手机号或用户名
-  role: "owner" | "member" | "viewer";
+type RefreshRequest = {
+  refreshToken: string;
 };
 ```
 
-权限规则：
-
-- 只有 `owner` 可以添加成员。
-- 账号必须已存在于 Supabase Auth。
-- 已在小队中的账号返回 `409`。
-
-### `PATCH /api/admin/members`
-
-用途：小队 `owner` 更新成员角色。
-
-请求体：
-
+成功响应：
 ```ts
-type AdminMemberRoleRequest = {
-  userId: string;
-  role: "owner" | "member" | "viewer";
-};
-```
-
-权限规则：
-
-- 只有 `owner` 可以更新成员角色。
-- 不能在这里修改自己的角色。
-- 小队至少保留一个 `owner`。
-
-### `DELETE /api/admin/members`
-
-用途：小队 `owner` 移除成员。
-
-查询参数：
-
-```txt
-userId=<auth.users.id>
-```
-
-权限规则：
-
-- 只有 `owner` 可以移除成员。
-- 不能在这里移除自己。
-- 小队至少保留一个 `owner`。
-
-### `PATCH /api/admin/members/password`
-
-用途：小队 `owner` 重置当前小队成员密码。
-
-请求体：
-
-```ts
-type AdminMemberPasswordRequest = {
-  account: string; // 仅邮箱或手机号
-  password: string; // 8-72 位
-};
-```
-
-权限规则：
-
-- 只有 `owner` 可以重置成员密码。
-- `account` 只接受邮箱或手机号，不接受中文、用户名或其它账号格式。
-- 只能重置当前小队成员的密码。
-
-### `GET /api/admin/lists`
-
-用途：登录小队成员读取后台榜单权限列表。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 小队成员可读取榜单名称、说明、公开状态和店铺数。
-
-响应：
-
-```ts
-type AdminListsResponse = {
-  lists: Array<{
-    id: string; // lists.slug
-    databaseId: string;
-    slug: string;
-    name: string;
-    description: string;
-    visibility: "private" | "public_view" | "public_rate";
-    placeCount: number;
-    createdAt: string;
-  }>;
-  canManage: boolean;
-};
-```
-
-### `PATCH /api/admin/lists`
-
-用途：小队 `owner` 更新榜单名称、说明和公开权限。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-Content-Type: application/json
-```
-
-请求体：
-
-```ts
-type AdminListUpdateRequest = {
-  listId: string; // lists.slug 或 UUID
-  name: string;
-  description?: string;
-  visibility: "private" | "public_view" | "public_rate";
-};
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 只有 `owner` 可以更新榜单权限，`member` / `viewer` 返回 `403`。
-- 只能更新当前小队名下的榜单。
-
-### `POST /api/admin/lists`
-
-用途：小队 `owner` 创建新的榜单。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-Content-Type: application/json
-```
-
-请求体：
-
-```ts
-type AdminListCreateRequest = {
-  slug: string; // 仅小写字母、数字和中划线，例如 weekend-hotpot
-  name: string;
-  description?: string;
-  visibility?: "private" | "public_view" | "public_rate";
-};
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 只有 `owner` 可以创建榜单，`member` / `viewer` 返回 `403`。
-- `slug` 在当前小队内唯一，重复时返回 `409`。
-
-### `DELETE /api/admin/lists`
-
-用途：小队 `owner` 删除榜单。删除榜单不会删除店铺。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-```
-
-查询参数：
-
-```txt
-listId=<lists.slug 或 UUID>
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 只有 `owner` 可以删除榜单，`member` / `viewer` 返回 `403`。
-- 小队至少保留一个榜单。
-- 只能删除当前小队名下的榜单。
-
-### `GET /api/admin/places`
-
-用途：登录小队成员读取后台店铺维护列表。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-```
-
-查询参数：
-
-```txt
-q=<可选，按店名、类型或地区搜索>
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 小队成员可读取最多 24 条店铺维护记录。
-
-响应：
-
-```ts
-type AdminPlacesResponse = {
-  places: Array<{
-    id: string; // places.import_key 或 UUID
-    databaseId: string;
-    name: string;
-    category: string;
-    tasteTags: string[];
-    signatureDishes: string;
-    review: string;
-    region: string;
-    locationLabel: string;
-    parkingNote: string;
-    sourceLabel: string;
-    visited: boolean;
-    geocodeStatus: string;
-    updatedAt: string;
-    coverPhotoUrl?: string;
-    photoCount: number;
-  }>;
-  canEdit: boolean;
-};
-```
-
-### `PATCH /api/admin/places`
-
-用途：小队 `owner` / `member` 更新一条店铺基础资料。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-Content-Type: application/json
-```
-
-请求体：
-
-```ts
-type AdminPlaceUpdateRequest = {
-  placeId: string; // places.import_key 或 UUID
-  name: string;
-  category?: string;
-  tasteTags?: string[];
-  signatureDishes?: string;
-  review?: string;
-  region?: string;
-  locationLabel?: string;
-  parkingNote?: string;
-  sourceLabel?: string;
-  visited?: boolean;
-};
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- `viewer` 返回 `403`。
-- 只能更新当前小队名下的店铺。
-
-### `GET /api/admin/place-lists`
-
-用途：登录小队成员读取某家店铺所属榜单和排序值。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-```
-
-查询参数：
-
-```txt
-placeId=<places.import_key 或 UUID>
-```
-
-响应：
-
-```ts
-type AdminPlaceListsResponse = {
-  place: {
-    id: string;
-    databaseId: string;
-    name: string;
+type RefreshResponse = {
+  ok: true;
+  session: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number | null;
+    tokenType: string;
+    user: {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl: string | null;
+    };
   };
-  lists: Array<{
-    id: string; // lists.slug
-    databaseId: string;
-    slug: string;
-    name: string;
-    visibility: "private" | "public_view" | "public_rate";
-    included: boolean;
-    sortOrder: number;
-  }>;
-  canEdit: boolean;
 };
 ```
 
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- 小队成员可读取当前小队店铺的榜单归属。
-
-### `PATCH /api/admin/place-lists`
-
-用途：小队 `owner` / `member` 保存某家店铺所属榜单和榜单内排序值。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-Content-Type: application/json
-```
-
-请求体：
-
-```ts
-type AdminPlaceListsUpdateRequest = {
-  placeId: string; // places.import_key 或 UUID
-  lists: Array<{
-    listId: string; // lists.slug 或 UUID
-    included: boolean;
-    sortOrder?: number; // 数字越小越靠前
-  }>;
-};
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- `viewer` 返回 `403`。
-- 只能维护当前小队名下的店铺和榜单。
-- 未勾选的榜单关联会被移除；删除关联不会删除店铺。
-
-### `POST /api/admin/photos`
-
-用途：小队 `owner` / `member` 为店铺上传图片。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-Content-Type: multipart/form-data
-```
-
-请求体：
-
-```txt
-placeId=<places.import_key 或 UUID>
-file=<JPG / PNG / WebP，最大 5MB>
-```
-
-配置：
-
-- Storage bucket 默认使用 `place-photos`。
-- 可通过 `SUPABASE_PLACE_PHOTOS_BUCKET` 覆盖 bucket 名。
-- bucket 需要配置为 public，公开页才能直接显示上传图片。
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 非 `what-to-eat` 小队成员返回 `403`。
-- `viewer` 返回 `403`。
-- 只能给当前小队名下的店铺上传图片。
-
-响应：
-
-```ts
-type AdminPhotoUploadResponse = {
-  photo: {
-    id: string;
-    url: string;
-    isCover: boolean;
-    sortOrder: number;
-    createdAt: string;
-  };
-  coverPhotoUrl: string;
-  photoCount: number;
-  message: string;
-};
-```
-
-### `GET /api/ratings`
-
-用途：登录用户在店铺详情页读取自己对当前店铺的已有评分，用于表单预填。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-```
-
-查询参数：
-
-```txt
-placeId=<places.import_key 或 UUID>
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 小队 `owner` / `member` 读取自己的 `team_member` 评分。
-- 非小队成员仅可在 `public_rate` 榜单关联店铺读取自己的 `external` 评分。
-
-响应：
-
-```ts
-type RatingLookupResponse = {
-  rating: {
-    id: string;
-    score: number;
-    note: string | null;
-    source: "team_member" | "external";
-  } | null;
-  source: "team_member" | "external";
-};
-```
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或缺少 refreshToken |
+| 401 | `invalid_credentials` | refresh token 无效或已过期 |
+| 401 | `profile_not_found` | Auth 用户缺少业务 profile |
+| 500 | `internal_error` | 未预期服务端错误 |
 
 ### `POST /api/ratings`
 
-用途：登录用户在店铺详情页提交或更新自己的评分。
+路径：`src/app/api/ratings/route.ts`
 
-请求头：
+用途：登录用户给公开店铺评分。
+
+认证：
 
 ```txt
-Authorization: Bearer <Supabase access token>
-Content-Type: application/json
+Authorization: Bearer <accessToken>
+```
+
+权限规则：
+
+- `owner` / `member`：写入 `team_member` 评分。
+- 非成员登录用户：仅当店铺所在榜单包含 `public_rate` 时写入 `external` 评分。
+- `viewer`：不写 `team_member`；如榜单允许 `public_rate`，按 `external` 处理。
+- 数据库 RLS 不直接开放客户端写入；写入由服务端验证 token 后使用 server admin client 完成。
+
+请求体：
+
+```ts
+type UpsertRatingRequest = {
+  placeId: string;
+  score: number;
+  note?: string | null;
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或 `placeId/score/note` 不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `place_not_public` | 店铺不在公开榜单中 |
+| 403 | `rating_not_allowed` | 当前用户无权评分 |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/places`
+
+路径：`src/app/api/admin/places/route.ts`
+
+用途：owner/member 按小队读取后台店铺列表，供后台店铺管理、选店和搜索使用。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+| `query` | 否 | 关键词，匹配店铺 `id/import_key/name/category/region/location/taste_tags` 等字段 |
+| `category` | 否 | 精确匹配店铺分类 |
+| `region` | 否 | 精确匹配区域 |
+| `includeArchived` | 否 | 是否包含已归档店铺，仅支持 `true`/`false`，默认 `false` |
+| `limit` | 否 | 返回数量，1-200，默认 50 |
+
+成功响应：
+```ts
+type GetAdminPlacesResponse = {
+  ok: true;
+  places: Array<PublicPlace & {
+    teamId: string;
+    listSlugs: string[];
+    listNames: string[];
+    archivedAt: string | null;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/places`
+
+路径：`src/app/api/admin/places/route.ts`
+
+用途：owner/member 新增或编辑店铺，并挂到指定榜单。
+
+认证：
+
+```txt
+Authorization: Bearer <accessToken>
 ```
 
 请求体：
 
 ```ts
-type RatingRequest = {
-  placeId: string; // places.import_key 或 UUID
-  score: number; // 1-5，前端按 0.5 分档位提交
-  note?: string; // 最长 500 字
+type UpsertAdminPlaceRequest = {
+  id?: string;
+  listSlug: string;
+  importKey?: string;
+  name: string;
+  category?: string | null;
+  tasteTags?: string[];
+  signatureDishes?: string | null;
+  review?: string | null;
+  region?: string | null;
+  locationLabel?: string | null;
+  parkingNote?: string | null;
+  sourceLabel?: string | null;
+  visited?: boolean;
+  longitude?: number | null;
+  latitude?: number | null;
 };
 ```
 
-权限规则：
+说明：
 
-- 未登录用户返回 `401`。
-- 小队 `owner` / `member` 提交为 `team_member` 评分。
-- 非小队成员仅可给 `public_rate` 榜单下的店铺提交 `external` 评分。
-- 同一用户对同一店铺、同一评分来源重复提交时更新原评分。
+- `id` 可传 `places.import_key` 或 UUID；存在时更新店铺。
+- 新增店铺时如果不传 `importKey`，后端自动生成稳定 key。
+- `listSlug` 必须对应已存在榜单。
+- 调用用户必须是该榜单所在小队的 `owner` 或 `member`。
 
-响应：
+成功响应：
 
 ```ts
-type RatingResponse = {
-  rating: {
-    id: string;
-    score: number;
-    note: string | null;
-  };
-  source: "team_member" | "external";
-  message: string;
+type UpsertAdminPlaceResponse = {
+  ok: true;
+  place: PublicPlace;
 };
 ```
 
-### `DELETE /api/ratings`
+错误响应：
 
-用途：登录用户删除自己对当前店铺的已有评分。
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `place_team_mismatch` | 店铺不属于目标榜单所在小队 |
+| 404 | `list_not_found` | 榜单不存在 |
+| 404 | `place_not_found` | 指定店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
 
-请求头：
+### `GET /api/admin/lists`
 
+路径：`src/app/api/admin/lists/route.ts`
+
+用途：owner/member 读取小队全部榜单列表，包含 private/public_view/public_rate，并附带未归档店铺统计。
+
+认证：
 ```txt
-Authorization: Bearer <Supabase access token>
+Authorization: Bearer <accessToken>
 ```
 
-查询参数：
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
 
-```txt
-placeId=<places.import_key 或 UUID>
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 小队 `owner` / `member` 删除自己的 `team_member` 评分。
-- 非小队成员仅可删除自己在 `public_rate` 榜单下提交的 `external` 评分。
-- 没有已保存评分时返回 `404`。
-
-响应：
-
+成功响应：
 ```ts
-type RatingDeleteResponse = {
-  message: string;
-};
-```
-
-### `GET /api/ratings/me`
-
-用途：登录用户读取自己的最近评分历史。
-
-请求头：
-
-```txt
-Authorization: Bearer <Supabase access token>
-```
-
-权限规则：
-
-- 未登录用户返回 `401`。
-- 只返回当前登录账号自己的评分记录。
-- 小队成员可以看到自己在私密或公开榜单中的队内评分。
-- 外部用户只看到仍有关联公开榜单的评分记录。
-
-响应：
-
-```ts
-type MyRatingsResponse = {
-  ratings: Array<{
-    id: string;
-    score: number;
-    note: string | null;
-    source: "team_member" | "external";
-    updatedAt: string;
-    place: {
-      id: string;
-      name: string;
-      category: string;
-      region: string;
-    };
-    list: {
-      slug: string;
-      name: string;
-      visibility: "private" | "public_view" | "public_rate";
-    };
+type GetAdminListsResponse = {
+  ok: true;
+  lists: Array<PublicList & {
+    teamSlug: string;
   }>;
 };
 ```
 
-## 数据访问层接口
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
 
-路径：`src/server/places/repository.ts`
+### `POST /api/admin/lists`
 
-| 函数 | 说明 |
+路径：`src/app/api/admin/lists/route.ts`
+
+用途：owner/member 新增或编辑榜单。
+
+认证：
+
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type UpsertAdminListRequest = {
+  slug: string;
+  name: string;
+  description?: string | null;
+  visibility: "private" | "public_view" | "public_rate";
+  teamSlug?: string;
+};
+```
+
+说明：
+
+- `slug` 已存在时更新现有榜单。
+- `slug` 不存在时按 `teamSlug` 找小队创建榜单，`teamSlug` 默认 `what-to-eat`。
+- 调用用户必须是目标小队的 `owner` 或 `member`。
+
+成功响应：
+
+```ts
+type UpsertAdminListResponse = {
+  ok: true;
+  list: PublicList;
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `team_not_found` | 创建榜单时目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/members`
+
+路径：`src/app/api/admin/members/route.ts`
+
+用途：owner 读取小队成员列表。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+
+成功响应：
+```ts
+type GetAdminMembersResponse = {
+  ok: true;
+  members: Array<{
+    username: string;
+    userId: string;
+    displayName: string | null;
+    avatarUrl: string | null;
+    role: "owner" | "member" | "viewer";
+    joinedAt: string;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/members`
+
+路径：`src/app/api/admin/members/route.ts`
+
+用途：owner 添加小队成员或修改成员角色。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type UpsertAdminMemberRequest = {
+  username: string;
+  role: "owner" | "member" | "viewer";
+  teamSlug?: string;
+};
+```
+
+说明：
+- `username` 必须已存在于 `profiles`。
+- `teamSlug` 默认 `what-to-eat`。
+- 调用用户必须是目标小队 `owner`。
+- owner 不能把自己的角色改成非 owner。
+
+成功响应：
+```ts
+type UpsertAdminMemberResponse = {
+  ok: true;
+  member: {
+    username: string;
+    userId: string;
+    role: "owner" | "member" | "viewer";
+    teamSlug: string;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 400 | `invalid_username` | username 格式不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 403 | `self_role_change_not_allowed` | owner 试图把自己的角色改成非 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 404 | `profile_not_found` | 目标 username 不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `DELETE /api/admin/members`
+
+路径：`src/app/api/admin/members/route.ts`
+
+用途：owner 移除小队成员。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type RemoveAdminMemberRequest = {
+  username: string;
+  teamSlug?: string;
+};
+```
+
+说明：
+- `teamSlug` 默认 `what-to-eat`。
+- 调用用户必须是目标小队 `owner`。
+- owner 不能移除自己。
+
+成功响应：
+```ts
+type RemoveAdminMemberResponse = {
+  ok: true;
+  member: {
+    username: string;
+    userId: string;
+    role: null;
+    teamSlug: string;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 400 | `invalid_username` | username 格式不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 403 | `self_remove_not_allowed` | owner 试图移除自己 |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 404 | `profile_not_found` | 目标 username 不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/import-batches`
+
+路径：`src/app/api/admin/import-batches/route.ts`
+
+用途：owner 读取导入批次列表，用于后台查看 seed/import 历史和选择回滚目标批次。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+| `limit` | 否 | 返回条数，范围 1-100，默认 20 |
+| `includeLegacy` | 否 | 是否包含旧版无 `team_id` 批次，默认 `true` |
+
+成功响应：
+```ts
+type GetAdminImportBatchesResponse = {
+  ok: true;
+  importBatches: Array<{
+    id: string;
+    teamId: string | null;
+    sourceName: string;
+    operation: string;
+    status: string;
+    summary: Record<string, unknown>;
+    counts: {
+      places: number;
+      listPlaces: number;
+      ratings: number;
+    };
+    createdAt: string;
+    finishedAt: string | null;
+    rolledBackAt: string | null;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/places/archive`
+
+路径：`src/app/api/admin/places/archive/route.ts`
+
+用途：owner/member 软归档或恢复店铺。
+
+认证：
+
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求体：
+
+```ts
+type ArchiveAdminPlaceRequest = {
+  id: string;
+  archived?: boolean;
+};
+```
+
+说明：
+
+- `id` 可传 `places.import_key` 或 UUID。
+- `archived` 默认为 `true`。
+- 归档会设置 `places.archived_at`；恢复会置空。
+- 公开读取会过滤已归档店铺。
+
+成功响应：
+
+```ts
+type ArchiveAdminPlaceResponse = {
+  ok: true;
+  place: {
+    id: string;
+    archivedAt: string | null;
+  };
+};
+```
+
+错误响应：
+
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `place_not_found` | 指定店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/places/[id]`
+
+路径：`src/app/api/admin/places/[id]/route.ts`
+
+用途：owner/member 读取店铺后台详情，包含基础字段、归档状态、所属榜单和团队评分汇总。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
 | --- | --- |
-| `getPublicLists()` | 查询公开榜单原始记录 |
-| `getPublicListBySlug(slug)` | 按 slug 查询公开榜单 |
-| `getPlacesForPublicListId(listId)` | 查询公开榜单下的店铺关联和店铺记录 |
-| `getPublicPlaceByStableId(id)` | 按 `import_key` 或 UUID 查询店铺 |
-| `getPublicListsForPlace(placeId)` | 查询某店铺所属的公开榜单 |
-| `getRatingsForPlaces(placeIds)` | 批量读取评分记录 |
-| `getTeamMembership(teamId, userId)` | 查询用户在小队中的角色 |
-| `getUserRatingForPlace(placeId, userId, source)` | 查询用户对店铺的已有评分 |
-| `upsertUserRating(input)` | 新增或更新用户评分 |
+| `id` | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type GetAdminPlaceResponse = {
+  ok: true;
+  place: PublicPlace & {
+    teamId: string;
+    archivedAt: string | null;
+    lists: Array<{
+      slug: string;
+      name: string;
+      visibility: "private" | "public_view" | "public_rate";
+    }>;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/places/archived`
+
+路径：`src/app/api/admin/places/archived/route.ts`
+
+用途：owner/member 读取已归档店铺列表，用于后台恢复或检查归档数据。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+| `limit` | 否 | 返回条数，范围 1-200，默认 50 |
+
+成功响应：
+```ts
+type GetAdminArchivedPlacesResponse = {
+  ok: true;
+  places: Array<{
+    id: string;
+    name: string;
+    category: string;
+    region: string;
+    locationLabel: string;
+    listSlugs: string[];
+    listNames: string[];
+    archivedAt: string;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/places/[id]/ratings`
+
+路径：`src/app/api/admin/places/[id]/ratings/route.ts`
+
+用途：owner/member 读取店铺评分明细，用于后台查看团队评分、外部评分和备注。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type GetAdminPlaceRatingsResponse = {
+  ok: true;
+  ratings: Array<{
+    id: string;
+    userId: string | null;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    source: "team_member" | "external";
+    raterLabel: string | null;
+    score: number;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `rating_not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/lists/[slug]/places`
+
+路径：`src/app/api/admin/lists/[slug]/places/route.ts`
+
+用途：owner/member 读取某个榜单下的店铺管理视图，用于后台表格、编辑入口和排序展示。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `slug` | 榜单 slug |
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `includeArchived` | 否 | 是否包含已归档店铺，默认 `false` |
+
+成功响应：
+```ts
+type GetAdminListPlacesResponse = {
+  ok: true;
+  places: Array<PublicPlace & {
+    sortOrder: number;
+    archivedAt: string | null;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member |
+| 404 | `list_not_found` | 榜单不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/lists/[slug]/places/order`
+
+路径：`src/app/api/admin/lists/[slug]/places/order/route.ts`
+
+用途：owner/member 调整某个榜单内已有店铺的排序。该接口只更新 `list_places.sort_order`，不会新增榜单关联。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `slug` | 榜单 slug |
+
+请求体：
+```ts
+type ReorderAdminListPlacesRequest = {
+  placeIds: string[];
+};
+```
+
+说明：
+- `placeIds` 按目标展示顺序传入。
+- 每个 id 可为 `places.import_key` 或 UUID。
+- 所有店铺必须已经属于目标榜单。
+
+成功响应：
+```ts
+type ReorderAdminListPlacesResponse = {
+  ok: true;
+  result: {
+    listSlug: string;
+    updated: number;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或字段不合法 |
+| 400 | `duplicate_place_id` | `placeIds` 内有重复 id |
+| 400 | `place_not_in_list` | 店铺不存在、跨小队，或不属于目标榜单 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member |
+| 404 | `list_not_found` | 榜单不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
 
 ## 脚本接口
 
@@ -838,75 +994,101 @@ type MyRatingsResponse = {
 
 路径：`scripts/seed-supabase.mjs`
 
-用途：
-- 创建或复用默认小队。
-- 创建或更新公开榜单。
-- 导入 `src/data/seed-places.json` 中的 77 条店铺。
-- 创建榜单关联。
-- 导入已有评分。
+用途：创建默认小队、公开榜单、增量导入初始店铺、榜单关联和已有评分。
 
-输入：
-- `.env.local`
-- `src/data/seed-places.json`
-
-输出示例：
-
-```json
-{
-  "ok": true,
-  "teamId": "...",
-  "importBatchId": "...",
-  "lists": 2,
-  "places": 77,
-  "ratingsWithScores": 60
-}
+常用命令：
+```powershell
+pnpm db:seed
+pnpm db:seed:dry-run
+pnpm db:seed -- --archive-missing
+pnpm db:rollback-import -- <importBatchId> --dry-run
+pnpm db:rollback-import -- <importBatchId> --confirm
 ```
 
-幂等性：
-- 店铺按 `team_id + import_key` 复用。
-- 榜单按 `team_id + slug` 复用。
-- 评分按 `place_id + source + user_id/rater_label` 复用。
+参数：
+| 参数 | 说明 |
+| --- | --- |
+| `--dry-run` | 只计算导入计划，不写入远端 Supabase |
+| `--archive-missing` | 将当前 seed 文件中不存在、但远端仍未归档的同队 `import_key` 店铺软归档 |
+| `--rollback-batch <id>` | 回滚指定导入批次：删除该批次评分和榜单关联，并软归档该批次店铺 |
+| `--confirm` | 执行真实回滚时必须显式传入 |
+| `--source-name <name>` | 自定义导入来源名，默认 `seed-places.json` |
+| `--team-slug <slug>` | 自定义目标小队，默认 `what-to-eat` |
 
-### `pnpm smoke:supabase`
+批次追踪：
+- `import_batches.operation/status/summary/finished_at/rolled_back_at` 记录导入或回滚状态。
+- `places.import_batch_id`、`list_places.import_batch_id`、`ratings.import_batch_id` 记录最近一次导入来源批次。
+- 回滚是运维操作，不自动恢复被覆盖前的旧字段值；适合撤销测试导入或整批 seed 导入。
 
-路径：`scripts/smoke-supabase-public.mjs`
+### `pnpm auth:create-user`
 
-用途：
-- 使用 `NEXT_PUBLIC_SUPABASE_URL` 和 `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 验证未登录公开读取路径。
-- 检查公开榜单、公开榜单关联、公开店铺、公开评分和一条样例店铺能否读取。
-- 不读取、不打印 `SUPABASE_SECRET_KEY`。
+路径：`scripts/create-auth-user.mjs`
 
-输入：
-- `.env.local`
+用途：用 `username + password` 创建或更新业务用户。
 
-输出：
-- 每个检查项的 `PASS` / `FAIL`。
-- 只输出数量和布尔结果，不输出密钥。
-
-### `pnpm smoke:auth`
-
-路径：`scripts/smoke-authenticated.mjs`
-
-用途：
-- 使用 `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` 和临时测试账号验证登录态接口。
-- 检查后台概览、后台成员管理、后台店铺维护、店铺榜单归属维护、评分读取、评分历史和榜单权限读取路径。
-- 使用 member 测试账号确认密码重置接口返回 `403`。
-- 当测试账号不是 `owner` 时，检查 `PATCH /api/admin/lists` 和 `POST /api/admin/lists` 返回 `403`。
-- 不读取、不打印 `SUPABASE_SECRET_KEY`。
-
-输入：
-- `.env.local`
-- `SMOKE_AUTH_USERNAME`
-- `SMOKE_AUTH_PASSWORD`
-
-运行示例：
+示例：
 
 ```powershell
-$env:SMOKE_AUTH_USERNAME="testuser@users.what-to-eat-today.invalid"
-$env:SMOKE_AUTH_PASSWORD="<password>"
-pnpm smoke:auth
+pnpm auth:create-user -- --username yang --password "<password>" --display-name "Yang" --role owner
 ```
 
-输出：
-- 每个检查项的 `PASS` / `FAIL`。
-- 只输出接口状态、角色、数量和评分来源，不输出 token 或密码。
+参数：
+
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `--username` | 是 | 业务账号，必须符合 username 规则 |
+| `--password` | 是 | 密码，至少 8 位 |
+| `--display-name` | 否 | 展示名，默认等于 username |
+| `--contact-email` | 否 | 账号找回/修改密码校验邮箱 |
+| `--contact-phone` | 否 | 账号找回/修改密码校验手机号 |
+| `--role` | 否 | `owner`、`member`、`viewer`，默认 `member` |
+| `--team-slug` | 否 | 默认 `what-to-eat` |
+| `--no-team` | 否 | 创建外部测试用户，不绑定小队 |
+
+输出不会打印密码。
+
+### `pnpm smoke:auth-ratings`
+
+路径：`scripts/smoke-auth-ratings.mjs`
+
+用途：验证后端登录和评分权限闭环。该脚本会写入/更新远端 Supabase 测试评分。
+
+### `pnpm smoke:change-password`
+
+路径：`scripts/smoke-change-password.mjs`
+
+用途：验证账号联系方式校验修改密码闭环。脚本会把 `testuser` 临时改为新密码，确认旧密码失效、新密码可登录，最后恢复原密码。
+
+默认测试账号：
+```txt
+username: testuser
+contactEmail: testuser@example.com
+originalPassword: TestUser_2026
+temporaryPassword: TempUser_2026
+```
+
+覆盖：
+- `POST /api/auth/change-password`
+- `POST /api/auth/login`
+- 错误联系方式返回 `contact_mismatch`
+- 正确联系方式可修改密码
+- 测试结束恢复原密码
+
+### `pnpm smoke:admin-read`
+
+路径：`scripts/smoke-admin-read.mjs`
+
+用途：验证后端后台只读接口和认证接口闭环。该脚本只读取数据，不写入远端 Supabase。
+
+覆盖：
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/refresh`
+- `GET /api/admin/lists`
+- `GET /api/admin/places`
+- `GET /api/admin/lists/[slug]/places`
+- `GET /api/admin/places/[id]`
+- `GET /api/admin/places/[id]/ratings`
+- `GET /api/admin/members`
+- `GET /api/admin/import-batches`
+- owner/member/external/未登录权限路径

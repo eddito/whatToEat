@@ -1,0 +1,112 @@
+const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
+const MEMBER_USERNAME = "testuser";
+const MEMBER_PASSWORD = "TestUser_2026";
+const EXTERNAL_USERNAME = "testexternal";
+const EXTERNAL_PASSWORD = "TestExternal_2026";
+
+function getBaseUrl() {
+  return (process.env.BACKEND_SMOKE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+}
+
+async function readJson(response) {
+  const text = await response.text();
+
+  try {
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return { raw: text };
+  }
+}
+
+async function requestJson(path, options = {}) {
+  const response = await fetch(`${getBaseUrl()}${path}`, {
+    ...options,
+    headers: {
+      "content-type": "application/json",
+      ...(options.headers ?? {}),
+    },
+  });
+  const body = await readJson(response);
+
+  return {
+    status: response.status,
+    body,
+  };
+}
+
+function assert(condition, message, details) {
+  if (!condition) {
+    const suffix = details ? `\n${JSON.stringify(details, null, 2)}` : "";
+    throw new Error(`${message}${suffix}`);
+  }
+}
+
+async function login(username, password) {
+  const result = await requestJson("/api/auth/login", {
+    method: "POST",
+    body: JSON.stringify({ username, password }),
+  });
+
+  assert(result.status === 200, `${username} login should return 200`, result);
+  assert(result.body?.ok === true, `${username} login should be ok`, result);
+  assert(Boolean(result.body?.session?.accessToken), `${username} login should include access token`, result);
+
+  return result.body.session.accessToken;
+}
+
+async function rate(placeId, score, token, note) {
+  return requestJson("/api/ratings", {
+    method: "POST",
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    body: JSON.stringify({ placeId, score, note }),
+  });
+}
+
+async function main() {
+  const memberToken = await login(MEMBER_USERNAME, MEMBER_PASSWORD);
+  const externalToken = await login(EXTERNAL_USERNAME, EXTERNAL_PASSWORD);
+
+  const noToken = await rate("red-list-1", 4, null, "smoke no token");
+  assert(noToken.status === 401, "Rating without token should return 401", noToken);
+
+  const memberRating = await rate("red-list-1", 4.3, memberToken, "member smoke test");
+  assert(memberRating.status === 200, "Member rating should return 200", memberRating);
+  assert(memberRating.body?.source === "team_member", "Member rating should use team_member source", memberRating);
+  assert(memberRating.body?.role === "member", "Member rating should include member role", memberRating);
+
+  const externalRating = await rate("red-list-1", 3.7, externalToken, "external smoke test");
+  assert(externalRating.status === 200, "External public_rate rating should return 200", externalRating);
+  assert(externalRating.body?.source === "external", "External rating should use external source", externalRating);
+  assert(externalRating.body?.role === null, "External rating should not have team role", externalRating);
+
+  const forbiddenExternalRating = await rate("retry-list-1", 3.2, externalToken, "external forbidden smoke test");
+  assert(
+    forbiddenExternalRating.status === 403,
+    "External public_view-only rating should return 403",
+    forbiddenExternalRating,
+  );
+
+  console.log(
+    JSON.stringify(
+      {
+        ok: true,
+        baseUrl: getBaseUrl(),
+        checks: [
+          "member login",
+          "external login",
+          "missing token rejected",
+          "member team_member rating",
+          "external public_rate rating",
+          "external public_view-only rating rejected",
+        ],
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

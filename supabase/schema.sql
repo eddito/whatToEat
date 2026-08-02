@@ -23,11 +23,54 @@ end $$;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
-  email text,
+  username text,
   display_name text,
   avatar_url text,
+  contact_email text,
+  contact_phone text,
   created_at timestamptz not null default now()
 );
+
+alter table public.profiles add column if not exists username text;
+alter table public.profiles add column if not exists contact_email text;
+alter table public.profiles add column if not exists contact_phone text;
+update public.profiles
+set username = 'user' || left(replace(id::text, '-', ''), 12)
+where username is null;
+update public.profiles
+set username = lower(regexp_replace(username, '[^a-z0-9]', '', 'g'))
+where username !~ '^[a-z][a-z0-9]{2,31}$'
+  and lower(regexp_replace(username, '[^a-z0-9]', '', 'g')) ~ '^[a-z][a-z0-9]{2,31}$';
+update public.profiles
+set username = 'user' || left(replace(id::text, '-', ''), 12)
+where username !~ '^[a-z][a-z0-9]{2,31}$';
+update auth.users
+set
+  email = public.profiles.username || '@users.what-to-eat-today.invalid',
+  raw_user_meta_data = coalesce(auth.users.raw_user_meta_data, '{}'::jsonb)
+    || jsonb_build_object('username', public.profiles.username)
+from public.profiles
+where auth.users.id = public.profiles.id
+  and auth.users.email like '%@users.what-to-eat-today.invalid'
+  and auth.users.email <> public.profiles.username || '@users.what-to-eat-today.invalid';
+alter table public.profiles alter column username set not null;
+alter table public.profiles drop column if exists email;
+
+drop index if exists profiles_username_lower_idx;
+create unique index profiles_username_lower_idx
+  on public.profiles (lower(username));
+
+alter table public.profiles drop constraint if exists profiles_username_format_chk;
+alter table public.profiles add constraint profiles_username_format_chk
+  check (username ~ '^[a-z][a-z0-9]{2,31}$');
+
+alter table public.profiles drop constraint if exists profiles_contact_email_format_chk;
+alter table public.profiles add constraint profiles_contact_email_format_chk
+  check (contact_email is null or contact_email ~* '^[^[:space:]@]+@[^[:space:]@]+\.[^[:space:]@]+$');
+
+alter table public.profiles drop constraint if exists profiles_contact_phone_format_chk;
+alter table public.profiles add constraint profiles_contact_phone_format_chk
+  check (contact_phone is null or contact_phone ~ '^\+?[0-9]{6,20}$');
 
 create table if not exists public.teams (
   id uuid primary key default gen_random_uuid(),
@@ -63,6 +106,7 @@ create table if not exists public.places (
   longitude double precision,
   latitude double precision,
   geocode_status text not null default 'pending',
+  archived_at timestamptz,
   created_by uuid references public.profiles(id),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -111,6 +155,7 @@ create table if not exists public.ratings (
 );
 
 alter table public.places add column if not exists import_key text;
+alter table public.places add column if not exists archived_at timestamptz;
 alter table public.ratings add column if not exists rater_label text;
 
 create unique index if not exists places_team_import_key_idx
@@ -136,10 +181,27 @@ create table if not exists public.photos (
 
 create table if not exists public.import_batches (
   id uuid primary key default gen_random_uuid(),
+  team_id uuid references public.teams(id) on delete set null,
   source_name text not null,
+  operation text not null default 'seed',
+  status text not null default 'completed',
+  summary jsonb not null default '{}'::jsonb,
   created_by uuid references public.profiles(id),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  finished_at timestamptz,
+  rolled_back_at timestamptz
 );
+
+alter table public.import_batches add column if not exists team_id uuid references public.teams(id) on delete set null;
+alter table public.import_batches add column if not exists operation text not null default 'seed';
+alter table public.import_batches add column if not exists status text not null default 'completed';
+alter table public.import_batches add column if not exists summary jsonb not null default '{}'::jsonb;
+alter table public.import_batches add column if not exists finished_at timestamptz;
+alter table public.import_batches add column if not exists rolled_back_at timestamptz;
+
+alter table public.places add column if not exists import_batch_id uuid references public.import_batches(id);
+alter table public.list_places add column if not exists import_batch_id uuid references public.import_batches(id);
+alter table public.ratings add column if not exists import_batch_id uuid references public.import_batches(id);
 
 create or replace function public.is_team_member(target_team_id uuid)
 returns boolean
@@ -194,19 +256,31 @@ language plpgsql
 security definer
 set search_path = public
 as $$
+declare
+  candidate_username text;
 begin
-  insert into public.profiles (id, email, display_name, avatar_url)
+  candidate_username := lower(trim(coalesce(new.raw_user_meta_data ->> 'username', '')));
+
+  if candidate_username !~ '^[a-z][a-z0-9]{2,31}$' then
+    candidate_username := 'user' || left(replace(new.id::text, '-', ''), 12);
+  end if;
+
+  insert into public.profiles (id, username, display_name, avatar_url, contact_email, contact_phone)
   values (
     new.id,
-    new.email,
+    candidate_username,
     coalesce(new.raw_user_meta_data ->> 'display_name', new.raw_user_meta_data ->> 'name'),
-    new.raw_user_meta_data ->> 'avatar_url'
+    new.raw_user_meta_data ->> 'avatar_url',
+    nullif(lower(trim(coalesce(new.raw_user_meta_data ->> 'contact_email', ''))), ''),
+    nullif(trim(coalesce(new.raw_user_meta_data ->> 'contact_phone', '')), '')
   )
   on conflict (id) do update
   set
-    email = excluded.email,
+    username = coalesce(public.profiles.username, excluded.username),
     display_name = coalesce(public.profiles.display_name, excluded.display_name),
-    avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url);
+    avatar_url = coalesce(public.profiles.avatar_url, excluded.avatar_url),
+    contact_email = coalesce(public.profiles.contact_email, excluded.contact_email),
+    contact_phone = coalesce(public.profiles.contact_phone, excluded.contact_phone);
 
   return new;
 end;
