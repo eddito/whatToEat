@@ -23,6 +23,10 @@ export type UsernameLoginResult = {
   };
 };
 
+export type RefreshSessionInput = {
+  refreshToken: string;
+};
+
 export type CurrentUserSession = {
   user: {
     id: string;
@@ -82,6 +86,36 @@ export async function loginWithUsername(input: UsernameLoginInput): Promise<User
 
   if (error || !data.session) {
     throw new AuthError("Invalid username or password.", "invalid_credentials");
+  }
+
+  return {
+    accessToken: data.session.access_token,
+    refreshToken: data.session.refresh_token,
+    expiresAt: data.session.expires_at ?? null,
+    tokenType: data.session.token_type,
+    user: {
+      id: profile.id,
+      username: profile.username,
+      displayName: profile.display_name ?? profile.username,
+      avatarUrl: profile.avatar_url,
+    },
+  };
+}
+
+export async function refreshSession(input: RefreshSessionInput): Promise<UsernameLoginResult> {
+  const supabase = createSupabaseAuthClient();
+  const { data, error } = await supabase.auth.refreshSession({
+    refresh_token: input.refreshToken,
+  });
+
+  if (error || !data.session || !data.user) {
+    throw new AuthError("Invalid refresh token.", "invalid_credentials");
+  }
+
+  const profile = await getProfileById(data.user.id);
+
+  if (!profile) {
+    throw new AuthError("Profile not found.", "profile_not_found");
   }
 
   return {

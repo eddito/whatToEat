@@ -212,6 +212,46 @@ type CurrentUserResponse = {
 | 404 | `profile_not_found` | Auth 用户缺少业务 profile |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `POST /api/auth/refresh`
+
+路径：`src/app/api/auth/refresh/route.ts`
+
+用途：使用 refresh token 换取新的 access token 和 refresh token。
+
+请求体：
+```ts
+type RefreshRequest = {
+  refreshToken: string;
+};
+```
+
+成功响应：
+```ts
+type RefreshResponse = {
+  ok: true;
+  session: {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number | null;
+    tokenType: string;
+    user: {
+      id: string;
+      username: string;
+      displayName: string;
+      avatarUrl: string | null;
+    };
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或缺少 refreshToken |
+| 401 | `invalid_credentials` | refresh token 无效或已过期 |
+| 401 | `profile_not_found` | Auth 用户缺少业务 profile |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `POST /api/ratings`
 
 路径：`src/app/api/ratings/route.ts`

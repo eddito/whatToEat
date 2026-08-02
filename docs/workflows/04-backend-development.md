@@ -29,7 +29,7 @@
 | B8 | 导入脚本运维能力 | 已完成 | seed dry-run、批次追踪、归档缺失项和按批次回滚 |
 | B9 | 导入批次后台读取 | 已完成 | owner-only 导入批次列表和关联数据计数接口 |
 | B10 | 后台只读管理数据 | 进行中 | 成员列表、已归档店铺、榜单内店铺管理视图和店铺评分明细接口已实现 |
-| B11 | 登录态读取 | 已完成 | 当前用户资料和小队角色接口已实现 |
+| B11 | 登录态读取 | 已完成 | 当前用户资料、小队角色和 refresh token 换新接口已实现 |
 
 ## 任务进度表
 
@@ -64,6 +64,7 @@
 | BE-027 | 实现榜单内店铺管理视图接口 | 已完成 | `GET /api/admin/lists/[slug]/places`、`getAdminPlacesByList` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-028 | 实现后台店铺评分明细接口 | 已完成 | `GET /api/admin/places/[id]/ratings`、`getAdminPlaceRatings` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-029 | 实现当前用户登录态接口 | 已完成 | `GET /api/auth/me`、`getCurrentUserSession` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| BE-030 | 实现 refresh token 换新接口 | 已完成 | `POST /api/auth/refresh`、`refreshSession` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 
 ## 完成记录
 
@@ -102,6 +103,8 @@
 | 2026-08-02 | 远端后台店铺评分明细验证 | Supabase `places`、`ratings`、`profiles` | `GET /api/admin/places/red-list-1/ratings`：owner/member 返回 200，external 返回 403，未登录返回 401，不存在店铺返回 404；当前返回 3 条评分 |
 | 2026-08-02 | 实现当前用户登录态接口 | `src/app/api/auth/me/route.ts`、`src/server/auth/repository.ts`、`src/server/auth/service.ts`、`src/server/teams/repository.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-08-02 | 远端当前用户登录态验证 | Supabase `profiles`、`team_members`、`teams` | `GET /api/auth/me`：owner 返回 200 且包含 owner 角色，external 返回 200 且 memberships 为空，未登录返回 401 |
+| 2026-08-02 | 实现 refresh token 换新接口 | `src/app/api/auth/refresh/route.ts`、`src/server/auth/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| 2026-08-02 | 远端 refresh token 换新验证 | Supabase Auth、`profiles` | `POST /api/auth/refresh`：有效 refresh token 返回 200 且返回新 token，非法 token 返回 401，缺少 token 返回 400 |
 
 ## 当前数据库快照
 
