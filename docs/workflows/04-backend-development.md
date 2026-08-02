@@ -26,6 +26,7 @@
 | B5 | 认证与评分 | 已完成 | 登录、bearer token、评分写入、权限 smoke |
 | B6 | 后台写入接口 | 已完成 | 店铺新增/编辑、软归档和榜单新增/编辑接口已实现 |
 | B7 | 成员管理接口 | 已完成 | owner-only 成员添加、角色调整和移除接口已实现 |
+| B8 | 导入脚本运维能力 | 已完成 | seed dry-run、批次追踪、归档缺失项和按批次回滚 |
 
 ## 任务进度表
 
@@ -53,6 +54,7 @@
 | BE-020 | 实现后台榜单新增/编辑接口 | 已完成 | `POST /api/admin/lists`、`upsertAdminList` | member 写入 200，external 403，未登录 401 |
 | BE-021 | 实现后台店铺软归档接口 | 已完成 | `POST /api/admin/places/archive`、`places.archived_at` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-022 | 实现后台成员管理接口 | 已完成 | `POST /api/admin/members`、`DELETE /api/admin/members`、`src/server/teams/service.ts` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| BE-023 | 增强 Supabase seed 导入脚本 | 已完成 | `scripts/seed-supabase.mjs`、`import_batches` 批次字段、`import_batch_id` 追踪字段 | `node --check`、`tsc --noEmit`、`next build`；远端 dry-run 因本机到 Supabase TLS 连接失败未完成 |
 
 ## 完成记录
 
@@ -77,6 +79,7 @@
 | 2026-07-23 | 远端后台店铺归档验证 | Supabase `places.archived_at` | `admin-smoke-place` 归档返回 200、恢复返回 200、external 403、未登录 401；最终已恢复 |
 | 2026-07-23 | 实现后台成员管理接口 | `src/app/api/admin/members/route.ts`、`src/server/teams/repository.ts`、`src/server/teams/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-07-23 | 远端后台成员管理验证 | Supabase `profiles`、`team_members` | `test_owner` 创建并绑定为 `what-to-eat` owner；`test_member_target` 创建为无小队用户；owner 添加/移除 target 返回 200，member 添加返回 403，未登录添加返回 401；target 最终已移除 |
+| 2026-08-02 | 增强 seed 导入脚本 | `supabase/schema.sql`、`scripts/seed-supabase.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过；远端 dry-run 因本机到 Supabase TLS 握手失败未完成 |
 
 ## 当前数据库快照
 
@@ -87,14 +90,14 @@
 | `places` | 78+ | 初始店铺数据和后台接口 smoke 测试店 |
 | `list_places` | 78+ | 店铺和榜单关联，包含后台接口 smoke 测试关联 |
 | `ratings` | 60+ | 初始评分和测试评分 |
-| `import_batches` | 1 | 初始导入批次 |
+| `import_batches` | 1+ | 初始导入批次；schema 已支持 operation/status/summary/finished_at/rolled_back_at |
 | `profiles` | 4+ | `test_user`、`test_external`、`test_owner`、`test_member_target` 等测试账号 |
 | `team_members` | 2+ | 默认小队成员和 `test_owner` owner |
 
 ## 下一步
 
 1. 后续 integration 接入后台表单时使用 `POST /api/admin/places`、`POST /api/admin/places/archive`、`POST /api/admin/lists`、`POST /api/admin/members` 和 `DELETE /api/admin/members`。
-2. 继续补导入脚本的增量导入/回滚能力。
+2. 执行最新 `supabase/schema.sql` 后，运行 `pnpm db:seed:dry-run` 验证远端导入计划。
 
 ## 记录规则
 

@@ -154,9 +154,24 @@ create table if not exists public.photos (
 create table if not exists public.import_batches (
   id uuid primary key default gen_random_uuid(),
   source_name text not null,
+  operation text not null default 'seed',
+  status text not null default 'completed',
+  summary jsonb not null default '{}'::jsonb,
   created_by uuid references public.profiles(id),
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  finished_at timestamptz,
+  rolled_back_at timestamptz
 );
+
+alter table public.import_batches add column if not exists operation text not null default 'seed';
+alter table public.import_batches add column if not exists status text not null default 'completed';
+alter table public.import_batches add column if not exists summary jsonb not null default '{}'::jsonb;
+alter table public.import_batches add column if not exists finished_at timestamptz;
+alter table public.import_batches add column if not exists rolled_back_at timestamptz;
+
+alter table public.places add column if not exists import_batch_id uuid references public.import_batches(id);
+alter table public.list_places add column if not exists import_batch_id uuid references public.import_batches(id);
+alter table public.ratings add column if not exists import_batch_id uuid references public.import_batches(id);
 
 create or replace function public.is_team_member(target_team_id uuid)
 returns boolean

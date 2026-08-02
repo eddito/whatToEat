@@ -455,7 +455,31 @@ type ArchiveAdminPlaceResponse = {
 
 路径：`scripts/seed-supabase.mjs`
 
-用途：创建默认小队、公开榜单、导入初始店铺、榜单关联和已有评分。
+用途：创建默认小队、公开榜单、增量导入初始店铺、榜单关联和已有评分。
+
+常用命令：
+```powershell
+pnpm db:seed
+pnpm db:seed:dry-run
+pnpm db:seed -- --archive-missing
+pnpm db:rollback-import -- <importBatchId> --dry-run
+pnpm db:rollback-import -- <importBatchId> --confirm
+```
+
+参数：
+| 参数 | 说明 |
+| --- | --- |
+| `--dry-run` | 只计算导入计划，不写入远端 Supabase |
+| `--archive-missing` | 将当前 seed 文件中不存在、但远端仍未归档的同队 `import_key` 店铺软归档 |
+| `--rollback-batch <id>` | 回滚指定导入批次：删除该批次评分和榜单关联，并软归档该批次店铺 |
+| `--confirm` | 执行真实回滚时必须显式传入 |
+| `--source-name <name>` | 自定义导入来源名，默认 `seed-places.json` |
+| `--team-slug <slug>` | 自定义目标小队，默认 `what-to-eat` |
+
+批次追踪：
+- `import_batches.operation/status/summary/finished_at/rolled_back_at` 记录导入或回滚状态。
+- `places.import_batch_id`、`list_places.import_batch_id`、`ratings.import_batch_id` 记录最近一次导入来源批次。
+- 回滚是运维操作，不自动恢复被覆盖前的旧字段值；适合撤销测试导入或整批 seed 导入。
 
 ### `pnpm auth:create-user`
 

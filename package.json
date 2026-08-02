@@ -9,6 +9,8 @@
     "start": "next start",
     "lint": "next lint",
     "db:seed": "node scripts/seed-supabase.mjs",
+    "db:seed:dry-run": "node scripts/seed-supabase.mjs --dry-run",
+    "db:rollback-import": "node scripts/seed-supabase.mjs --rollback-batch",
     "auth:create-user": "node scripts/create-auth-user.mjs",
     "smoke:auth-ratings": "node scripts/smoke-auth-ratings.mjs",
     "typecheck": "tsc --noEmit"
