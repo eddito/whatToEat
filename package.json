@@ -14,6 +14,7 @@
     "auth:create-user": "node scripts/create-auth-user.mjs",
     "smoke:change-password": "node scripts/smoke-change-password.mjs",
     "smoke:admin-read": "node scripts/smoke-admin-read.mjs",
+    "smoke:admin-photos": "node scripts/smoke-admin-photos.mjs",
     "smoke:auth-ratings": "node scripts/smoke-auth-ratings.mjs",
     "typecheck": "tsc --noEmit"
   },

@@ -1287,3 +1287,26 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/members`
 - `GET /api/admin/import-batches`
 - owner/member/external/未登录权限路径
+
+### `pnpm smoke:admin-photos`
+
+路径：`scripts/smoke-admin-photos.mjs`
+
+用途：验证后台店铺照片上传、元数据更新和真删除闭环。该脚本会向公开 Storage bucket `place-photos` 上传一张 1x1 PNG，测试结束后删除 Storage object 和 `photos` 记录。
+
+运行前置：
+- 本地后端服务运行在 `http://127.0.0.1:3101`，或设置 `BACKEND_SMOKE_URL`
+- 远端 Supabase 已执行包含 `photos.storage_path` 和 `place-photos` bucket 配置的最新 `supabase/schema.sql`
+- 测试账号 `testowner/testuser/testexternal` 已存在
+
+覆盖：
+- `POST /api/auth/login`
+- `POST /api/admin/places/[id]/photos`
+- `PATCH /api/admin/places/[id]/photos`
+- `DELETE /api/admin/places/[id]/photos`
+- `GET /api/admin/places/[id]`
+- 未登录上传返回 401
+- external 上传返回 403
+- owner 上传照片并成为封面
+- member 更新照片 `isCover/sortOrder`
+- owner 删除照片并确认详情中不再返回该照片

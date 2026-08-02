@@ -76,6 +76,7 @@
 | BE-039 | 实现当前用户评分读取和删除接口 | 已完成 | `GET /api/ratings`、`DELETE /api/ratings`、`getMyRating/deleteMyRating` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
 | BE-040 | 接入店铺照片公开读取契约 | 已完成 | `photos` 读取、`coverPhotoUrl/photoCount`、后台详情 `photos` | `tsc --noEmit`、`next build`、`pnpm smoke:admin-read` 通过 |
 | BE-041 | 实现店铺照片上传和真删除接口 | 已完成 | `place-photos` bucket、`photos.storage_path`、`POST/PATCH/DELETE /api/admin/places/[id]/photos` | `node --check`、`tsc --noEmit`、`next build` 通过；远端 smoke 待执行 schema 后进行 |
+| BE-042 | 新增店铺照片上传/真删除 smoke 脚本 | 已完成 | `pnpm smoke:admin-photos`、`scripts/smoke-admin-photos.mjs` | `node --check`、`tsc --noEmit`、`next build` 通过；远端运行需先执行最新 schema |
 
 ## 完成记录
 
@@ -133,6 +134,7 @@
 | 2026-08-02 | 实现当前用户评分读取和删除接口 | `src/app/api/ratings/route.ts`、`src/server/ratings/repository.ts`、`src/server/ratings/service.ts`、`scripts/smoke-auth-ratings.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
 | 2026-08-02 | 接入店铺照片公开读取契约 | `src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、`pnpm smoke:admin-read` 通过 |
 | 2026-08-02 | 实现店铺照片上传和真删除接口 | `supabase/schema.sql`、`src/app/api/admin/places/[id]/photos/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过；需要先执行更新后的 schema，再验证 Storage 上传/删除 |
+| 2026-08-02 | 新增店铺照片上传/真删除 smoke 脚本 | `scripts/smoke-admin-photos.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过；远端运行需先执行最新 schema |
 
 ## 当前数据库快照
 
