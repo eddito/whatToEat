@@ -963,3 +963,21 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 路径：`scripts/smoke-auth-ratings.mjs`
 
 用途：验证后端登录和评分权限闭环。该脚本会写入/更新远端 Supabase 测试评分。
+
+### `pnpm smoke:admin-read`
+
+路径：`scripts/smoke-admin-read.mjs`
+
+用途：验证后端后台只读接口和认证接口闭环。该脚本只读取数据，不写入远端 Supabase。
+
+覆盖：
+- `POST /api/auth/login`
+- `GET /api/auth/me`
+- `POST /api/auth/refresh`
+- `GET /api/admin/lists`
+- `GET /api/admin/lists/[slug]/places`
+- `GET /api/admin/places/[id]`
+- `GET /api/admin/places/[id]/ratings`
+- `GET /api/admin/members`
+- `GET /api/admin/import-batches`
+- owner/member/external/未登录权限路径

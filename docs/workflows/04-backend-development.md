@@ -69,6 +69,7 @@
 | BE-032 | 补齐远端 seed 导入批次追踪 | 已完成 | 远端 `places/list_places/ratings.import_batch_id` | `pnpm db:seed` 和 `GET /api/admin/import-batches?limit=3` 验证通过 |
 | BE-033 | 实现榜单内店铺排序接口 | 已完成 | `POST /api/admin/lists/[slug]/places/order`、`reorderAdminListPlaces` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-034 | 实现后台店铺详情接口 | 已完成 | `GET /api/admin/places/[id]`、`getAdminPlace` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
+| BE-035 | 新增后台只读 smoke 脚本 | 已完成 | `pnpm smoke:admin-read`、`scripts/smoke-admin-read.mjs` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
 
 ## 完成记录
 
@@ -117,6 +118,7 @@
 | 2026-08-02 | 远端榜单内店铺排序验证 | Supabase `list_places` | 临时交换 `red-list` 前两个店铺后读取顺序生效，再恢复原顺序；owner/member 返回 200，external 返回 403，未登录返回 401，重复 id 返回 400 |
 | 2026-08-02 | 实现后台店铺详情接口 | `src/app/api/admin/places/[id]/route.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | 2026-08-02 | 远端后台店铺详情验证 | Supabase `places`、`list_places`、`lists`、`ratings` | `GET /api/admin/places/red-list-1`：owner/member 返回 200，external 返回 403，未登录返回 401，不存在店铺返回 404；响应包含 `teamId` 和所属榜单 |
+| 2026-08-02 | 新增后台只读 smoke 脚本 | `scripts/smoke-admin-read.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
 
 ## 当前数据库快照
 
