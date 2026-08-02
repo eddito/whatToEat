@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
   archivePlaceRecord,
+  deletePhotoRecord,
   getArchivedPlacesForTeam,
   getListBySlug,
   getListPlaceLinks,
@@ -13,12 +14,14 @@ import {
   getPlacesForTeam,
   getPlacesForPublicListId,
   getPhotosForPlaces,
+  getPhotoById,
   getPublicListBySlug,
   getPublicLists,
   getPublicListsForPlace,
   getPlaceByStableId,
   getPublicPlaceByStableId,
   getRatingsForPlaces,
+  insertPhotoRecord,
   isUuid,
   type ListVisibility,
   type PhotoRecord,
@@ -28,9 +31,15 @@ import {
   upsertListPlace,
   upsertListRecord,
   upsertPlaceRecord,
+  updatePhotoRecord,
   updateListPlaceSortOrders,
 } from "@/server/places/repository";
+import { createSupabaseAdminClient } from "@/server/supabase/admin";
 import { canManageTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
+
+const PLACE_PHOTOS_BUCKET = "place-photos";
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export type PublicListStats = {
   count: number;
@@ -157,6 +166,28 @@ export type ReorderAdminListPlacesInput = {
   placeIds: string[];
 };
 
+export type UploadAdminPlacePhotoInput = {
+  userId: string;
+  placeId: string;
+  file: File;
+  isCover?: boolean;
+  sortOrder?: number;
+};
+
+export type UpdateAdminPlacePhotoInput = {
+  userId: string;
+  placeId: string;
+  photoId: string;
+  isCover?: boolean;
+  sortOrder?: number;
+};
+
+export type DeleteAdminPlacePhotoInput = {
+  userId: string;
+  placeId: string;
+  photoId: string;
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
@@ -215,6 +246,11 @@ export type AdminPlaceSummary = PublicPlace & {
   archivedAt: string | null;
 };
 
+export type AdminPlacePhotoMutationResult = {
+  photo: PublicPlacePhoto | null;
+  deleted?: boolean;
+};
+
 export class ListWriteError extends Error {
   constructor(
     message: string,
@@ -232,6 +268,22 @@ export class ListPlaceOrderError extends Error {
   ) {
     super(message);
     this.name = "ListPlaceOrderError";
+  }
+}
+
+export class PlacePhotoError extends Error {
+  constructor(
+    message: string,
+    public readonly code:
+      | "place_not_found"
+      | "photo_not_found"
+      | "not_allowed"
+      | "invalid_file"
+      | "file_too_large"
+      | "storage_error",
+  ) {
+    super(message);
+    this.name = "PlacePhotoError";
   }
 }
 
@@ -333,6 +385,41 @@ function optionalText(value: string | null | undefined) {
 
 function buildImportKey(listSlug: string) {
   return `${listSlug}-${randomUUID().slice(0, 8)}`;
+}
+
+function getPhotoExtension(file: File) {
+  const originalName = file.name.trim().toLowerCase();
+  const extension = originalName.match(/\.([a-z0-9]+)$/)?.[1];
+
+  if (extension && ["jpg", "jpeg", "png", "webp", "gif"].includes(extension)) {
+    return extension === "jpeg" ? "jpg" : extension;
+  }
+
+  if (file.type === "image/jpeg") return "jpg";
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  if (file.type === "image/gif") return "gif";
+
+  return "bin";
+}
+
+async function getManageablePhotoPlace(input: {
+  userId: string;
+  placeId: string;
+}) {
+  const place = await getPlaceByStableId(input.placeId);
+
+  if (!place) {
+    throw new PlacePhotoError("Place not found.", "place_not_found");
+  }
+
+  const membership = await getTeamMembership(place.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlacePhotoError("Current user cannot manage photos for this place.", "not_allowed");
+  }
+
+  return place;
 }
 
 function getStatsFromPlaces(places: PublicPlace[]): PublicListStats {
@@ -900,6 +987,113 @@ export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Prom
     sortOrder: row.sort_order,
     archivedAt: row.place.archived_at,
   }));
+}
+
+export async function uploadAdminPlacePhoto(input: UploadAdminPlacePhotoInput): Promise<AdminPlacePhotoMutationResult> {
+  const place = await getManageablePhotoPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+
+  if (!ALLOWED_PHOTO_TYPES.has(input.file.type)) {
+    throw new PlacePhotoError("Photo must be a jpeg, png, webp, or gif image.", "invalid_file");
+  }
+
+  if (input.file.size <= 0) {
+    throw new PlacePhotoError("Photo file is empty.", "invalid_file");
+  }
+
+  if (input.file.size > MAX_PHOTO_BYTES) {
+    throw new PlacePhotoError("Photo exceeds the 10MB limit.", "file_too_large");
+  }
+
+  const extension = getPhotoExtension(input.file);
+  const storagePath = `${place.team_id}/${place.id}/${randomUUID()}.${extension}`;
+  const supabase = createSupabaseAdminClient();
+  const { error: uploadError } = await supabase.storage
+    .from(PLACE_PHOTOS_BUCKET)
+    .upload(storagePath, input.file, {
+      contentType: input.file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new PlacePhotoError(uploadError.message, "storage_error");
+  }
+
+  const { data } = supabase.storage.from(PLACE_PHOTOS_BUCKET).getPublicUrl(storagePath);
+  let photo: PhotoRecord;
+
+  try {
+    photo = await insertPhotoRecord({
+      placeId: place.id,
+      url: data.publicUrl,
+      storagePath,
+      isCover: input.isCover ?? false,
+      sortOrder: input.sortOrder ?? 0,
+    });
+  } catch (error) {
+    await supabase.storage.from(PLACE_PHOTOS_BUCKET).remove([storagePath]);
+    throw error;
+  }
+
+  return {
+    photo: toPublicPlacePhoto(photo),
+  };
+}
+
+export async function updateAdminPlacePhoto(input: UpdateAdminPlacePhotoInput): Promise<AdminPlacePhotoMutationResult> {
+  const place = await getManageablePhotoPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+  const existingPhoto = await getPhotoById(input.photoId);
+
+  if (!existingPhoto || existingPhoto.place_id !== place.id) {
+    throw new PlacePhotoError("Photo not found.", "photo_not_found");
+  }
+
+  const photo = await updatePhotoRecord({
+    photoId: input.photoId,
+    placeId: place.id,
+    isCover: input.isCover,
+    sortOrder: input.sortOrder,
+  });
+
+  return {
+    photo: photo ? toPublicPlacePhoto(photo) : null,
+  };
+}
+
+export async function deleteAdminPlacePhoto(input: DeleteAdminPlacePhotoInput): Promise<AdminPlacePhotoMutationResult> {
+  const place = await getManageablePhotoPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+  const existingPhoto = await getPhotoById(input.photoId);
+
+  if (!existingPhoto || existingPhoto.place_id !== place.id) {
+    throw new PlacePhotoError("Photo not found.", "photo_not_found");
+  }
+
+  if (existingPhoto.storage_path) {
+    const supabase = createSupabaseAdminClient();
+    const { error } = await supabase.storage.from(PLACE_PHOTOS_BUCKET).remove([existingPhoto.storage_path]);
+
+    if (error) {
+      throw new PlacePhotoError(error.message, "storage_error");
+    }
+  }
+
+  const photo = await deletePhotoRecord({
+    photoId: input.photoId,
+    placeId: place.id,
+  });
+
+  return {
+    photo: photo ? toPublicPlacePhoto(photo) : null,
+    deleted: Boolean(photo),
+  };
 }
 
 export async function reorderAdminListPlaces(

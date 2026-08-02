@@ -174,10 +174,27 @@ create table if not exists public.photos (
   id uuid primary key default gen_random_uuid(),
   place_id uuid not null references public.places(id) on delete cascade,
   url text not null,
+  storage_path text,
   is_cover boolean not null default false,
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+alter table public.photos add column if not exists storage_path text;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'place-photos',
+  'place-photos',
+  true,
+  10485760,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
 
 create table if not exists public.import_batches (
   id uuid primary key default gen_random_uuid(),

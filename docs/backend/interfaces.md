@@ -59,7 +59,7 @@ Username 规则：
 | `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段、`archived_at` |
 | `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
 | `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
-| `photos` | 店铺图片 | `place_id`、`url`、`is_cover`、`sort_order` |
+| `photos` | 店铺图片 | `place_id`、`url`、`storage_path`、`is_cover`、`sort_order` |
 | `import_batches` | 导入批次 | `team_id`、`source_name`、`operation`、`status`、`summary`、`finished_at`、`rolled_back_at` |
 
 `profiles.email` 已从业务表移除。Supabase `auth.users.email` 仅由 Supabase Auth 内部使用。
@@ -951,6 +951,92 @@ type GetAdminArchivedPlacesResponse = {
 | 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
 | 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/places/[id]/photos`
+
+路径：`src/app/api/admin/places/[id]/photos/route.ts`
+
+用途：owner/member 给店铺上传图片到公开 Storage bucket `place-photos`，单张最大 10MB，支持 jpeg/png/webp/gif。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+Content-Type: multipart/form-data
+```
+
+FormData：
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `file` | 是 | 图片文件，最大 10MB |
+| `isCover` | 否 | `true/false`，设为封面时会清除同店铺其它封面 |
+| `sortOrder` | 否 | 0-10000 的整数 |
+
+成功响应：
+```ts
+type UploadAdminPlacePhotoResponse = {
+  ok: true;
+  photo: {
+    id: string;
+    url: string;
+    isCover: boolean;
+    sortOrder: number;
+  };
+};
+```
+
+### `PATCH /api/admin/places/[id]/photos`
+
+用途：owner/member 修改店铺图片封面状态或排序。
+
+请求体：
+```ts
+type UpdateAdminPlacePhotoRequest = {
+  photoId: string;
+  isCover?: boolean;
+  sortOrder?: number;
+};
+```
+
+成功响应：
+```ts
+type UpdateAdminPlacePhotoResponse = UploadAdminPlacePhotoResponse;
+```
+
+### `DELETE /api/admin/places/[id]/photos`
+
+用途：owner/member 删除店铺图片。删除时会先真实删除 `place-photos` 里的 Storage object，再删除 `photos` 记录。
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `photoId` | 是 | `photos.id` |
+
+成功响应：
+```ts
+type DeleteAdminPlacePhotoResponse = {
+  ok: true;
+  photo: {
+    id: string;
+    url: string;
+    isCover: boolean;
+    sortOrder: number;
+  } | null;
+  deleted: boolean;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体、form-data 或 photoId 不合法 |
+| 400 | `invalid_file` | 文件为空或不是允许的图片类型 |
+| 400 | `file_too_large` | 文件超过 10MB |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
+| 404 | `photo_not_found` | 图片不存在或不属于目标店铺 |
+| 502 | `storage_error` | Supabase Storage 上传或删除失败 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `GET /api/admin/places/[id]/ratings`
