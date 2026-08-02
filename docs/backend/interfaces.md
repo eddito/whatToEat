@@ -58,6 +58,7 @@ Username 规则：
 | `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段、`archived_at` |
 | `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
 | `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
+| `import_batches` | 导入批次 | `team_id`、`source_name`、`operation`、`status`、`summary`、`finished_at`、`rolled_back_at` |
 
 `profiles.email` 已从业务表移除。Supabase `auth.users.email` 仅由 Supabase Auth 内部使用。
 
@@ -98,6 +99,16 @@ Username 规则：
 | `removeAdminMember(input)` | owner 移除成员 |
 
 权限：调用用户必须是目标小队的 `owner`。为避免误操作，owner 不能移除自己，也不能把自己的角色改成非 owner。
+
+### 导入批次
+
+路径：`src/server/imports/service.ts`
+
+| 函数 | 说明 |
+| --- | --- |
+| `getAdminImportBatches(input)` | owner 读取导入批次列表和关联数据计数 |
+
+权限：调用用户必须是目标小队的 `owner`。
 
 ## HTTP 接口
 
@@ -397,6 +408,56 @@ type RemoveAdminMemberResponse = {
 | 403 | `self_remove_not_allowed` | owner 试图移除自己 |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 404 | `profile_not_found` | 目标 username 不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/import-batches`
+
+路径：`src/app/api/admin/import-batches/route.ts`
+
+用途：owner 读取导入批次列表，用于后台查看 seed/import 历史和选择回滚目标批次。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+| `limit` | 否 | 返回条数，范围 1-100，默认 20 |
+| `includeLegacy` | 否 | 是否包含旧版无 `team_id` 批次，默认 `true` |
+
+成功响应：
+```ts
+type GetAdminImportBatchesResponse = {
+  ok: true;
+  importBatches: Array<{
+    id: string;
+    teamId: string | null;
+    sourceName: string;
+    operation: string;
+    status: string;
+    summary: Record<string, unknown>;
+    counts: {
+      places: number;
+      listPlaces: number;
+      ratings: number;
+    };
+    createdAt: string;
+    finishedAt: string | null;
+    rolledBackAt: string | null;
+  }>;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `POST /api/admin/places/archive`

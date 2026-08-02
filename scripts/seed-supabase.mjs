@@ -347,7 +347,7 @@ async function upsertImportedRating(supabase, teamId, placeId, raterLabel, score
   return "create";
 }
 
-async function createImportBatch(supabase, options, summary, dryRun) {
+async function createImportBatch(supabase, teamId, options, summary, dryRun) {
   if (dryRun) {
     return "dry-run-batch-id";
   }
@@ -355,6 +355,7 @@ async function createImportBatch(supabase, options, summary, dryRun) {
   const inserted = await supabase
     .from("import_batches")
     .insert({
+      team_id: teamId,
       source_name: options.sourceName,
       operation: options.archiveMissing ? "seed_with_archive_missing" : "seed",
       status: "running",
@@ -436,7 +437,7 @@ async function runSeedImport(supabase, options) {
   const team = await getOrCreateTeam(supabase, options.teamSlug, dryRun);
   const teamId = team.id;
   const existingPlaces = dryRun && team.action === "create" ? new Map() : await getExistingPlaces(supabase, teamId);
-  const batchId = await createImportBatch(supabase, options, summary, dryRun);
+  const batchId = await createImportBatch(supabase, teamId, options, summary, dryRun);
   const listIds = new Map();
   const importedKeys = new Set();
 

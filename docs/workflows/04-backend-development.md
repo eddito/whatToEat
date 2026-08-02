@@ -27,6 +27,7 @@
 | B6 | 后台写入接口 | 已完成 | 店铺新增/编辑、软归档和榜单新增/编辑接口已实现 |
 | B7 | 成员管理接口 | 已完成 | owner-only 成员添加、角色调整和移除接口已实现 |
 | B8 | 导入脚本运维能力 | 已完成 | seed dry-run、批次追踪、归档缺失项和按批次回滚 |
+| B9 | 导入批次后台读取 | 进行中 | owner-only 导入批次列表和关联数据计数接口；等待远端执行最新 schema 后 smoke |
 
 ## 任务进度表
 
@@ -55,6 +56,7 @@
 | BE-021 | 实现后台店铺软归档接口 | 已完成 | `POST /api/admin/places/archive`、`places.archived_at` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-022 | 实现后台成员管理接口 | 已完成 | `POST /api/admin/members`、`DELETE /api/admin/members`、`src/server/teams/service.ts` | `tsc --noEmit`、`next build`、远端 API smoke test 通过 |
 | BE-023 | 增强 Supabase seed 导入脚本 | 已完成 | `scripts/seed-supabase.mjs`、`import_batches` 批次字段、`import_batch_id` 追踪字段 | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm db:seed:dry-run` 通过 |
+| BE-024 | 实现导入批次后台读取接口 | 进行中 | `GET /api/admin/import-batches`、`src/server/imports/**`、`import_batches.team_id` | `node --check`、`tsc --noEmit`、`next build` 通过；远端缺少 `import_batches.team_id`，等待执行最新 schema |
 
 ## 完成记录
 
@@ -81,6 +83,7 @@
 | 2026-07-23 | 远端后台成员管理验证 | Supabase `profiles`、`team_members` | `test_owner` 创建并绑定为 `what-to-eat` owner；`test_member_target` 创建为无小队用户；owner 添加/移除 target 返回 200，member 添加返回 403，未登录添加返回 401；target 最终已移除 |
 | 2026-08-02 | 增强 seed 导入脚本 | `supabase/schema.sql`、`scripts/seed-supabase.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过 |
 | 2026-08-02 | 验证远端 seed dry-run | Supabase `lists`、`places`、`list_places`、`ratings`、`import_batches` | `pnpm db:seed:dry-run` 通过；计划更新 2 个榜单、77 个店铺、77 个榜单关联、60 条评分，跳过 94 个空评分，不新增数据 |
+| 2026-08-02 | 实现导入批次后台读取接口本地代码 | `supabase/schema.sql`、`src/app/api/admin/import-batches/route.ts`、`src/server/imports/repository.ts`、`src/server/imports/service.ts`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build` 通过；远端探测显示缺少 `import_batches.team_id` |
 
 ## 当前数据库快照
 
@@ -98,7 +101,9 @@
 ## 下一步
 
 1. 后续 integration 接入后台表单时使用 `POST /api/admin/places`、`POST /api/admin/places/archive`、`POST /api/admin/lists`、`POST /api/admin/members` 和 `DELETE /api/admin/members`。
-2. 如需给现有远端 seed 数据补齐最新 `import_batch_id`，运行 `pnpm db:seed`；如需先检查归档缺失项，运行 `pnpm db:seed -- --archive-missing --dry-run`。
+2. 执行最新 `supabase/schema.sql` 后，验证 `GET /api/admin/import-batches`。
+3. 如需给现有远端 seed 数据补齐最新 `import_batch_id`，运行 `pnpm db:seed`；如需先检查归档缺失项，运行 `pnpm db:seed -- --archive-missing --dry-run`。
+4. 后续可以补后台只读管理数据接口，例如成员列表、已归档店铺列表和榜单内店铺管理视图。
 
 ## 记录规则
 
