@@ -62,6 +62,19 @@ async function rate(placeId, score, token, note) {
   });
 }
 
+async function getRating(placeId, token) {
+  return requestJson(`/api/ratings?placeId=${encodeURIComponent(placeId)}`, {
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+  });
+}
+
+async function deleteRating(placeId, token) {
+  return requestJson(`/api/ratings?placeId=${encodeURIComponent(placeId)}`, {
+    method: "DELETE",
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+  });
+}
+
 async function main() {
   const memberToken = await login(MEMBER_USERNAME, MEMBER_PASSWORD);
   const externalToken = await login(EXTERNAL_USERNAME, EXTERNAL_PASSWORD);
@@ -74,10 +87,29 @@ async function main() {
   assert(memberRating.body?.source === "team_member", "Member rating should use team_member source", memberRating);
   assert(memberRating.body?.role === "member", "Member rating should include member role", memberRating);
 
+  const memberRead = await getRating("red-list-1", memberToken);
+  assert(memberRead.status === 200, "Member rating read should return 200", memberRead);
+  assert(memberRead.body?.rating?.id === memberRating.body?.rating?.id, "Member rating read should return own rating", memberRead);
+
+  const memberDeleted = await deleteRating("red-list-1", memberToken);
+  assert(memberDeleted.status === 200, "Member rating delete should return 200", memberDeleted);
+  assert(memberDeleted.body?.deleted === true, "Member rating delete should delete existing rating", memberDeleted);
+
+  const memberReadAfterDelete = await getRating("red-list-1", memberToken);
+  assert(memberReadAfterDelete.status === 200, "Member rating read after delete should return 200", memberReadAfterDelete);
+  assert(memberReadAfterDelete.body?.rating === null, "Member rating should be null after delete", memberReadAfterDelete);
+
+  const memberRestored = await rate("red-list-1", 4.3, memberToken, "member smoke test");
+  assert(memberRestored.status === 200, "Member rating restore should return 200", memberRestored);
+
   const externalRating = await rate("red-list-1", 3.7, externalToken, "external smoke test");
   assert(externalRating.status === 200, "External public_rate rating should return 200", externalRating);
   assert(externalRating.body?.source === "external", "External rating should use external source", externalRating);
   assert(externalRating.body?.role === null, "External rating should not have team role", externalRating);
+
+  const externalRead = await getRating("red-list-1", externalToken);
+  assert(externalRead.status === 200, "External rating read should return 200", externalRead);
+  assert(externalRead.body?.rating?.id === externalRating.body?.rating?.id, "External rating read should return own rating", externalRead);
 
   const forbiddenExternalRating = await rate("retry-list-1", 3.2, externalToken, "external forbidden smoke test");
   assert(
@@ -96,7 +128,9 @@ async function main() {
           "external login",
           "missing token rejected",
           "member team_member rating",
+          "member own rating read/delete/restore",
           "external public_rate rating",
+          "external own rating read",
           "external public_view-only rating rejected",
         ],
       },

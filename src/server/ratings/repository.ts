@@ -122,6 +122,48 @@ export async function upsertUserRating(input: {
   return data as RatingRecord;
 }
 
+export async function getUserRating(input: {
+  placeId: string;
+  userId: string;
+  source: RatingSource;
+}): Promise<RatingRecord | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("ratings")
+    .select("id, source, score, note, updated_at")
+    .eq("place_id", input.placeId)
+    .eq("user_id", input.userId)
+    .eq("source", input.source)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as RatingRecord | null;
+}
+
+export async function deleteUserRating(input: {
+  placeId: string;
+  userId: string;
+  source: RatingSource;
+}): Promise<RatingRecord | null> {
+  const existing = await getUserRating(input);
+
+  if (!existing) {
+    return null;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("ratings").delete().eq("id", existing.id);
+
+  if (error) {
+    throw error;
+  }
+
+  return existing;
+}
+
 export async function getRatingsForPlace(placeId: string): Promise<AdminRatingRecord[]> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase

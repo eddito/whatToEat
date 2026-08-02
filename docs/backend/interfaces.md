@@ -299,6 +299,48 @@ type RefreshResponse = {
 | 401 | `profile_not_found` | Auth 用户缺少业务 profile |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `GET /api/ratings`
+
+路径：`src/app/api/ratings/route.ts`
+
+用途：读取当前登录用户对某家公开店铺的自己的评分。会自动按团队成员身份返回 `team_member` 评分，否则在 `public_rate` 榜单下返回 `external` 评分。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `placeId` | 是 | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type GetMyRatingResponse = {
+  ok: true;
+  rating: {
+    id: string;
+    source: "team_member" | "external";
+    score: number;
+    note: string | null;
+    updated_at: string;
+  } | null;
+  source: "team_member" | "external";
+  role: "owner" | "member" | "viewer" | null;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 缺少或无效 `placeId` |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `place_not_public` | 店铺不在公开榜单中 |
+| 403 | `rating_not_allowed` | 当前用户无权读取自己的评分上下文 |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `POST /api/ratings`
 
 路径：`src/app/api/ratings/route.ts`
@@ -336,6 +378,49 @@ type UpsertRatingRequest = {
 | 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `place_not_public` | 店铺不在公开榜单中 |
 | 403 | `rating_not_allowed` | 当前用户无权评分 |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `DELETE /api/ratings`
+
+路径：`src/app/api/ratings/route.ts`
+
+用途：删除当前登录用户对某家公开店铺的自己的评分。没有已保存评分时也返回 200，`deleted` 为 `false`。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `placeId` | 是 | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type DeleteMyRatingResponse = {
+  ok: true;
+  rating: {
+    id: string;
+    source: "team_member" | "external";
+    score: number;
+    note: string | null;
+    updated_at: string;
+  } | null;
+  deleted: boolean;
+  source: "team_member" | "external";
+  role: "owner" | "member" | "viewer" | null;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 缺少或无效 `placeId` |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `place_not_public` | 店铺不在公开榜单中 |
+| 403 | `rating_not_allowed` | 当前用户无权删除该评分上下文 |
 | 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -1052,6 +1137,15 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 路径：`scripts/smoke-auth-ratings.mjs`
 
 用途：验证后端登录和评分权限闭环。该脚本会写入/更新远端 Supabase 测试评分。
+
+覆盖：
+- `POST /api/auth/login`
+- `POST /api/ratings`
+- `GET /api/ratings`
+- `DELETE /api/ratings`
+- member 写入/读取/删除/恢复 team_member 评分
+- external 写入/读取 external 评分
+- external 给 public_view-only 榜单评分返回 403
 
 ### `pnpm smoke:change-password`
 

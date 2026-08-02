@@ -73,6 +73,7 @@
 | BE-036 | 实现后台店铺列表查询接口 | 已完成 | `GET /api/admin/places`、`getAdminPlaces` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
 | BE-037 | 实现账号联系方式校验修改密码接口 | 已完成 | `POST /api/auth/change-password`、`profiles.contact_email/contact_phone`、username 规则收紧 | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:change-password` 通过 |
 | BE-038 | 新增修改密码 smoke 脚本 | 已完成 | `pnpm smoke:change-password`、`scripts/smoke-change-password.mjs` | `node --check`、`tsc --noEmit`、`pnpm smoke:change-password` 通过 |
+| BE-039 | 实现当前用户评分读取和删除接口 | 已完成 | `GET /api/ratings`、`DELETE /api/ratings`、`getMyRating/deleteMyRating` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
 
 ## 完成记录
 
@@ -127,6 +128,7 @@
 | 2026-08-02 | 收紧测试账号命名规则 | `scripts/smoke-auth-ratings.mjs`、`scripts/smoke-admin-read.mjs`、`supabase/schema.sql` | 执行新 schema 后，历史测试账号会从 `test_user/test_external/test_owner/test_member_target` 迁移为 `testuser/testexternal/testowner/testmembertarget` |
 | 2026-08-02 | 更新远端测试账号联系方式 | Supabase Auth、`profiles`、`team_members` | `testuser/testowner/testexternal` 已按新 username 规则更新，并写入 `contact_email/contact_phone` |
 | 2026-08-02 | 远端修改密码闭环验证 | Supabase Auth、`profiles.contact_email` | `pnpm smoke:change-password` 通过：错误邮箱返回 `contact_mismatch`，正确邮箱可修改密码，旧密码失效，新密码可登录，最后恢复 `TestUser_2026` |
+| 2026-08-02 | 实现当前用户评分读取和删除接口 | `src/app/api/ratings/route.ts`、`src/server/ratings/repository.ts`、`src/server/ratings/service.ts`、`scripts/smoke-auth-ratings.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
 
 ## 当前数据库快照
 
