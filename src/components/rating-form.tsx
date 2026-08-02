@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Send, Star } from "lucide-react";
+import { Send, Star, Trash2 } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
@@ -34,6 +34,7 @@ export function RatingForm({ placeId }: { placeId: string }) {
   const [note, setNote] = useState("");
   const [hasExistingRating, setHasExistingRating] = useState(false);
   const [isLoadingRating, setIsLoadingRating] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
 
@@ -182,6 +183,59 @@ export function RatingForm({ placeId }: { placeId: string }) {
     router.refresh();
   }
 
+  async function handleDelete() {
+    if (!supabase || !user || isLoadingRating || isDeleting || !hasExistingRating) {
+      return;
+    }
+
+    setIsDeleting(true);
+    setState("idle");
+    setMessage("");
+
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+
+    if (!token) {
+      setState("error");
+      setMessage("登录状态已失效，请重新登录。");
+      setIsDeleting(false);
+      return;
+    }
+
+    let response: Response;
+    let result: { error?: string; message?: string } | null = null;
+
+    try {
+      response = await fetch(`/api/ratings?placeId=${encodeURIComponent(placeId)}`, {
+        method: "DELETE",
+        headers: {
+          authorization: `Bearer ${token}`,
+        },
+      });
+      result = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+    } catch {
+      setState("error");
+      setMessage("评分删除失败，请稍后重试。");
+      setIsDeleting(false);
+      return;
+    }
+
+    if (!response.ok) {
+      setState("error");
+      setMessage(result?.error ?? "评分删除失败，请稍后重试。");
+      setIsDeleting(false);
+      return;
+    }
+
+    setScore(5);
+    setNote("");
+    setHasExistingRating(false);
+    setState("success");
+    setMessage(result?.message ?? "评分已删除。");
+    setIsDeleting(false);
+    router.refresh();
+  }
+
   if (!isReady) {
     return <p className="rating-form-note">正在检查登录状态...</p>;
   }
@@ -199,7 +253,7 @@ export function RatingForm({ placeId }: { placeId: string }) {
 
   return (
     <form className="rating-form" onSubmit={handleSubmit}>
-      <fieldset className="rating-score-field" disabled={isLoadingRating || state === "loading"}>
+      <fieldset className="rating-score-field" disabled={isLoadingRating || state === "loading" || isDeleting}>
         <legend>评分</legend>
         <div className="rating-score-options">
           {scoreOptions.map((value) => (
@@ -221,7 +275,7 @@ export function RatingForm({ placeId }: { placeId: string }) {
         <span>备注</span>
         <textarea
           maxLength={500}
-          disabled={isLoadingRating || state === "loading"}
+          disabled={isLoadingRating || state === "loading" || isDeleting}
           onChange={(event) => setNote(event.target.value)}
           placeholder="可选，记录这次评分的理由"
           rows={3}
@@ -239,10 +293,23 @@ export function RatingForm({ placeId }: { placeId: string }) {
           (hasExistingRating ? "已保存过评分，可以调整后更新。" : "提交后会保存为你自己的评分记录。")}
       </p>
 
-      <button className="button auth-submit" disabled={isLoadingRating || state === "loading"} type="submit">
-        <Send aria-hidden="true" size={15} />
-        {state === "loading" ? "提交中..." : hasExistingRating ? "更新评分" : "提交评分"}
-      </button>
+      <div className="rating-actions">
+        <button className="button auth-submit" disabled={isLoadingRating || state === "loading" || isDeleting} type="submit">
+          <Send aria-hidden="true" size={15} />
+          {state === "loading" ? "提交中..." : hasExistingRating ? "更新评分" : "提交评分"}
+        </button>
+        {hasExistingRating ? (
+          <button
+            className="button secondary rating-delete-button"
+            disabled={isLoadingRating || state === "loading" || isDeleting}
+            onClick={handleDelete}
+            type="button"
+          >
+            <Trash2 aria-hidden="true" size={15} />
+            {isDeleting ? "删除中..." : "删除评分"}
+          </button>
+        ) : null}
+      </div>
     </form>
   );
 }

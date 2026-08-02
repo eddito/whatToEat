@@ -919,6 +919,22 @@ button {
   color: var(--green);
 }
 
+.rating-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+
+.rating-delete-button {
+  border-color: rgba(221, 55, 42, 0.28);
+  color: var(--red);
+}
+
+.rating-delete-button:hover:not(:disabled) {
+  border-color: var(--red);
+  background: rgba(221, 55, 42, 0.08);
+}
+
 .rating-login-box {
   display: grid;
   gap: 12px;

@@ -448,6 +448,37 @@ type RatingResponse = {
 };
 ```
 
+### `DELETE /api/ratings`
+
+用途：登录用户删除自己对当前店铺的已有评分。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+```
+
+查询参数：
+
+```txt
+placeId=<places.import_key 或 UUID>
+```
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 小队 `owner` / `member` 删除自己的 `team_member` 评分。
+- 非小队成员仅可删除自己在 `public_rate` 榜单下提交的 `external` 评分。
+- 没有已保存评分时返回 `404`。
+
+响应：
+
+```ts
+type RatingDeleteResponse = {
+  message: string;
+};
+```
+
 ## 数据访问层接口
 
 路径：`src/server/places/repository.ts`

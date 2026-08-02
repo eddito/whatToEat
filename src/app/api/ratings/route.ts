@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { User } from "@supabase/supabase-js";
 import { createSupabaseAdminClient } from "@/server/supabase/admin";
 import {
+  deleteUserRating,
   getPublicListsForPlace,
   getPublicPlaceByStableId,
   getTeamMembership,
@@ -145,5 +146,31 @@ export async function POST(request: Request) {
     rating,
     source: context.source,
     message: existingRating ? "评分已更新。" : "评分已提交。",
+  });
+}
+
+export async function DELETE(request: Request) {
+  const placeId = new URL(request.url).searchParams.get("placeId");
+
+  if (!placeId) {
+    return NextResponse.json({ error: "缺少店铺参数。" }, { status: 400 });
+  }
+
+  const context = await getRatingContext(request, placeId);
+
+  if (!context.ok) {
+    return context.response;
+  }
+
+  const existingRating = await getUserRatingForPlace(context.place.id, context.user.id, context.source);
+
+  if (!existingRating) {
+    return NextResponse.json({ error: "还没有保存过这家店的评分。" }, { status: 404 });
+  }
+
+  await deleteUserRating(existingRating.id);
+
+  return NextResponse.json({
+    message: "评分已删除。",
   });
 }

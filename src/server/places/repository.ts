@@ -276,3 +276,12 @@ export async function upsertUserRating(input: {
 
   return data as { id: string; score: number; note: string | null };
 }
+
+export async function deleteUserRating(ratingId: string) {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("ratings").delete().eq("id", ratingId);
+
+  if (error) {
+    throw error;
+  }
+}
