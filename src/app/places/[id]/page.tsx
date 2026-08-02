@@ -29,6 +29,10 @@ export default async function PlacePage({ params }: PlacePageProps) {
 
       <section className="container detail-layout">
         <div className="detail-main">
+          {place.coverPhotoUrl ? (
+            <img className="place-detail-photo" src={place.coverPhotoUrl} alt={`${place.name}封面`} />
+          ) : null}
+
           <article className="info-card">
             <h2>店铺信息</h2>
             <dl className="info-list">

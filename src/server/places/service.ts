@@ -4,12 +4,14 @@ import { getMixedScore } from "@/lib/score";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
   getPlacesForPublicListId,
+  getPhotosForPlaces,
   getPublicListBySlug,
   getPublicLists,
   getPublicListsForPlace,
   getPublicPlaceByStableId,
   getRatingsForPlaces,
   type ListVisibility,
+  type PhotoRecord,
   type PlaceRecord,
   type PublicListRecord,
   type RatingRecord,
@@ -48,6 +50,7 @@ export type PublicPlace = {
   externalScore: number;
   externalRatingCount: number;
   mixedScore: number;
+  coverPhotoUrl?: string;
   longitude?: number;
   latitude?: number;
 };
@@ -100,7 +103,13 @@ function buildRatingSummary(placeId: string, ratings: RatingRecord[]) {
   };
 }
 
-function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: RatingRecord[]): PublicPlace {
+function getCoverPhotoUrl(placeId: string, photos: PhotoRecord[]) {
+  return photos
+    .filter((photo) => photo.place_id === placeId)
+    .sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order)[0]?.url;
+}
+
+function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: RatingRecord[], photos: PhotoRecord[]): PublicPlace {
   const ratingSummary = buildRatingSummary(place.id, ratings);
 
   return {
@@ -122,6 +131,7 @@ function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: Rati
     externalScore: ratingSummary.externalScore,
     externalRatingCount: ratingSummary.externalRatingCount,
     mixedScore: ratingSummary.mixedScore,
+    coverPhotoUrl: getCoverPhotoUrl(place.id, photos),
     longitude: place.longitude ?? undefined,
     latitude: place.latitude ?? undefined,
   };
@@ -144,9 +154,10 @@ function getStatsFromPlaces(places: PublicPlace[]): PublicListStats {
 async function getPublicPlacesForListRecord(list: PublicListRecord) {
   const rows = await getPlacesForPublicListId(list.id);
   const places = rows.map((row) => row.place);
-  const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+  const placeIds = places.map((place) => place.id);
+  const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
 
-  return places.map((place) => toPublicPlace(place, list, ratings));
+  return places.map((place) => toPublicPlace(place, list, ratings, photos));
 }
 
 export async function getLists(): Promise<PublicList[]> {
@@ -203,8 +214,9 @@ export async function getPlace(id: string): Promise<PublicPlace | null> {
   }
 
   const ratings = await getRatingsForPlaces([place.id]);
+  const photos = await getPhotosForPlaces([place.id]);
 
-  return toPublicPlace(place, lists[0], ratings);
+  return toPublicPlace(place, lists[0], ratings, photos);
 }
 
 export async function getMapPlaces(): Promise<PublicMapPlace[]> {
@@ -292,6 +304,7 @@ function toLegacyPlace(place: PublicPlace): Place {
     externalRatingCount: place.externalRatingCount,
     mixedScore: place.mixedScore,
     legacyScore: 0,
+    coverPhotoUrl: place.coverPhotoUrl,
     longitude: place.longitude,
     latitude: place.latitude,
   };

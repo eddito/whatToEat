@@ -115,6 +115,7 @@
 NEXT_PUBLIC_SUPABASE_URL=https://lickxydbtkyijgjmpnqo.supabase.co
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
+SUPABASE_PLACE_PHOTOS_BUCKET=place-photos
 NEXT_PUBLIC_APP_URL=
 NEXT_PUBLIC_MAP_PROVIDER=amap
 NEXT_PUBLIC_AMAP_KEY=
@@ -124,6 +125,7 @@ NEXT_PUBLIC_AMAP_KEY=
 
 - `NEXT_PUBLIC_*` 可用于浏览器端，不能放服务端密钥。
 - `SUPABASE_SECRET_KEY` 只能用于服务端环境变量，严禁暴露到前端。
+- `SUPABASE_PLACE_PHOTOS_BUCKET` 默认为 `place-photos`，对应 Supabase public Storage bucket。
 - 如果 SDK 或模板仍使用旧命名，可在实现阶段映射为 `NEXT_PUBLIC_SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`，但密钥值仍不得提交到仓库。
 - 高德地图 key 根据高德开放平台要求设置域名白名单。
 
@@ -143,7 +145,7 @@ NEXT_PUBLIC_AMAP_KEY=
 - 创建生产数据库。
 - 执行 migration。
 - 配置 Auth。
-- 配置 Storage。
+- 配置 Storage bucket：`place-photos`，设为 public。
 - 配置 RLS。
 - 创建初始 owner：`1397854281@qq.com`。
 - 导入初始数据。

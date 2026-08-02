@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   Database,
   Eye,
+  ImagePlus,
   ListChecks,
   LockKeyhole,
   Pencil,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   Star,
   Store,
+  Upload,
   UserRoundCheck,
   UsersRound,
 } from "lucide-react";
@@ -58,6 +60,8 @@ type AdminPlace = {
   visited: boolean;
   geocodeStatus: string;
   updatedAt: string;
+  coverPhotoUrl?: string;
+  photoCount: number;
 };
 
 type AdminPlacesResponse = {
@@ -408,8 +412,11 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
   const [selectedPlace, setSelectedPlace] = useState<AdminPlace | null>(null);
   const [form, setForm] = useState<PlaceFormState>(emptyPlaceForm);
   const [searchQuery, setSearchQuery] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoInputKey, setPhotoInputKey] = useState(0);
   const [loadState, setLoadState] = useState<RequestState>("loading");
   const [saveState, setSaveState] = useState<RequestState>("idle");
+  const [uploadState, setUploadState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
 
   async function loadPlaces(query = searchQuery) {
@@ -457,6 +464,9 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     setSelectedPlace(place);
     setForm(toPlaceForm(place));
     setSaveState("idle");
+    setUploadState("idle");
+    setPhotoFile(null);
+    setPhotoInputKey((current) => current + 1);
     setMessage("");
   }
 
@@ -510,7 +520,53 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     setPlaces((current) => current.map((place) => (place.id === result.place?.id ? result.place : place)));
   }
 
-  const isBusy = loadState === "loading" || saveState === "loading";
+  async function handleUploadPhoto() {
+    if (!selectedPlace || !canEdit || !photoFile) {
+      return;
+    }
+
+    setUploadState("loading");
+    setMessage("");
+
+    const body = new FormData();
+    body.append("placeId", selectedPlace.id);
+    body.append("file", photoFile);
+
+    const response = await fetch("/api/admin/photos", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      body,
+    });
+    const result = (await response.json().catch(() => null)) as {
+      error?: string;
+      message?: string;
+      coverPhotoUrl?: string;
+      photoCount?: number;
+    } | null;
+
+    if (!response.ok) {
+      setUploadState("error");
+      setMessage(result?.error ?? "图片上传失败。");
+      return;
+    }
+
+    const nextPlace = {
+      ...selectedPlace,
+      coverPhotoUrl: result?.coverPhotoUrl ?? selectedPlace.coverPhotoUrl,
+      photoCount: result?.photoCount ?? selectedPlace.photoCount + 1,
+    };
+
+    setSelectedPlace(nextPlace);
+    setPlaces((current) => current.map((place) => (place.id === nextPlace.id ? nextPlace : place)));
+    setPhotoFile(null);
+    setPhotoInputKey((current) => current + 1);
+    setUploadState("success");
+    setMessage(result?.message ?? "图片已上传。");
+  }
+
+  const isBusy = loadState === "loading" || saveState === "loading" || uploadState === "loading";
 
   return (
     <section className="container section">
@@ -670,15 +726,47 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
                 />
                 <span>已探店</span>
               </label>
+
+              <div className="admin-photo-uploader">
+                {selectedPlace?.coverPhotoUrl ? (
+                  <img className="admin-photo-preview" src={selectedPlace.coverPhotoUrl} alt={`${selectedPlace.name}封面`} />
+                ) : (
+                  <div className="admin-photo-empty">
+                    <ImagePlus aria-hidden="true" size={18} />
+                    <span>暂无封面</span>
+                  </div>
+                )}
+                <div className="admin-photo-controls">
+                  <label className="field">
+                    <span>店铺图片</span>
+                    <input
+                      accept="image/jpeg,image/png,image/webp"
+                      key={photoInputKey}
+                      onChange={(event) => setPhotoFile(event.target.files?.[0] ?? null)}
+                      type="file"
+                    />
+                  </label>
+                  <button
+                    className="button secondary"
+                    disabled={!selectedPlace || !canEdit || !photoFile || isBusy}
+                    onClick={handleUploadPhoto}
+                    type="button"
+                  >
+                    <Upload aria-hidden="true" size={16} />
+                    {uploadState === "loading" ? "上传中..." : "上传图片"}
+                  </button>
+                  <p className="section-note">{selectedPlace ? `${selectedPlace.photoCount} 张图片，支持 JPG / PNG / WebP。` : "请选择店铺。"}</p>
+                </div>
+              </div>
             </fieldset>
 
             <div className="admin-form-footer">
               <p
                 aria-live="polite"
                 className={
-                  saveState === "error" || loadState === "error"
+                  saveState === "error" || loadState === "error" || uploadState === "error"
                     ? "admin-inline-message error"
-                    : saveState === "success"
+                    : saveState === "success" || uploadState === "success"
                       ? "admin-inline-message success"
                       : "admin-inline-message"
                 }

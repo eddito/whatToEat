@@ -48,6 +48,13 @@ export type RatingRecord = {
   note: string | null;
 };
 
+export type PhotoRecord = {
+  place_id: string;
+  url: string;
+  is_cover: boolean;
+  sort_order: number;
+};
+
 export type UserRatingHistoryRecord = RatingRecord & {
   updated_at: string;
   places:
@@ -260,6 +267,26 @@ export async function getRatingsForPlaces(placeIds: string[]) {
   }
 
   return data as RatingRecord[];
+}
+
+export async function getPhotosForPlaces(placeIds: string[]) {
+  if (placeIds.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("photos")
+    .select("place_id, url, is_cover, sort_order")
+    .in("place_id", placeIds)
+    .order("is_cover", { ascending: false })
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PhotoRecord[];
 }
 
 export async function getTeamMembership(teamId: string, userId: string) {

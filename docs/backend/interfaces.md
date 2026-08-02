@@ -25,6 +25,7 @@
 | `NEXT_PUBLIC_SUPABASE_URL` | server/client | 是 | Supabase Project URL |
 | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | client | 是 | 浏览器端公开 key，后续 Auth/RLS 验证使用 |
 | `SUPABASE_SECRET_KEY` | server only | 是 | 服务端 admin client 和脚本使用，不暴露到客户端 |
+| `SUPABASE_PLACE_PHOTOS_BUCKET` | server only | 否 | 店铺图片 Storage bucket，默认 `place-photos` |
 | `NEXT_PUBLIC_APP_URL` | server/client | 是 | 本地或线上应用地址 |
 | `NEXT_PUBLIC_MAP_PROVIDER` | client | 是 | 当前为 `amap` |
 | `NEXT_PUBLIC_AMAP_KEY` | client | 是 | 高德地图 key |
@@ -329,6 +330,8 @@ type AdminPlacesResponse = {
     visited: boolean;
     geocodeStatus: string;
     updatedAt: string;
+    coverPhotoUrl?: string;
+    photoCount: number;
   }>;
   canEdit: boolean;
 };
@@ -369,6 +372,54 @@ type AdminPlaceUpdateRequest = {
 - 非 `what-to-eat` 小队成员返回 `403`。
 - `viewer` 返回 `403`。
 - 只能更新当前小队名下的店铺。
+
+### `POST /api/admin/photos`
+
+用途：小队 `owner` / `member` 为店铺上传图片。
+
+请求头：
+
+```txt
+Authorization: Bearer <Supabase access token>
+Content-Type: multipart/form-data
+```
+
+请求体：
+
+```txt
+placeId=<places.import_key 或 UUID>
+file=<JPG / PNG / WebP，最大 5MB>
+```
+
+配置：
+
+- Storage bucket 默认使用 `place-photos`。
+- 可通过 `SUPABASE_PLACE_PHOTOS_BUCKET` 覆盖 bucket 名。
+- bucket 需要配置为 public，公开页才能直接显示上传图片。
+
+权限规则：
+
+- 未登录用户返回 `401`。
+- 非 `what-to-eat` 小队成员返回 `403`。
+- `viewer` 返回 `403`。
+- 只能给当前小队名下的店铺上传图片。
+
+响应：
+
+```ts
+type AdminPhotoUploadResponse = {
+  photo: {
+    id: string;
+    url: string;
+    isCover: boolean;
+    sortOrder: number;
+    createdAt: string;
+  };
+  coverPhotoUrl: string;
+  photoCount: number;
+  message: string;
+};
+```
 
 ### `GET /api/ratings`
 

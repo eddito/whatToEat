@@ -1353,6 +1353,46 @@ button {
   accent-color: var(--red);
 }
 
+.admin-photo-uploader {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.admin-photo-preview,
+.admin-photo-empty {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  border-radius: 6px;
+}
+
+.admin-photo-preview {
+  object-fit: cover;
+}
+
+.admin-photo-empty {
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(107, 91, 83, 0.36);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.admin-photo-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-photo-controls .button {
+  width: fit-content;
+}
+
 .admin-permission-preview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1617,7 +1657,8 @@ button {
   .admin-list-permissions,
   .admin-place-editor,
   .admin-form-grid,
-  .admin-permission-preview {
+  .admin-permission-preview,
+  .admin-photo-uploader {
     grid-template-columns: 1fr;
   }
 
@@ -1964,6 +2005,24 @@ body {
 .place-card {
   min-height: 232px;
   padding: 18px;
+}
+
+.place-card-photo {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+
+.place-detail-photo {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-sm);
 }
 
 .score-pill {

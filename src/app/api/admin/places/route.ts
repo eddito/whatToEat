@@ -36,7 +36,9 @@ function toAdminPlace(row: {
   visited: boolean;
   geocode_status: string;
   updated_at: string;
-}) {
+}, photos: Array<{ url: string; is_cover: boolean; sort_order: number }> = []) {
+  const coverPhoto = [...photos].sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order)[0];
+
   return {
     id: row.import_key ?? row.id,
     databaseId: row.id,
@@ -52,6 +54,8 @@ function toAdminPlace(row: {
     visited: row.visited,
     geocodeStatus: row.geocode_status,
     updatedAt: row.updated_at,
+    coverPhotoUrl: coverPhoto?.url,
+    photoCount: photos.length,
   };
 }
 
@@ -83,8 +87,26 @@ export async function GET(request: Request) {
     throw error;
   }
 
+  const placeIds = (data ?? []).map((place) => place.id);
+  const photosResult =
+    placeIds.length > 0
+      ? await context.supabase.from("photos").select("place_id, url, is_cover, sort_order").in("place_id", placeIds)
+      : { data: [], error: null };
+
+  if (photosResult.error) {
+    throw photosResult.error;
+  }
+
+  const photosByPlace = new Map<string, Array<{ url: string; is_cover: boolean; sort_order: number }>>();
+
+  for (const photo of photosResult.data ?? []) {
+    const current = photosByPlace.get(photo.place_id) ?? [];
+    current.push({ url: photo.url, is_cover: photo.is_cover, sort_order: photo.sort_order });
+    photosByPlace.set(photo.place_id, current);
+  }
+
   return NextResponse.json({
-    places: (data ?? []).map(toAdminPlace),
+    places: (data ?? []).map((place) => toAdminPlace(place, photosByPlace.get(place.id))),
     canEdit: canEditTeamData(context.membership.role),
   });
 }
@@ -138,8 +160,17 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "店铺不存在或不属于当前小队。" }, { status: 404 });
   }
 
+  const photosResult = await context.supabase
+    .from("photos")
+    .select("url, is_cover, sort_order")
+    .eq("place_id", data.id);
+
+  if (photosResult.error) {
+    throw photosResult.error;
+  }
+
   return NextResponse.json({
-    place: toAdminPlace(data),
+    place: toAdminPlace(data, photosResult.data ?? []),
     message: "店铺资料已保存。",
   });
 }

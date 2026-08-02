@@ -23,6 +23,7 @@ export type Place = {
   externalRatingCount: number;
   mixedScore: number;
   legacyScore: number;
+  coverPhotoUrl?: string;
   longitude?: number;
   latitude?: number;
 };

@@ -179,6 +179,12 @@ const ratingHistory = await fetchJson("/api/ratings/me", {
 assertCheck("rating history status", ratingHistory.response.status === 200, `status=${ratingHistory.response.status}`);
 assertCheck("rating history data", Array.isArray(ratingHistory.json?.ratings), `count=${ratingHistory.json?.ratings?.length ?? 0}`);
 
+const photoUploadValidation = await fetchJson("/api/admin/photos", {
+  method: "POST",
+  headers: authHeaders,
+});
+assertCheck("photo upload validation", photoUploadValidation.response.status === 400, `status=${photoUploadValidation.response.status}`);
+
 const lists = await fetchJson("/api/admin/lists", {
   headers: authHeaders,
 });

@@ -223,7 +223,7 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [x] 实现评分和混合总分。（已完成登录用户评分写入、我的评分预填、外部评分统计、混合总分联动、删除自己的评分和评分历史）
 - [x] 生成 Excel 种子数据和导入说明。
 - [x] 建立公开页面和 Supabase 公开读取 smoke 检查。
-- [ ] 实现图片上传。
+- [x] 实现图片上传。（后台上传、photos 写入、公开封面读取已完成；Storage bucket 需部署时创建）
 - [ ] 完成测试。（已补公开页面、Supabase 公开读取和登录态后台 smoke；权限矩阵和 Playwright 关键路径待完善）
 - [ ] 交付部署清单。
 
@@ -287,3 +287,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-08-02 | 新增登录态 smoke 脚本覆盖后台概览、店铺维护、评分读取和榜单权限 | Codex | 测试闭环、联调稳定性 |
 | 2026-08-02 | 新增 `/api/ratings` 删除接口和详情页删除自己评分入口 | Codex | 评分维护、成员体验 |
 | 2026-08-02 | 新增 `/ratings` 评分历史页和 `/api/ratings/me` 最近评分接口 | Codex | 评分历史、个人记录 |
+| 2026-08-02 | 新增后台店铺图片上传接口、上传控件和公开封面展示 | Codex | 图片上传、公开读取 |

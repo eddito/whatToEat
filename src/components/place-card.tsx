@@ -24,6 +24,10 @@ export function PlaceCard({ place }: { place: Place }) {
 
   return (
     <article className="place-card">
+      {place.coverPhotoUrl ? (
+        <img className="place-card-photo" src={place.coverPhotoUrl} alt={`${place.name}封面`} loading="lazy" />
+      ) : null}
+
       <div className="place-card-top">
         <h3 className="place-title">{place.name}</h3>
         <span className="score-pill" aria-label={`队内评分 ${scoreLabel}`}>
