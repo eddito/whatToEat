@@ -8,6 +8,7 @@ const checks = [
   { path: "/map", includes: ["地图探索"] },
   { path: "/ratings", includes: ["评分历史"] },
   { path: "/login", includes: ["登录后参与评分和管理"] },
+  { path: "/change-password", includes: ["用邮箱或手机号修改密码"] },
 ];
 
 function buildUrl(path) {

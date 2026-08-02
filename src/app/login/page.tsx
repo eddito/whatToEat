@@ -50,6 +50,9 @@ export default function LoginPage() {
           </div>
 
           <LoginForm />
+          <Link className="auth-card-link" href="/change-password">
+            忘记密码？用邮箱或手机号修改
+          </Link>
         </section>
       </section>
 

@@ -2750,6 +2750,19 @@ body {
   color: var(--red);
 }
 
+.auth-card-link {
+  display: inline-flex;
+  width: fit-content;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.auth-card-link:hover {
+  text-decoration: underline;
+}
+
 .auth-submit:disabled {
   cursor: not-allowed;
   border-color: var(--line);
