@@ -7,6 +7,7 @@ import {
   deleteTeamMember,
   getTeamBySlug,
   getTeamMembership,
+  getTeamMembers,
   type TeamRole,
   upsertTeamMember,
 } from "@/server/teams/repository";
@@ -29,6 +30,20 @@ export type AdminMemberResult = {
   userId: string;
   role: TeamRole | null;
   teamSlug: string;
+};
+
+export type AdminTeamMember = {
+  username: string;
+  userId: string;
+  displayName: string | null;
+  avatarUrl: string | null;
+  role: TeamRole;
+  joinedAt: string;
+};
+
+export type GetAdminMembersInput = {
+  actorUserId: string;
+  teamSlug?: string;
 };
 
 export class MemberWriteError extends Error {
@@ -64,6 +79,17 @@ async function getWritableTeamForActor(actorUserId: string, teamSlug?: string) {
   return team;
 }
 
+function toAdminTeamMember(member: Awaited<ReturnType<typeof getTeamMembers>>[number]): AdminTeamMember {
+  return {
+    username: member.profile.username,
+    userId: member.profile.id,
+    displayName: member.profile.display_name,
+    avatarUrl: member.profile.avatar_url,
+    role: member.role,
+    joinedAt: member.created_at,
+  };
+}
+
 async function getTargetProfile(username: string) {
   const normalizedUsername = normalizeUsername(username);
 
@@ -78,6 +104,13 @@ async function getTargetProfile(username: string) {
   }
 
   return profile;
+}
+
+export async function getAdminMembers(input: GetAdminMembersInput): Promise<AdminTeamMember[]> {
+  const team = await getWritableTeamForActor(input.actorUserId, input.teamSlug);
+  const members = await getTeamMembers(team.id);
+
+  return members.map(toAdminTeamMember);
 }
 
 export async function upsertAdminMember(input: UpsertAdminMemberInput): Promise<AdminMemberResult> {

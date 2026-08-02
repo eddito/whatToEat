@@ -14,6 +14,18 @@ export type TeamMemberRecord = {
   role: TeamRole;
 };
 
+export type TeamMemberWithProfileRecord = {
+  user_id: string;
+  role: TeamRole;
+  created_at: string;
+  profile: {
+    id: string;
+    username: string;
+    display_name: string | null;
+    avatar_url: string | null;
+  };
+};
+
 export type TeamRecord = {
   id: string;
   slug: string | null;
@@ -50,6 +62,33 @@ export async function getTeamMembership(teamId: string, userId: string): Promise
   }
 
   return data as TeamMembership | null;
+}
+
+export async function getTeamMembers(teamId: string): Promise<TeamMemberWithProfileRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("team_members")
+    .select(
+      `
+        user_id,
+        role,
+        created_at,
+        profile:profiles!team_members_user_id_fkey (
+          id,
+          username,
+          display_name,
+          avatar_url
+        )
+      `,
+    )
+    .eq("team_id", teamId)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as unknown as TeamMemberWithProfileRecord[];
 }
 
 export async function upsertTeamMember(input: {

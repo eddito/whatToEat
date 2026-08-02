@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserFromAuthorizationHeader, SessionError } from "@/server/auth/session";
-import { MemberWriteError, removeAdminMember, upsertAdminMember } from "@/server/teams/service";
+import { getAdminMembers, MemberWriteError, removeAdminMember, upsertAdminMember } from "@/server/teams/service";
+
+const memberQuerySchema = z.object({
+  teamSlug: z.string().min(1).optional(),
+});
 
 const upsertMemberRequestSchema = z.object({
   username: z.string().min(1),
@@ -77,6 +81,30 @@ async function readJson(request: Request) {
     return await request.json();
   } catch {
     return null;
+  }
+}
+
+export async function GET(request: Request) {
+  const url = new URL(request.url);
+  const parsed = memberQuerySchema.safeParse(Object.fromEntries(url.searchParams));
+
+  if (!parsed.success) {
+    return invalidRequest("Member query is invalid.");
+  }
+
+  try {
+    const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
+    const members = await getAdminMembers({
+      actorUserId: user.id,
+      ...parsed.data,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      members,
+    });
+  } catch (error) {
+    return handleError(error);
   }
 }
 
