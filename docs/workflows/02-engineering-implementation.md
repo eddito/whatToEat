@@ -213,7 +213,7 @@ mixed_score = team_score * team_weight + external_score * external_weight
 - [x] 初始化项目。
 - [x] 建立基础页面和路由。
 - [x] 建立数据库 schema。
-- [ ] 建立 RLS 策略。
+- [x] 建立 RLS 策略。（已覆盖公开读取、成员写入、owner 管理和用户自己的评分维护）
 - [x] 实现认证流程。
 - [x] 实现基于种子数据的公开浏览。
 - [x] 实现登录入口页面骨架。
@@ -288,3 +288,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-08-02 | 新增 `/api/ratings` 删除接口和详情页删除自己评分入口 | Codex | 评分维护、成员体验 |
 | 2026-08-02 | 新增 `/ratings` 评分历史页和 `/api/ratings/me` 最近评分接口 | Codex | 评分历史、个人记录 |
 | 2026-08-02 | 新增后台店铺图片上传接口、上传控件和公开封面展示 | Codex | 图片上传、公开读取 |
+| 2026-08-02 | 补齐 Supabase RLS 写策略覆盖成员数据、榜单、评分和图片 | Codex | RLS、权限边界 |

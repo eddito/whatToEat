@@ -232,8 +232,13 @@ create policy "Users can read own profile" on public.profiles
   for select using (auth.uid() = id);
 
 drop policy if exists "Users can insert own profile" on public.profiles;
+create policy "Users can insert own profile" on public.profiles
+  for insert with check (auth.uid() = id);
 
 drop policy if exists "Users can update own profile" on public.profiles;
+create policy "Users can update own profile" on public.profiles
+  for update using (auth.uid() = id)
+  with check (auth.uid() = id);
 
 drop policy if exists "Public can read teams with public lists" on public.teams;
 create policy "Public can read teams with public lists" on public.teams
@@ -248,18 +253,27 @@ create policy "Public can read teams with public lists" on public.teams
   );
 
 drop policy if exists "Owners can manage teams" on public.teams;
+create policy "Owners can manage teams" on public.teams
+  for update using (public.is_team_owner(id))
+  with check (public.is_team_owner(id));
 
 drop policy if exists "Users can read own team memberships" on public.team_members;
 create policy "Users can read own team memberships" on public.team_members
   for select using (user_id = auth.uid() or public.is_team_member(team_id));
 
 drop policy if exists "Owners can manage team memberships" on public.team_members;
+create policy "Owners can manage team memberships" on public.team_members
+  for all using (public.is_team_owner(team_id))
+  with check (public.is_team_owner(team_id));
 
 drop policy if exists "Public can read public lists" on public.lists;
 create policy "Public can read public lists" on public.lists
   for select using (visibility in ('public_view', 'public_rate') or public.is_team_member(team_id));
 
 drop policy if exists "Members manage lists" on public.lists;
+create policy "Members manage lists" on public.lists
+  for all using (public.is_team_owner(team_id))
+  with check (public.is_team_owner(team_id));
 
 drop policy if exists "Public can read places in public lists" on public.places;
 create policy "Public can read places in public lists" on public.places
@@ -275,6 +289,9 @@ create policy "Public can read places in public lists" on public.places
   );
 
 drop policy if exists "Members manage places" on public.places;
+create policy "Members manage places" on public.places
+  for all using (public.is_team_owner_or_member(team_id))
+  with check (public.is_team_owner_or_member(team_id));
 
 drop policy if exists "Public can read list places for public lists" on public.list_places;
 create policy "Public can read list places for public lists" on public.list_places
@@ -288,6 +305,23 @@ create policy "Public can read list places for public lists" on public.list_plac
   );
 
 drop policy if exists "Members manage list places" on public.list_places;
+create policy "Members manage list places" on public.list_places
+  for all using (
+    exists (
+      select 1
+      from public.lists l
+      where l.id = list_places.list_id
+        and public.is_team_owner_or_member(l.team_id)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.lists l
+      where l.id = list_places.list_id
+        and public.is_team_owner_or_member(l.team_id)
+    )
+  );
 
 drop policy if exists "Public can read ratings for public places" on public.ratings;
 create policy "Public can read ratings for public places" on public.ratings
@@ -303,10 +337,43 @@ create policy "Public can read ratings for public places" on public.ratings
   );
 
 drop policy if exists "Members can rate team places" on public.ratings;
+create policy "Members can rate team places" on public.ratings
+  for insert with check (
+    user_id = auth.uid()
+    and source = 'team_member'
+    and public.is_team_owner_or_member(team_id)
+    and exists (
+      select 1
+      from public.places p
+      where p.id = ratings.place_id
+        and p.team_id = ratings.team_id
+    )
+  );
 
 drop policy if exists "Users can update own ratings" on public.ratings;
+create policy "Users can update own ratings" on public.ratings
+  for update using (user_id = auth.uid())
+  with check (user_id = auth.uid());
+
+drop policy if exists "Users can delete own ratings" on public.ratings;
+create policy "Users can delete own ratings" on public.ratings
+  for delete using (user_id = auth.uid());
 
 drop policy if exists "External users can rate public-rate lists" on public.ratings;
+create policy "External users can rate public-rate lists" on public.ratings
+  for insert with check (
+    user_id = auth.uid()
+    and source = 'external'
+    and exists (
+      select 1
+      from public.places p
+      join public.list_places lp on lp.place_id = p.id
+      join public.lists l on l.id = lp.list_id
+      where p.id = ratings.place_id
+        and p.team_id = ratings.team_id
+        and l.visibility = 'public_rate'
+    )
+  );
 
 drop policy if exists "Public can read public place photos" on public.photos;
 create policy "Public can read public place photos" on public.photos
@@ -318,5 +385,24 @@ create policy "Public can read public place photos" on public.photos
       join public.lists l on l.id = lp.list_id
       where p.id = photos.place_id
         and l.visibility in ('public_view', 'public_rate')
+    )
+  );
+
+drop policy if exists "Members manage place photos" on public.photos;
+create policy "Members manage place photos" on public.photos
+  for all using (
+    exists (
+      select 1
+      from public.places p
+      where p.id = photos.place_id
+        and public.is_team_owner_or_member(p.team_id)
+    )
+  )
+  with check (
+    exists (
+      select 1
+      from public.places p
+      where p.id = photos.place_id
+        and public.is_team_owner_or_member(p.team_id)
     )
   );

@@ -46,7 +46,7 @@
 
 ### RLS 最小闭环
 
-公开读取仍由 RLS 负责。评分写入暂由服务端 Route Handler 使用当前登录用户 token 校验身份后执行，不在客户端直接开放匿名写入。
+公开读取由 RLS 负责；后台 Route Handler 仍会用服务端密钥和当前登录用户 token 做二次校验。schema 同时提供最小写策略，避免后续客户端直连 Supabase 时越权。
 
 | 资源 | 未登录用户权限 |
 | --- | --- |
@@ -56,7 +56,16 @@
 | `ratings` | 可 `select` 公开店铺的评分，用于统计展示 |
 | `photos` | 可 `select` 公开店铺图片 |
 
-私密榜单、成员管理、后台管理策略留到后续切片。
+| 资源 | 登录用户写权限 |
+| --- | --- |
+| `profiles` | 用户可创建/更新自己的 profile |
+| `teams` | owner 可更新小队 |
+| `team_members` | owner 可管理成员关系 |
+| `lists` | owner 可管理榜单 |
+| `places` | owner/member 可管理店铺 |
+| `list_places` | owner/member 可管理榜单店铺关联 |
+| `ratings` | owner/member 可提交队内评分；外部用户可给 `public_rate` 店铺评分；用户可更新/删除自己的评分 |
+| `photos` | owner/member 可管理当前小队店铺图片 |
 
 ## 公开浏览数据契约
 
