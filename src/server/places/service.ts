@@ -7,6 +7,7 @@ import {
   getArchivedPlacesForTeam,
   getListBySlug,
   getListsForPlaces,
+  getPlacesForListId,
   getPlacesForPublicListId,
   getPublicListBySlug,
   getPublicLists,
@@ -109,6 +110,12 @@ export type GetAdminArchivedPlacesInput = {
   limit?: number;
 };
 
+export type GetAdminListPlacesInput = {
+  userId: string;
+  slug: string;
+  includeArchived?: boolean;
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
@@ -133,6 +140,11 @@ export type AdminArchivedPlace = {
   listSlugs: string[];
   listNames: string[];
   archivedAt: string;
+};
+
+export type AdminListPlace = PublicPlace & {
+  sortOrder: number;
+  archivedAt: string | null;
 };
 
 export class ListWriteError extends Error {
@@ -580,4 +592,31 @@ export async function getAdminArchivedPlaces(input: GetAdminArchivedPlacesInput)
       archivedAt: place.archived_at as string,
     };
   });
+}
+
+export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Promise<AdminListPlace[]> {
+  const list = await getListBySlug(input.slug.trim());
+
+  if (!list) {
+    throw new PlaceWriteError("List not found.", "list_not_found");
+  }
+
+  const membership = await getTeamMembership(list.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot read places for this list.", "not_allowed");
+  }
+
+  const rows = await getPlacesForListId({
+    listId: list.id,
+    includeArchived: input.includeArchived,
+  });
+  const places = rows.map((row) => row.place);
+  const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+
+  return rows.map((row) => ({
+    ...toPublicPlace(row.place, list, ratings),
+    sortOrder: row.sort_order,
+    archivedAt: row.place.archived_at,
+  }));
 }

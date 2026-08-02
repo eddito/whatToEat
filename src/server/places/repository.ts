@@ -181,6 +181,54 @@ export async function getPlacesForPublicListId(listId: string) {
     .filter((row) => row.place && !row.place.archived_at) as unknown as ListPlaceRecord[];
 }
 
+export async function getPlacesForListId(input: {
+  listId: string;
+  includeArchived?: boolean;
+}): Promise<ListPlaceRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("list_places")
+    .select(
+      `
+      list_id,
+      sort_order,
+      places (
+        id,
+        team_id,
+        import_key,
+        name,
+        category,
+        taste_tags,
+        signature_dishes,
+        review_summary,
+        region,
+        location_label,
+        parking_note,
+        source_label,
+        visited,
+        longitude,
+        latitude,
+        geocode_status,
+        archived_at
+      )
+    `,
+    )
+    .eq("list_id", input.listId)
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? [])
+    .map((row) => ({
+      list_id: row.list_id,
+      sort_order: row.sort_order,
+      place: Array.isArray(row.places) ? row.places[0] : row.places,
+    }))
+    .filter((row) => row.place && (input.includeArchived || !row.place.archived_at)) as unknown as ListPlaceRecord[];
+}
+
 export async function getPublicPlaceByStableId(stableId: string) {
   const supabase = createSupabaseAdminClient();
   const query = supabase
