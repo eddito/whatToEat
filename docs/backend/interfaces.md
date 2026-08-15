@@ -124,6 +124,7 @@ type PublicPlacePhotoFields = {
 
 | 函数 | 说明 |
 | --- | --- |
+| `getAdminImportPlan(input)` | owner 读取 seed 导入预检 dry-run 计划 |
 | `getAdminImportBatches(input)` | owner 读取导入批次列表和关联数据计数 |
 | `getAdminImportBatch(input)` | owner 读取单个导入批次详情、关联数据计数和审计预览 |
 | `getAdminImportBatchRollbackPlan(input)` | owner 读取单个导入批次的只读回滚计划 |
@@ -814,6 +815,68 @@ type RemoveAdminMemberResponse = {
 | 403 | `self_remove_not_allowed` | owner 试图移除自己 |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 404 | `profile_not_found` | 目标 username 不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/import-plan`
+
+路径：`src/app/api/admin/import-plan/route.ts`
+
+用途：owner 读取 seed 导入前的只读 dry-run 预检计划，用于确认导入会创建、更新、跳过或归档多少数据。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+| `sourceName` | 否 | 计划来源名，默认 `seed-places.json` |
+| `archiveMissing` | 否 | 是否计算缺失项软归档影响，仅支持 `true/false`，默认 `false` |
+
+成功响应：
+```ts
+type GetAdminImportPlanResponse = {
+  ok: true;
+  importPlan: {
+    dryRun: true;
+    sourceName: string;
+    teamSlug: string;
+    archiveMissing: boolean;
+    summary: {
+      listsCreated: number;
+      listsUpdated: number;
+      placesCreated: number;
+      placesUpdated: number;
+      listLinksCreated: number;
+      listLinksUpdated: number;
+      ratingsCreated: number;
+      ratingsUpdated: number;
+      ratingsSkipped: number;
+      placesArchivedMissing: number;
+    };
+    counts: {
+      seedPlaces: number;
+      seedLists: number;
+      importedRatings: number;
+    };
+  };
+};
+```
+
+说明：
+- 该接口不创建 `import_batches`，不写入任何表。
+- 计划基于当前 `src/data/seed-places.json` 和默认导入榜单配置计算。
+- `archiveMissing=true` 只计算会被软归档的缺失店铺数量，不执行归档。
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `GET /api/admin/import-batches`
@@ -1603,11 +1666,13 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/places/[id]`
 - `GET /api/admin/places/[id]/ratings`
 - `GET /api/admin/members`
+- `GET /api/admin/import-plan`
 - `GET /api/admin/import-batches`
 - `GET /api/admin/import-batches/[id]`
 - `GET /api/admin/import-batches/[id]/rollback-plan`
 - `POST /api/admin/import-batches/[id]/rollback`
 - owner/member/external/未登录权限路径
+- 导入预检 dry-run 计划读取权限和 seed place 计数
 - 后台汇总计数读取权限与 active place 计数
 - 导入批次详情计数和 preview 结构
 - 导入批次只读回滚计划 impact

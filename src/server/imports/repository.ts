@@ -62,6 +62,28 @@ export type ImportBatchRatingPreviewRecord = {
   } | null;
 };
 
+export type ImportPlanListRecord = {
+  id: string;
+  slug: string;
+};
+
+export type ImportPlanPlaceRecord = {
+  id: string;
+  import_key: string;
+  archived_at: string | null;
+};
+
+export type ImportPlanListPlaceRecord = {
+  list_id: string;
+  place_id: string;
+};
+
+export type ImportPlanRatingRecord = {
+  id: string;
+  place_id: string;
+  rater_label: string | null;
+};
+
 export async function getImportBatches(input: {
   teamId: string;
   includeLegacy: boolean;
@@ -100,6 +122,112 @@ export async function getImportBatchById(batchId: string): Promise<ImportBatchRe
   }
 
   return data as ImportBatchRecord | null;
+}
+
+export async function getImportPlanLists(input: {
+  teamId: string;
+  slugs: string[];
+}): Promise<ImportPlanListRecord[]> {
+  if (input.slugs.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("lists")
+    .select("id, slug")
+    .eq("team_id", input.teamId)
+    .in("slug", input.slugs);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ImportPlanListRecord[];
+}
+
+export async function getImportPlanPlaces(input: {
+  teamId: string;
+  importKeys: string[];
+}): Promise<ImportPlanPlaceRecord[]> {
+  if (input.importKeys.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("places")
+    .select("id, import_key, archived_at")
+    .eq("team_id", input.teamId)
+    .in("import_key", input.importKeys);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ImportPlanPlaceRecord[];
+}
+
+export async function getImportPlanListPlaces(input: {
+  listIds: string[];
+  placeIds: string[];
+}): Promise<ImportPlanListPlaceRecord[]> {
+  if (input.listIds.length === 0 || input.placeIds.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("list_places")
+    .select("list_id, place_id")
+    .in("list_id", input.listIds)
+    .in("place_id", input.placeIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ImportPlanListPlaceRecord[];
+}
+
+export async function getImportPlanRatings(placeIds: string[]): Promise<ImportPlanRatingRecord[]> {
+  if (placeIds.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("ratings")
+    .select("id, place_id, rater_label")
+    .in("place_id", placeIds)
+    .eq("source", "team_member");
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ImportPlanRatingRecord[];
+}
+
+export async function countImportPlanArchiveMissing(input: {
+  teamId: string;
+  importedKeys: string[];
+}): Promise<number> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("places")
+    .select("import_key")
+    .eq("team_id", input.teamId)
+    .not("import_key", "is", null)
+    .is("archived_at", null);
+
+  if (error) {
+    throw error;
+  }
+
+  const importedKeySet = new Set(input.importedKeys);
+
+  return (data ?? []).filter((place) => place.import_key && !importedKeySet.has(place.import_key)).length;
 }
 
 async function getCount(table: "places" | "list_places" | "ratings", batchId: string) {
