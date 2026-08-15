@@ -10,16 +10,17 @@ const importBatchDetailQuerySchema = z.object({
 
 export async function GET(
   request: Request,
-  context: {
-    params: {
-      id: string;
-    };
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
   },
 ) {
+  const { id } = await params;
   const url = new URL(request.url);
   const parsed = importBatchDetailQuerySchema.safeParse(Object.fromEntries(url.searchParams));
 
-  if (!parsed.success || !context.params.id) {
+  if (!parsed.success || !id) {
     return NextResponse.json(
       {
         ok: false,
@@ -34,7 +35,7 @@ export async function GET(
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const importBatch = await getAdminImportBatch({
       actorUserId: user.id,
-      batchId: context.params.id,
+      batchId: id,
       ...parsed.data,
     });
 
