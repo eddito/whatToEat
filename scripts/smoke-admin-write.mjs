@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
+const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 const OWNER_USERNAME = "testowner";
 const OWNER_PASSWORD = "TestOwner_2026";
 const MEMBER_USERNAME = "testuser";
@@ -6,13 +6,12 @@ const MEMBER_PASSWORD = "TestUser_2026";
 const EXTERNAL_USERNAME = "testexternal";
 const EXTERNAL_PASSWORD = "TestExternal_2026";
 const TARGET_MEMBER_USERNAME = "testmembertarget";
-const TEAM_SLUG = "what-to-eat";
 const LIST_SLUG = "red-list";
 const SMOKE_LIST_SLUG = "admin-smoke-list";
-const SMOKE_PLACE_ID = "admin-smoke-place";
+const SMOKE_PLACE_ID = "red-list-1";
 
 function getBaseUrl() {
-  return (process.env.BACKEND_SMOKE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+  return (process.env.BACKEND_SMOKE_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
 }
 
 async function readJson(response) {
@@ -74,21 +73,36 @@ async function upsertList(token, payload) {
   });
 }
 
+async function patchList(token, payload) {
+  return requestJson("/api/admin/lists", {
+    method: "PATCH",
+    headers: authHeaders(token),
+    body: JSON.stringify(payload),
+  });
+}
+
+async function deleteList(token, listId) {
+  return requestJson(`/api/admin/lists?listId=${encodeURIComponent(listId)}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+}
+
 async function getAdminLists(token) {
-  return requestJson(`/api/admin/lists?teamSlug=${encodeURIComponent(TEAM_SLUG)}`, {
+  return requestJson("/api/admin/lists", {
     headers: authHeaders(token),
   });
 }
 
 async function getAdminPlaces(token) {
-  return requestJson(`/api/admin/places?teamSlug=${encodeURIComponent(TEAM_SLUG)}&limit=5`, {
+  return requestJson("/api/admin/places?limit=5", {
     headers: authHeaders(token),
   });
 }
 
 async function upsertPlace(token, payload) {
   return requestJson("/api/admin/places", {
-    method: "POST",
+    method: "PATCH",
     headers: authHeaders(token),
     body: JSON.stringify(payload),
   });
@@ -132,20 +146,40 @@ async function upsertMember(token, username, role) {
   return requestJson("/api/admin/members", {
     method: "POST",
     headers: authHeaders(token),
-    body: JSON.stringify({ username, role, teamSlug: TEAM_SLUG }),
+    body: JSON.stringify({ account: username, role }),
   });
 }
 
-async function removeMember(token, username) {
-  return requestJson("/api/admin/members", {
+async function removeMember(token, userId) {
+  return requestJson(`/api/admin/members?userId=${encodeURIComponent(userId)}`, {
     method: "DELETE",
     headers: authHeaders(token),
-    body: JSON.stringify({ username, teamSlug: TEAM_SLUG }),
   });
 }
 
 function takeFirstPlaceIds(result) {
   return (result.body?.places ?? []).slice(0, 2).map((place) => place.id);
+}
+
+function findMember(result, username) {
+  return (result.body?.members ?? []).find((member) => member.username === username) ?? null;
+}
+
+function buildPlacePayload(place, overrides = {}) {
+  return {
+    placeId: place.id,
+    name: place.name,
+    category: place.category,
+    tasteTags: place.tasteTags,
+    signatureDishes: place.signatureDishes,
+    review: place.review,
+    region: place.region,
+    locationLabel: place.locationLabel,
+    parkingNote: place.parkingNote,
+    sourceLabel: place.sourceLabel,
+    visited: place.visited,
+    ...overrides,
+  };
 }
 
 async function main() {
@@ -158,15 +192,18 @@ async function main() {
     name: "Admin Smoke List",
     description: "Smoke test list",
     visibility: "public_view",
-    teamSlug: TEAM_SLUG,
   });
   assert(externalListWrite.status === 403, "External list write should return 403", externalListWrite);
 
   let externalViewerAdded = false;
+  let externalUserId = null;
 
   try {
     const ownerAddViewer = await upsertMember(ownerToken, EXTERNAL_USERNAME, "viewer");
     assert(ownerAddViewer.status === 200, "Owner add external viewer should return 200", ownerAddViewer);
+    const externalMember = findMember(ownerAddViewer, EXTERNAL_USERNAME);
+    assert(externalMember?.role === "viewer", "Owner add external viewer should set viewer role", ownerAddViewer);
+    externalUserId = externalMember.userId;
     externalViewerAdded = true;
 
     const viewerLists = await getAdminLists(externalToken);
@@ -189,78 +226,129 @@ async function main() {
       name: "Admin Smoke List",
       description: "Viewer write should fail",
       visibility: "public_view",
-      teamSlug: TEAM_SLUG,
     });
     assert(viewerListWrite.status === 403, "Viewer list write should return 403", viewerListWrite);
   } finally {
-    if (externalViewerAdded) {
-      await removeMember(ownerToken, EXTERNAL_USERNAME);
+    if (externalViewerAdded && externalUserId) {
+      await removeMember(ownerToken, externalUserId);
     }
   }
 
-  const listWrite = await upsertList(memberToken, {
+  const memberListWrite = await upsertList(memberToken, {
     slug: SMOKE_LIST_SLUG,
     name: "Admin Smoke List",
-    description: "Smoke test list",
+    description: "Member create should fail",
     visibility: "public_view",
-    teamSlug: TEAM_SLUG,
   });
-  assert(listWrite.status === 200, "Member list write should return 200", listWrite);
-  assert(listWrite.body?.list?.slug === SMOKE_LIST_SLUG, "Member list write should return smoke list", listWrite);
+  assert(memberListWrite.status === 403, "Member list create should return 403", memberListWrite);
 
-  const placeWrite = await upsertPlace(memberToken, {
-    listSlug: LIST_SLUG,
-    importKey: SMOKE_PLACE_ID,
-    name: "Admin Smoke Place",
-    category: "Smoke",
-    tasteTags: ["smoke"],
-    signatureDishes: "Smoke dish",
-    review: "Smoke write test",
-    region: "Smoke Region",
-    locationLabel: "Smoke Location",
-    parkingNote: "Smoke parking",
-    sourceLabel: "smoke",
-    visited: true,
-    longitude: 120.123456,
-    latitude: 30.123456,
-  });
-  assert(placeWrite.status === 200, "Member place write should return 200", placeWrite);
-  assert(placeWrite.body?.place?.id === SMOKE_PLACE_ID, "Member place write should return smoke place", placeWrite);
+  const previousSmokeListDelete = await deleteList(ownerToken, SMOKE_LIST_SLUG);
+  assert(
+    previousSmokeListDelete.status === 200 || previousSmokeListDelete.status === 404,
+    "Previous smoke list cleanup should return 200 or 404",
+    previousSmokeListDelete,
+  );
 
-  const archived = await archivePlace(memberToken, SMOKE_PLACE_ID, true);
-  assert(archived.status === 200, "Member archive place should return 200", archived);
-  assert(Boolean(archived.body?.place?.archivedAt), "Archived place should include archivedAt", archived);
+  let smokeListCreated = false;
+  let originalPlace = null;
+  let placeChanged = false;
+  let targetMemberId = null;
 
-  const restored = await archivePlace(memberToken, SMOKE_PLACE_ID, false);
-  assert(restored.status === 200, "Member restore place should return 200", restored);
-  assert(restored.body?.place?.archivedAt === null, "Restored place archivedAt should be null", restored);
+  try {
+    const listWrite = await upsertList(memberToken, {
+      slug: SMOKE_LIST_SLUG,
+      name: "Admin Smoke List",
+      description: "Smoke test list",
+      visibility: "public_view",
+    });
+    assert(listWrite.status === 403, "Member list write should return 403", listWrite);
 
-  const listPlaces = await getListPlaces(ownerToken, LIST_SLUG);
-  assert(listPlaces.status === 200, "Owner list places should return 200", listPlaces);
-  const originalIds = takeFirstPlaceIds(listPlaces);
-  assert(originalIds.length >= 2, "List should include at least two places for reorder smoke", listPlaces);
+    const ownerListWrite = await upsertList(ownerToken, {
+      slug: SMOKE_LIST_SLUG,
+      name: "Admin Smoke List",
+      description: "Smoke test list",
+      visibility: "public_view",
+    });
+    assert(ownerListWrite.status === 200, "Owner list create should return 200", ownerListWrite);
+    assert(ownerListWrite.body?.list?.slug === SMOKE_LIST_SLUG, "Owner list create should return smoke list", ownerListWrite);
+    smokeListCreated = true;
 
-  const swappedIds = [originalIds[1], originalIds[0]];
-  const swapped = await reorderListPlaces(memberToken, LIST_SLUG, swappedIds);
-  assert(swapped.status === 200, "Member reorder list places should return 200", swapped);
-  assert(swapped.body?.result?.updated === 2, "Reorder should update two places", swapped);
+    const ownerListPatch = await patchList(ownerToken, {
+      listId: SMOKE_LIST_SLUG,
+      name: "Admin Smoke List",
+      description: "Smoke test list updated",
+      visibility: "private",
+    });
+    assert(ownerListPatch.status === 200, "Owner list patch should return 200", ownerListPatch);
 
-  const duplicateOrder = await reorderListPlaces(memberToken, LIST_SLUG, [originalIds[0], originalIds[0]]);
-  assert(duplicateOrder.status === 400, "Duplicate order payload should return 400", duplicateOrder);
+    const initialPlace = await getAdminPlace(memberToken, SMOKE_PLACE_ID);
+    assert(initialPlace.status === 200, "Member place detail before write should return 200", initialPlace);
+    originalPlace = initialPlace.body?.place;
+    assert(Boolean(originalPlace?.id), "Member place detail should include place payload", initialPlace);
 
-  const restoredOrder = await reorderListPlaces(memberToken, LIST_SLUG, originalIds);
-  assert(restoredOrder.status === 200, "Member restore list order should return 200", restoredOrder);
+    const smokeParkingNote = `Smoke parking ${Date.now()}`;
+    const placeWrite = await upsertPlace(memberToken, buildPlacePayload(originalPlace, { parkingNote: smokeParkingNote }));
+    assert(placeWrite.status === 200, "Member place write should return 200", placeWrite);
+    assert(placeWrite.body?.place?.id === SMOKE_PLACE_ID, "Member place write should return smoke place", placeWrite);
+    assert(placeWrite.body?.place?.parkingNote === smokeParkingNote, "Member place write should persist changed field", placeWrite);
+    placeChanged = true;
 
-  const memberAddForbidden = await upsertMember(memberToken, TARGET_MEMBER_USERNAME, "viewer");
-  assert(memberAddForbidden.status === 403, "Member cannot manage team members", memberAddForbidden);
+    const archived = await archivePlace(memberToken, SMOKE_PLACE_ID, true);
+    assert(archived.status === 200, "Member archive place should return 200", archived);
+    assert(Boolean(archived.body?.place?.archivedAt), "Archived place should include archivedAt", archived);
 
-  const ownerAddMember = await upsertMember(ownerToken, TARGET_MEMBER_USERNAME, "viewer");
-  assert(ownerAddMember.status === 200, "Owner add member should return 200", ownerAddMember);
-  assert(ownerAddMember.body?.member?.role === "viewer", "Owner add member should set viewer role", ownerAddMember);
+    const restored = await archivePlace(memberToken, SMOKE_PLACE_ID, false);
+    assert(restored.status === 200, "Member restore place should return 200", restored);
+    assert(restored.body?.place?.archivedAt === null, "Restored place archivedAt should be null", restored);
 
-  const ownerRemoveMember = await removeMember(ownerToken, TARGET_MEMBER_USERNAME);
-  assert(ownerRemoveMember.status === 200, "Owner remove member should return 200", ownerRemoveMember);
-  assert(ownerRemoveMember.body?.member?.role === null, "Owner remove member should clear role", ownerRemoveMember);
+    const placeRestored = await upsertPlace(memberToken, buildPlacePayload(originalPlace));
+    assert(placeRestored.status === 200, "Member place restore should return 200", placeRestored);
+    assert(placeRestored.body?.place?.parkingNote === originalPlace.parkingNote, "Member place restore should restore field", placeRestored);
+    placeChanged = false;
+
+    const listPlaces = await getListPlaces(ownerToken, LIST_SLUG);
+    assert(listPlaces.status === 200, "Owner list places should return 200", listPlaces);
+    const originalIds = takeFirstPlaceIds(listPlaces);
+    assert(originalIds.length >= 2, "List should include at least two places for reorder smoke", listPlaces);
+
+    const swappedIds = [originalIds[1], originalIds[0]];
+    const swapped = await reorderListPlaces(memberToken, LIST_SLUG, swappedIds);
+    assert(swapped.status === 200, "Member reorder list places should return 200", swapped);
+    assert(swapped.body?.result?.updated === 2, "Reorder should update two places", swapped);
+
+    const duplicateOrder = await reorderListPlaces(memberToken, LIST_SLUG, [originalIds[0], originalIds[0]]);
+    assert(duplicateOrder.status === 400, "Duplicate order payload should return 400", duplicateOrder);
+
+    const restoredOrder = await reorderListPlaces(memberToken, LIST_SLUG, originalIds);
+    assert(restoredOrder.status === 200, "Member restore list order should return 200", restoredOrder);
+
+    const memberAddForbidden = await upsertMember(memberToken, TARGET_MEMBER_USERNAME, "viewer");
+    assert(memberAddForbidden.status === 403, "Member cannot manage team members", memberAddForbidden);
+
+    const ownerAddMember = await upsertMember(ownerToken, TARGET_MEMBER_USERNAME, "viewer");
+    assert(ownerAddMember.status === 200, "Owner add member should return 200", ownerAddMember);
+    const targetMember = findMember(ownerAddMember, TARGET_MEMBER_USERNAME);
+    assert(targetMember?.role === "viewer", "Owner add member should set viewer role", ownerAddMember);
+    targetMemberId = targetMember.userId;
+
+    const ownerRemoveMember = await removeMember(ownerToken, targetMember.userId);
+    assert(ownerRemoveMember.status === 200, "Owner remove member should return 200", ownerRemoveMember);
+    assert(!findMember(ownerRemoveMember, TARGET_MEMBER_USERNAME), "Owner remove member should clear role", ownerRemoveMember);
+    targetMemberId = null;
+  } finally {
+    if (targetMemberId) {
+      await removeMember(ownerToken, targetMemberId).catch(() => {});
+    }
+
+    if (placeChanged && originalPlace) {
+      await archivePlace(memberToken, SMOKE_PLACE_ID, false).catch(() => {});
+      await upsertPlace(memberToken, buildPlacePayload(originalPlace)).catch(() => {});
+    }
+
+    if (smokeListCreated) {
+      await deleteList(ownerToken, SMOKE_LIST_SLUG).catch(() => {});
+    }
+  }
 
   console.log(
     JSON.stringify(
@@ -273,8 +361,9 @@ async function main() {
           "viewer admin list read allowed",
           "viewer admin place reads allowed",
           "viewer admin list write rejected",
-          "member list write",
-          "member place write",
+          "member list create rejected",
+          "owner list create, patch, and delete",
+          "member place write and restore",
           "member archive and restore place",
           "member reorder and restore list places",
           "duplicate reorder rejected",

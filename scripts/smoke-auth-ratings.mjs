@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
+const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 const OWNER_USERNAME = "testowner";
 const OWNER_PASSWORD = "TestOwner_2026";
 const MEMBER_USERNAME = "testuser";
@@ -7,7 +7,7 @@ const EXTERNAL_USERNAME = "testexternal";
 const EXTERNAL_PASSWORD = "TestExternal_2026";
 
 function getBaseUrl() {
-  return (process.env.BACKEND_SMOKE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+  return (process.env.BACKEND_SMOKE_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
 }
 
 async function readJson(response) {

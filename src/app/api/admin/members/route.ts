@@ -46,6 +46,10 @@ function getUsername(user: { email?: string; user_metadata?: Record<string, unkn
   return email.endsWith(suffix) ? email.slice(0, -suffix.length) : null;
 }
 
+function getFallbackUsername(userId: string) {
+  return `user${userId.replaceAll("-", "").slice(0, 12)}`;
+}
+
 function isValidMemberAccount(account: string) {
   return (
     emailSchema.safeParse(account).success ||
@@ -170,8 +174,19 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "没有找到这个 Auth 账号，请先在 Supabase 创建用户。" }, { status: 404 });
   }
 
+  const { data: profile, error: existingProfileError } = await context.supabase
+    .from("profiles")
+    .select("username")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (existingProfileError) {
+    throw existingProfileError;
+  }
+
   const { error: profileError } = await context.supabase.from("profiles").upsert({
     id: user.id,
+    username: profile?.username ?? getUsername(user) ?? getFallbackUsername(user.id),
     display_name: getUserLabel(user),
     avatar_url: typeof user.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : null,
   });

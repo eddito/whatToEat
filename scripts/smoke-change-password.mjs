@@ -1,11 +1,11 @@
-const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
+const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 const USERNAME = "testuser";
 const ORIGINAL_PASSWORD = "TestUser_2026";
 const TEMP_PASSWORD = "TempUser_2026";
 const CONTACT_EMAIL = "testuser@example.com";
 
 function getBaseUrl() {
-  return (process.env.BACKEND_SMOKE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+  return (process.env.BACKEND_SMOKE_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
 }
 
 async function readJson(response) {

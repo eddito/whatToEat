@@ -1,4 +1,4 @@
-const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
+const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 const OWNER_USERNAME = "testowner";
 const OWNER_PASSWORD = "TestOwner_2026";
 const MEMBER_USERNAME = "testuser";
@@ -7,7 +7,7 @@ const EXTERNAL_USERNAME = "testexternal";
 const EXTERNAL_PASSWORD = "TestExternal_2026";
 
 function getBaseUrl() {
-  return (process.env.BACKEND_SMOKE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+  return (process.env.BACKEND_SMOKE_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
 }
 
 async function readJson(response) {
@@ -74,6 +74,14 @@ async function expectStatus(label, path, token, status) {
   return result;
 }
 
+function getSummaryRole(result) {
+  return result.body?.summary?.team?.role ?? result.body?.currentUser?.role;
+}
+
+function getActivePlaceCount(result) {
+  return result.body?.summary?.counts?.activePlaces ?? result.body?.stats?.places;
+}
+
 async function main() {
   const owner = await login(OWNER_USERNAME, OWNER_PASSWORD);
   const member = await login(MEMBER_USERNAME, MEMBER_PASSWORD);
@@ -98,15 +106,15 @@ async function main() {
   assert(lists.body?.lists?.some((list) => list.slug === "red-list"), "Admin lists should include red-list", lists);
 
   const ownerSummary = await expectStatus("owner admin summary", "/api/admin/summary", owner.accessToken, 200);
-  assert(ownerSummary.body?.summary?.team?.role === "owner", "Admin summary should include owner role", ownerSummary);
+  assert(getSummaryRole(ownerSummary) === "owner", "Admin summary should include owner role", ownerSummary);
   assert(
-    ownerSummary.body?.summary?.counts?.activePlaces > 0,
+    getActivePlaceCount(ownerSummary) > 0,
     "Admin summary should include active place count",
     ownerSummary,
   );
 
   const memberSummary = await expectStatus("member admin summary", "/api/admin/summary", member.accessToken, 200);
-  assert(memberSummary.body?.summary?.team?.role === "member", "Admin summary should include member role", memberSummary);
+  assert(getSummaryRole(memberSummary) === "member", "Admin summary should include member role", memberSummary);
 
   const listPlaces = await expectStatus(
     "member admin list places",

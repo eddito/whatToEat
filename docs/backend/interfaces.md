@@ -1403,13 +1403,13 @@ temporaryPassword: TempUser_2026
 用途：验证后台写入接口闭环。该脚本会写入/更新固定测试榜单和测试店铺，临时归档后恢复测试店铺，临时调整榜单前两项排序后恢复，并临时添加再移除测试成员。
 
 运行前置：
-- 本地后端服务运行在 `http://127.0.0.1:3101`，或设置 `BACKEND_SMOKE_URL`
+- 本地 Next.js 服务默认运行在 `http://127.0.0.1:3000`，也可设置 `BACKEND_SMOKE_URL`、`NEXT_PUBLIC_APP_URL` 或 `APP_URL`
 - 测试账号 `testowner/testuser/testexternal/testmembertarget` 已存在
 
 覆盖：
 - `POST /api/auth/login`
 - `POST /api/admin/lists`
-- `POST /api/admin/places`
+- `PATCH /api/admin/places`
 - `POST /api/admin/places/archive`
 - `GET /api/admin/places`
 - `GET /api/admin/places/[id]`
@@ -1420,7 +1420,7 @@ temporaryPassword: TempUser_2026
 - `DELETE /api/admin/members`
 - external 写榜单返回 403
 - viewer 可读后台榜单、店铺、榜单内店铺、店铺详情和评分明细，但写榜单返回 403
-- member 可写榜单、店铺、归档/恢复店铺、调整榜单排序
+- member 可写店铺、归档/恢复店铺、调整榜单排序；member 创建榜单返回 403
 - 重复排序 id 返回 400
 - member 管理成员返回 403
 - owner 可添加并移除测试成员
@@ -1432,7 +1432,7 @@ temporaryPassword: TempUser_2026
 用途：验证后台店铺照片上传、元数据更新和真删除闭环。该脚本会向公开 Storage bucket `place-photos` 上传一张 1x1 PNG，测试结束后删除 Storage object 和 `photos` 记录。
 
 运行前置：
-- 本地后端服务运行在 `http://127.0.0.1:3101`，或设置 `BACKEND_SMOKE_URL`
+- 本地 Next.js 服务默认运行在 `http://127.0.0.1:3000`，也可设置 `BACKEND_SMOKE_URL`、`NEXT_PUBLIC_APP_URL` 或 `APP_URL`
 - 远端 Supabase 已执行包含 `photos.storage_path` 和 `place-photos` bucket 配置的最新 `supabase/schema.sql`
 - 测试账号 `testowner/testuser/testexternal` 已存在
 
