@@ -10,12 +10,13 @@ const rollbackRequestSchema = z.object({
 
 export async function POST(
   request: Request,
-  context: {
-    params: {
-      id: string;
-    };
+  {
+    params,
+  }: {
+    params: Promise<{ id: string }>;
   },
 ) {
+  const { id } = await params;
   let body: unknown;
 
   try {
@@ -33,7 +34,7 @@ export async function POST(
 
   const parsed = rollbackRequestSchema.safeParse(body);
 
-  if (!parsed.success || !context.params.id) {
+  if (!parsed.success || !id) {
     return NextResponse.json(
       {
         ok: false,
@@ -48,7 +49,7 @@ export async function POST(
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const rollback = await rollbackAdminImportBatch({
       actorUserId: user.id,
-      batchId: context.params.id,
+      batchId: id,
       confirm: parsed.data.confirm,
       teamSlug: parsed.data.teamSlug,
     });
