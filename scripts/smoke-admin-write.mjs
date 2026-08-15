@@ -74,6 +74,18 @@ async function upsertList(token, payload) {
   });
 }
 
+async function getAdminLists(token) {
+  return requestJson(`/api/admin/lists?teamSlug=${encodeURIComponent(TEAM_SLUG)}`, {
+    headers: authHeaders(token),
+  });
+}
+
+async function getAdminPlaces(token) {
+  return requestJson(`/api/admin/places?teamSlug=${encodeURIComponent(TEAM_SLUG)}&limit=5`, {
+    headers: authHeaders(token),
+  });
+}
+
 async function upsertPlace(token, payload) {
   return requestJson("/api/admin/places", {
     method: "POST",
@@ -92,6 +104,18 @@ async function archivePlace(token, id, archived) {
 
 async function getListPlaces(token, slug) {
   return requestJson(`/api/admin/lists/${encodeURIComponent(slug)}/places`, {
+    headers: authHeaders(token),
+  });
+}
+
+async function getAdminPlace(token, placeId) {
+  return requestJson(`/api/admin/places/${encodeURIComponent(placeId)}`, {
+    headers: authHeaders(token),
+  });
+}
+
+async function getAdminRatings(token, placeId) {
+  return requestJson(`/api/admin/places/${encodeURIComponent(placeId)}/ratings`, {
     headers: authHeaders(token),
   });
 }
@@ -137,6 +161,42 @@ async function main() {
     teamSlug: TEAM_SLUG,
   });
   assert(externalListWrite.status === 403, "External list write should return 403", externalListWrite);
+
+  let externalViewerAdded = false;
+
+  try {
+    const ownerAddViewer = await upsertMember(ownerToken, EXTERNAL_USERNAME, "viewer");
+    assert(ownerAddViewer.status === 200, "Owner add external viewer should return 200", ownerAddViewer);
+    externalViewerAdded = true;
+
+    const viewerLists = await getAdminLists(externalToken);
+    assert(viewerLists.status === 200, "Viewer admin lists read should return 200", viewerLists);
+
+    const viewerPlaces = await getAdminPlaces(externalToken);
+    assert(viewerPlaces.status === 200, "Viewer admin places read should return 200", viewerPlaces);
+
+    const viewerListPlaces = await getListPlaces(externalToken, LIST_SLUG);
+    assert(viewerListPlaces.status === 200, "Viewer admin list places read should return 200", viewerListPlaces);
+
+    const viewerPlace = await getAdminPlace(externalToken, "red-list-1");
+    assert(viewerPlace.status === 200, "Viewer admin place detail read should return 200", viewerPlace);
+
+    const viewerRatings = await getAdminRatings(externalToken, "red-list-1");
+    assert(viewerRatings.status === 200, "Viewer admin place ratings read should return 200", viewerRatings);
+
+    const viewerListWrite = await upsertList(externalToken, {
+      slug: SMOKE_LIST_SLUG,
+      name: "Admin Smoke List",
+      description: "Viewer write should fail",
+      visibility: "public_view",
+      teamSlug: TEAM_SLUG,
+    });
+    assert(viewerListWrite.status === 403, "Viewer list write should return 403", viewerListWrite);
+  } finally {
+    if (externalViewerAdded) {
+      await removeMember(ownerToken, EXTERNAL_USERNAME);
+    }
+  }
 
   const listWrite = await upsertList(memberToken, {
     slug: SMOKE_LIST_SLUG,
@@ -210,6 +270,9 @@ async function main() {
         checks: [
           "owner/member/external login",
           "external list write rejected",
+          "viewer admin list read allowed",
+          "viewer admin place reads allowed",
+          "viewer admin list write rejected",
           "member list write",
           "member place write",
           "member archive and restore place",

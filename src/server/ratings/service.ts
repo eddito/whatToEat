@@ -12,7 +12,7 @@ import {
   type RatingRecord,
 } from "@/server/ratings/repository";
 import { getPlaceByStableId } from "@/server/places/repository";
-import { canManageTeamContent, getTeamMembership } from "@/server/teams/repository";
+import { canManageTeamContent, canReadTeamContent, getTeamMembership } from "@/server/teams/repository";
 
 export type UpsertRatingInput = {
   userId: string;
@@ -128,7 +128,7 @@ export async function getAdminPlaceRatings(input: {
 
   const membership = await getTeamMembership(place.team_id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new RatingError("Rating is not allowed for this place.", "rating_not_allowed");
   }
 

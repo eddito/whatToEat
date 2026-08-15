@@ -79,6 +79,7 @@
 | BE-042 | 新增店铺照片上传/真删除 smoke 脚本 | 已完成 | `pnpm smoke:admin-photos`、`scripts/smoke-admin-photos.mjs` | `node --check`、`tsc --noEmit`、`next build`、远端 smoke 通过 |
 | BE-043 | 实现后台评分删除接口 | 已完成 | `DELETE /api/admin/places/[id]/ratings`、`deleteAdminPlaceRating` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
 | BE-044 | 新增后台写入 smoke 脚本 | 已完成 | `pnpm smoke:admin-write`、`scripts/smoke-admin-write.mjs` | `node --check`、`tsc --noEmit`、`next build`、远端 smoke 通过 |
+| BE-045 | 细化 viewer 角色后台内容只读权限 | 已完成 | `canReadTeamContent`、后台内容 GET 接口允许 viewer | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过 |
 
 ## 完成记录
 
@@ -139,6 +140,7 @@
 | 2026-08-02 | 新增店铺照片上传/真删除 smoke 脚本 | `scripts/smoke-admin-photos.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-photos` 通过 |
 | 2026-08-15 | 实现后台评分删除接口 | `src/app/api/admin/places/[id]/ratings/route.ts`、`src/server/ratings/repository.ts`、`src/server/ratings/service.ts`、`scripts/smoke-auth-ratings.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过；owner 可删除指定评分，external 删除后台评分返回 403，测试评分已恢复 |
 | 2026-08-15 | 新增后台写入 smoke 脚本 | `scripts/smoke-admin-write.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过；测试成员已移除，测试店铺已恢复未归档 |
+| 2026-08-15 | 细化 viewer 角色后台内容只读权限 | `src/server/teams/repository.ts`、`src/server/places/service.ts`、`src/server/ratings/service.ts`、`scripts/smoke-admin-write.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过；`testexternal` 临时 viewer 已移除 |
 
 ## 当前数据库快照
 

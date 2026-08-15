@@ -35,7 +35,7 @@ import {
   updateListPlaceSortOrders,
 } from "@/server/places/repository";
 import { createSupabaseAdminClient } from "@/server/supabase/admin";
-import { canManageTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
+import { canManageTeamContent, canReadTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
 
 const PLACE_PHOTOS_BUCKET = "place-photos";
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -743,7 +743,7 @@ export async function getAdminLists(input: GetAdminListsInput): Promise<AdminLis
 
   const membership = await getTeamMembership(team.id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new ListWriteError("Current user cannot read lists for this team.", "not_allowed");
   }
 
@@ -803,7 +803,7 @@ export async function getAdminArchivedPlaces(input: GetAdminArchivedPlacesInput)
 
   const membership = await getTeamMembership(team.id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read archived places for this team.", "not_allowed");
   }
 
@@ -845,7 +845,7 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
 
   const membership = await getTeamMembership(place.team_id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read this place.", "not_allowed");
   }
 
@@ -908,7 +908,7 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
 
   const membership = await getTeamMembership(team.id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read places for this team.", "not_allowed");
   }
 
@@ -969,7 +969,7 @@ export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Prom
 
   const membership = await getTeamMembership(list.team_id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read places for this list.", "not_allowed");
   }
 

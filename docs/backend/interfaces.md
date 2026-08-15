@@ -95,15 +95,15 @@ type PublicPlacePhotoFields = {
 | --- | --- |
 | `upsertAdminPlace(input)` | owner/member 新增或编辑店铺，并维护榜单关联 |
 | `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
-| `getAdminPlaces(input)` | owner/member 按团队读取后台店铺列表，支持关键词/分类/区域/归档筛选 |
-| `getAdminArchivedPlaces(input)` | owner/member 读取已归档店铺列表 |
-| `getAdminPlace(input)` | owner/member 读取店铺后台详情 |
-| `getAdminPlacesByList(input)` | owner/member 读取榜单内店铺管理视图 |
-| `getAdminLists(input)` | owner/member 读取后台榜单列表，包含 private 榜单 |
+| `getAdminPlaces(input)` | owner/member/viewer 按团队读取后台店铺列表，支持关键词/分类/区域/归档筛选 |
+| `getAdminArchivedPlaces(input)` | owner/member/viewer 读取已归档店铺列表 |
+| `getAdminPlace(input)` | owner/member/viewer 读取店铺后台详情 |
+| `getAdminPlacesByList(input)` | owner/member/viewer 读取榜单内店铺管理视图 |
+| `getAdminLists(input)` | owner/member/viewer 读取后台榜单列表，包含 private 榜单 |
 | `reorderAdminListPlaces(input)` | owner/member 调整榜单内店铺排序 |
 | `upsertAdminList(input)` | owner/member 新增或编辑榜单 |
 
-权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
+权限：后台内容读取允许目标小队 `owner`、`member`、`viewer`；后台内容写入、归档、排序和图片管理要求 `owner` 或 `member`。
 
 ### 成员管理
 
@@ -133,9 +133,9 @@ type PublicPlacePhotoFields = {
 
 | 函数 | 说明 |
 | --- | --- |
-| `getAdminPlaceRatings(input)` | owner/member 读取店铺评分明细 |
+| `getAdminPlaceRatings(input)` | owner/member/viewer 读取店铺评分明细 |
 
-权限：调用用户必须是目标店铺所在小队的 `owner` 或 `member`。
+权限：评分明细读取允许目标小队 `owner`、`member`、`viewer`；删除评分要求 `owner` 或 `member`。
 
 ## HTTP 接口
 
@@ -437,7 +437,7 @@ type DeleteMyRatingResponse = {
 
 路径：`src/app/api/admin/places/route.ts`
 
-用途：owner/member 按小队读取后台店铺列表，供后台店铺管理、选店和搜索使用。
+用途：owner/member/viewer 按小队读取后台店铺列表，供后台店铺管理、选店和搜索使用。
 
 认证：
 ```txt
@@ -472,7 +472,7 @@ type GetAdminPlacesResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -542,7 +542,7 @@ type UpsertAdminPlaceResponse = {
 
 路径：`src/app/api/admin/lists/route.ts`
 
-用途：owner/member 读取小队全部榜单列表，包含 private/public_view/public_rate，并附带未归档店铺统计。
+用途：owner/member/viewer 读取小队全部榜单列表，包含 private/public_view/public_rate，并附带未归档店铺统计。
 
 认证：
 ```txt
@@ -569,7 +569,7 @@ type GetAdminListsResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -868,7 +868,7 @@ type ArchiveAdminPlaceResponse = {
 
 路径：`src/app/api/admin/places/[id]/route.ts`
 
-用途：owner/member 读取店铺后台详情，包含基础字段、归档状态、所属榜单和团队评分汇总。
+用途：owner/member/viewer 读取店铺后台详情，包含基础字段、归档状态、所属榜单和团队评分汇总。
 
 认证：
 ```txt
@@ -906,7 +906,7 @@ type GetAdminPlaceResponse = {
 | HTTP | `error` | 场景 |
 | ---: | --- | --- |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member/viewer |
 | 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -914,7 +914,7 @@ type GetAdminPlaceResponse = {
 
 路径：`src/app/api/admin/places/archived/route.ts`
 
-用途：owner/member 读取已归档店铺列表，用于后台恢复或检查归档数据。
+用途：owner/member/viewer 读取已归档店铺列表，用于后台恢复或检查归档数据。
 
 认证：
 ```txt
@@ -949,7 +949,7 @@ type GetAdminArchivedPlacesResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -1043,7 +1043,7 @@ type DeleteAdminPlacePhotoResponse = {
 
 路径：`src/app/api/admin/places/[id]/ratings/route.ts`
 
-用途：owner/member 读取店铺评分明细，用于后台查看团队评分、外部评分和备注。
+用途：owner/member/viewer 读取店铺评分明细，用于后台查看团队评分、外部评分和备注。
 
 认证：
 ```txt
@@ -1079,7 +1079,7 @@ type GetAdminPlaceRatingsResponse = {
 | HTTP | `error` | 场景 |
 | ---: | --- | --- |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `rating_not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 403 | `rating_not_allowed` | 当前用户不是目标店铺所在小队 owner/member/viewer |
 | 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -1139,7 +1139,7 @@ type DeleteAdminPlaceRatingResponse = {
 
 路径：`src/app/api/admin/lists/[slug]/places/route.ts`
 
-用途：owner/member 读取某个榜单下的店铺管理视图，用于后台表格、编辑入口和排序展示。
+用途：owner/member/viewer 读取某个榜单下的店铺管理视图，用于后台表格、编辑入口和排序展示。
 
 认证：
 ```txt
@@ -1172,7 +1172,7 @@ type GetAdminListPlacesResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member/viewer |
 | 404 | `list_not_found` | 榜单不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -1358,11 +1358,15 @@ temporaryPassword: TempUser_2026
 - `POST /api/admin/lists`
 - `POST /api/admin/places`
 - `POST /api/admin/places/archive`
+- `GET /api/admin/places`
+- `GET /api/admin/places/[id]`
+- `GET /api/admin/places/[id]/ratings`
 - `GET /api/admin/lists/[slug]/places`
 - `POST /api/admin/lists/[slug]/places/order`
 - `POST /api/admin/members`
 - `DELETE /api/admin/members`
 - external 写榜单返回 403
+- viewer 可读后台榜单、店铺、榜单内店铺、店铺详情和评分明细，但写榜单返回 403
 - member 可写榜单、店铺、归档/恢复店铺、调整榜单排序
 - 重复排序 id 返回 400
 - member 管理成员返回 403
