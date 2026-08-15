@@ -126,6 +126,20 @@ export async function getTeamMembers(teamId: string): Promise<TeamMemberWithProf
   return (data ?? []) as unknown as TeamMemberWithProfileRecord[];
 }
 
+export async function countTeamMembers(teamId: string): Promise<number> {
+  const supabase = createSupabaseAdminClient();
+  const { count, error } = await supabase
+    .from("team_members")
+    .select("team_id", { count: "exact", head: true })
+    .eq("team_id", teamId);
+
+  if (error) {
+    throw error;
+  }
+
+  return count ?? 0;
+}
+
 export async function upsertTeamMember(input: {
   teamId: string;
   userId: string;
