@@ -22,6 +22,7 @@ import {
   getPlaceByStableId,
   getPublicPlaceByStableId,
   getRatingsForPlaces,
+  getTeamContentCounts,
   insertPhotoRecord,
   isUuid,
   type ListVisibility,
@@ -36,7 +37,14 @@ import {
   updateListPlaceSortOrders,
 } from "@/server/places/repository";
 import { createSupabaseAdminClient } from "@/server/supabase/admin";
-import { canManageTeamContent, canReadTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
+import {
+  canManageTeamContent,
+  canReadTeamContent,
+  countTeamMembers,
+  getTeamBySlug,
+  getTeamMembership,
+  type TeamRole,
+} from "@/server/teams/repository";
 
 const PLACE_PHOTOS_BUCKET = "place-photos";
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
@@ -158,6 +166,11 @@ export type GetAdminPlacesInput = {
   limit?: number;
 };
 
+export type GetAdminSummaryInput = {
+  userId: string;
+  teamSlug?: string;
+};
+
 export type GetAdminListPlacesInput = {
   userId: string;
   slug: string;
@@ -248,6 +261,23 @@ export type AdminPlaceSummary = PublicPlace & {
   listSlugs: string[];
   listNames: string[];
   archivedAt: string | null;
+};
+
+export type AdminSummary = {
+  team: {
+    id: string;
+    slug: string;
+    name: string;
+    role: TeamRole;
+  };
+  counts: {
+    lists: number;
+    activePlaces: number;
+    archivedPlaces: number;
+    ratings: number;
+    members: number;
+  };
+  generatedAt: string;
 };
 
 export type AdminPlacePhotoMutationResult = {
@@ -981,6 +1011,36 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
       archivedAt: place.archived_at,
     };
   });
+}
+
+export async function getAdminSummary(input: GetAdminSummaryInput): Promise<AdminSummary> {
+  const team = await getTeamBySlug(input.teamSlug?.trim() || "what-to-eat");
+
+  if (!team) {
+    throw new PlaceWriteError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(team.id, input.userId);
+
+  if (!canReadTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot read summary for this team.", "not_allowed");
+  }
+
+  const [contentCounts, members] = await Promise.all([getTeamContentCounts(team.id), countTeamMembers(team.id)]);
+
+  return {
+    team: {
+      id: team.id,
+      slug: team.slug ?? "",
+      name: team.name,
+      role: membership.role,
+    },
+    counts: {
+      ...contentCounts,
+      members,
+    },
+    generatedAt: new Date().toISOString(),
+  };
 }
 
 export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Promise<AdminListPlace[]> {

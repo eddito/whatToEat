@@ -190,6 +190,50 @@ export async function getListsForTeam(teamId: string): Promise<PublicListRecord[
   return (data ?? []) as PublicListRecord[];
 }
 
+export type TeamContentCounts = {
+  lists: number;
+  activePlaces: number;
+  archivedPlaces: number;
+  ratings: number;
+};
+
+export async function getTeamContentCounts(teamId: string): Promise<TeamContentCounts> {
+  const supabase = createSupabaseAdminClient();
+  const [listsResult, activePlacesResult, archivedPlacesResult, ratings] = await Promise.all([
+    supabase.from("lists").select("id", { count: "exact", head: true }).eq("team_id", teamId),
+    supabase.from("places").select("id", { count: "exact", head: true }).eq("team_id", teamId).is("archived_at", null),
+    supabase
+      .from("places")
+      .select("id", { count: "exact", head: true })
+      .eq("team_id", teamId)
+      .not("archived_at", "is", null),
+    supabase
+      .from("ratings")
+      .select("id, places!inner(team_id)", { count: "exact", head: true })
+      .eq("places.team_id", teamId)
+      .then(({ count, error }) => {
+        if (error) {
+          throw error;
+        }
+
+        return count ?? 0;
+      }),
+  ]);
+
+  for (const result of [listsResult, activePlacesResult, archivedPlacesResult]) {
+    if (result.error) {
+      throw result.error;
+    }
+  }
+
+  return {
+    lists: listsResult.count ?? 0,
+    activePlaces: activePlacesResult.count ?? 0,
+    archivedPlaces: archivedPlacesResult.count ?? 0,
+    ratings,
+  };
+}
+
 export async function upsertListRecord(input: {
   id?: string;
   teamId: string;

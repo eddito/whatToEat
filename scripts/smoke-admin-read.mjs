@@ -97,6 +97,17 @@ async function main() {
   const lists = await expectStatus("owner admin lists", "/api/admin/lists", owner.accessToken, 200);
   assert(lists.body?.lists?.some((list) => list.slug === "red-list"), "Admin lists should include red-list", lists);
 
+  const ownerSummary = await expectStatus("owner admin summary", "/api/admin/summary", owner.accessToken, 200);
+  assert(ownerSummary.body?.summary?.team?.role === "owner", "Admin summary should include owner role", ownerSummary);
+  assert(
+    ownerSummary.body?.summary?.counts?.activePlaces > 0,
+    "Admin summary should include active place count",
+    ownerSummary,
+  );
+
+  const memberSummary = await expectStatus("member admin summary", "/api/admin/summary", member.accessToken, 200);
+  assert(memberSummary.body?.summary?.team?.role === "member", "Admin summary should include member role", memberSummary);
+
   const listPlaces = await expectStatus(
     "member admin list places",
     "/api/admin/lists/red-list/places",
@@ -155,6 +166,7 @@ async function main() {
   assert((importBatches.body?.importBatches?.length ?? 0) > 0, "Import batches should include rows", importBatches);
 
   await expectStatus("member import batches forbidden", "/api/admin/import-batches", member.accessToken, 403);
+  await expectStatus("external admin summary forbidden", "/api/admin/summary", external.accessToken, 403);
   await expectStatus("external admin lists forbidden", "/api/admin/lists", external.accessToken, 403);
   await expectStatus("missing token members rejected", "/api/admin/members", null, 401);
 
@@ -166,6 +178,7 @@ async function main() {
         checks: [
           "owner login and /api/auth/me",
           "refresh token",
+          "admin summary",
           "admin lists",
           "admin places",
           "admin list places",
