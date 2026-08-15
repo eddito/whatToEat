@@ -165,6 +165,10 @@ async function main() {
   const members = await expectStatus("owner admin members", "/api/admin/members", owner.accessToken, 200);
   assert(members.body?.members?.some((item) => item.username === OWNER_USERNAME), "Members should include owner", members);
 
+  const importPlan = await expectStatus("owner import plan", "/api/admin/import-plan?archiveMissing=true", owner.accessToken, 200);
+  assert(importPlan.body?.importPlan?.dryRun === true, "Import plan should be dry-run", importPlan);
+  assert(importPlan.body?.importPlan?.counts?.seedPlaces > 0, "Import plan should include seed place count", importPlan);
+
   const importBatches = await expectStatus(
     "owner import batches",
     "/api/admin/import-batches?limit=3",
@@ -209,6 +213,7 @@ async function main() {
   assert(missingConfirmRollback.status === 400, "Rollback without confirm: true should return 400", missingConfirmRollback);
 
   await expectStatus("member import batches forbidden", "/api/admin/import-batches", member.accessToken, 403);
+  await expectStatus("member import plan forbidden", "/api/admin/import-plan", member.accessToken, 403);
   await expectStatus(
     "member import batch detail forbidden",
     `/api/admin/import-batches/${encodeURIComponent(importBatchId)}`,
@@ -247,6 +252,7 @@ async function main() {
           "admin place detail",
           "admin place ratings",
           "admin members",
+          "import plan",
           "import batches",
           "import batch detail",
           "import batch rollback plan",

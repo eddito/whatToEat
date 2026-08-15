@@ -1,12 +1,18 @@
 import "server-only";
 
+import seedPlaces from "@/data/seed-places.json";
 import {
+  countImportPlanArchiveMissing,
   getImportBatchById,
   getImportBatchCounts,
   getImportBatchListPlacePreview,
   getImportBatchPlacePreview,
   getImportBatchRatingPreview,
   getImportBatches,
+  getImportPlanListPlaces,
+  getImportPlanLists,
+  getImportPlanPlaces,
+  getImportPlanRatings,
   markImportBatchRolledBack,
   rollbackImportBatchRecords,
   type ImportBatchRecord,
@@ -35,6 +41,13 @@ export type GetAdminImportBatchesInput = {
   teamSlug?: string;
   includeLegacy?: boolean;
   limit?: number;
+};
+
+export type GetAdminImportPlanInput = {
+  actorUserId: string;
+  teamSlug?: string;
+  archiveMissing?: boolean;
+  sourceName?: string;
 };
 
 export type GetAdminImportBatchInput = {
@@ -101,6 +114,30 @@ export type AdminImportBatchRollbackResult = {
   };
 };
 
+export type AdminImportPlan = {
+  dryRun: true;
+  sourceName: string;
+  teamSlug: string;
+  archiveMissing: boolean;
+  summary: {
+    listsCreated: number;
+    listsUpdated: number;
+    placesCreated: number;
+    placesUpdated: number;
+    listLinksCreated: number;
+    listLinksUpdated: number;
+    ratingsCreated: number;
+    ratingsUpdated: number;
+    ratingsSkipped: number;
+    placesArchivedMissing: number;
+  };
+  counts: {
+    seedPlaces: number;
+    seedLists: number;
+    importedRatings: number;
+  };
+};
+
 export class ImportBatchReadError extends Error {
   constructor(
     message: string,
@@ -139,6 +176,135 @@ function toAdminImportBatch(batch: ImportBatchRecord, counts: AdminImportBatch["
     createdAt: batch.created_at,
     finishedAt: batch.finished_at,
     rolledBackAt: batch.rolled_back_at,
+  };
+}
+
+const DEFAULT_IMPORT_LISTS = [
+  {
+    slug: "red-list",
+    name: "红榜",
+    description: "已经探过、值得优先推荐的店。",
+    visibility: "public_rate",
+  },
+  {
+    slug: "retry-list",
+    name: "再练练",
+    description: "体验还有争议，适合二刷确认的候选。",
+    visibility: "public_view",
+  },
+];
+
+const IMPORTED_RATERS = [
+  ["杨", "yang"],
+  ["陈", "chen"],
+] as const;
+
+type SeedPlace = {
+  id: string;
+  listSlug: string;
+  memberScores?: Record<string, number>;
+};
+
+export async function getAdminImportPlan(input: GetAdminImportPlanInput): Promise<AdminImportPlan> {
+  const team = await getTeamBySlug(input.teamSlug?.trim() || "what-to-eat");
+
+  if (!team) {
+    throw new ImportBatchReadError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(team.id, input.actorUserId);
+
+  if (!canManageTeamMembers(membership?.role)) {
+    throw new ImportBatchReadError("Current user cannot read import plan for this team.", "not_allowed");
+  }
+
+  const places = seedPlaces as SeedPlace[];
+  const importKeys = places.map((place) => place.id);
+  const listSlugs = DEFAULT_IMPORT_LISTS.map((list) => list.slug);
+  const [existingLists, existingPlaces] = await Promise.all([
+    getImportPlanLists({ teamId: team.id, slugs: listSlugs }),
+    getImportPlanPlaces({ teamId: team.id, importKeys }),
+  ]);
+  const listsBySlug = new Map(existingLists.map((list) => [list.slug, list]));
+  const placesByImportKey = new Map(existingPlaces.map((place) => [place.import_key, place]));
+  const existingPlaceIds = existingPlaces.map((place) => place.id);
+  const [existingListPlaces, existingRatings, placesArchivedMissing] = await Promise.all([
+    getImportPlanListPlaces({
+      listIds: existingLists.map((list) => list.id),
+      placeIds: existingPlaceIds,
+    }),
+    getImportPlanRatings(existingPlaceIds),
+    input.archiveMissing ? countImportPlanArchiveMissing({ teamId: team.id, importedKeys: importKeys }) : 0,
+  ]);
+  const listPlaceKeys = new Set(existingListPlaces.map((row) => `${row.list_id}:${row.place_id}`));
+  const ratingKeys = new Set(existingRatings.map((rating) => `${rating.place_id}:${rating.rater_label ?? ""}`));
+  const summary = {
+    listsCreated: 0,
+    listsUpdated: 0,
+    placesCreated: 0,
+    placesUpdated: 0,
+    listLinksCreated: 0,
+    listLinksUpdated: 0,
+    ratingsCreated: 0,
+    ratingsUpdated: 0,
+    ratingsSkipped: 0,
+    placesArchivedMissing,
+  };
+  let importedRatings = 0;
+
+  for (const list of DEFAULT_IMPORT_LISTS) {
+    if (listsBySlug.has(list.slug)) {
+      summary.listsUpdated += 1;
+    } else {
+      summary.listsCreated += 1;
+    }
+  }
+
+  for (const place of places) {
+    const existingPlace = placesByImportKey.get(place.id);
+    const list = listsBySlug.get(place.listSlug);
+
+    if (existingPlace) {
+      summary.placesUpdated += 1;
+    } else {
+      summary.placesCreated += 1;
+    }
+
+    if (!existingPlace || !list || !listPlaceKeys.has(`${list.id}:${existingPlace.id}`)) {
+      summary.listLinksCreated += 1;
+    } else {
+      summary.listLinksUpdated += 1;
+    }
+
+    for (const [raterLabel, key] of IMPORTED_RATERS) {
+      const score = place.memberScores?.[key] ?? 0;
+
+      if (!score || score <= 0) {
+        summary.ratingsSkipped += 1;
+        continue;
+      }
+
+      importedRatings += 1;
+
+      if (!existingPlace || !ratingKeys.has(`${existingPlace.id}:${raterLabel}`)) {
+        summary.ratingsCreated += 1;
+      } else {
+        summary.ratingsUpdated += 1;
+      }
+    }
+  }
+
+  return {
+    dryRun: true,
+    sourceName: input.sourceName?.trim() || "seed-places.json",
+    teamSlug: team.slug ?? "",
+    archiveMissing: input.archiveMissing ?? false,
+    summary,
+    counts: {
+      seedPlaces: places.length,
+      seedLists: DEFAULT_IMPORT_LISTS.length,
+      importedRatings,
+    },
   };
 }
 
