@@ -173,7 +173,45 @@ async function main() {
   );
   assert((importBatches.body?.importBatches?.length ?? 0) > 0, "Import batches should include rows", importBatches);
 
+  const importBatchId = importBatches.body.importBatches[0].id;
+  const importBatch = await expectStatus(
+    "owner import batch detail",
+    `/api/admin/import-batches/${encodeURIComponent(importBatchId)}?previewLimit=5`,
+    owner.accessToken,
+    200,
+  );
+  assert(importBatch.body?.importBatch?.id === importBatchId, "Import batch detail should return requested batch", importBatch);
+  assert(
+    Array.isArray(importBatch.body?.importBatch?.preview?.places),
+    "Import batch detail should include place preview",
+    importBatch,
+  );
+  const rollbackPlan = await expectStatus(
+    "owner import batch rollback plan",
+    `/api/admin/import-batches/${encodeURIComponent(importBatchId)}/rollback-plan`,
+    owner.accessToken,
+    200,
+  );
+  assert(rollbackPlan.body?.rollbackPlan?.dryRun === true, "Rollback plan should be read-only dry-run", rollbackPlan);
+  assert(
+    rollbackPlan.body?.rollbackPlan?.impact?.placesToArchive === importBatch.body.importBatch.counts.places,
+    "Rollback plan should mirror import batch place count",
+    rollbackPlan,
+  );
+
   await expectStatus("member import batches forbidden", "/api/admin/import-batches", member.accessToken, 403);
+  await expectStatus(
+    "member import batch detail forbidden",
+    `/api/admin/import-batches/${encodeURIComponent(importBatchId)}`,
+    member.accessToken,
+    403,
+  );
+  await expectStatus(
+    "member import batch rollback plan forbidden",
+    `/api/admin/import-batches/${encodeURIComponent(importBatchId)}/rollback-plan`,
+    member.accessToken,
+    403,
+  );
   await expectStatus("external admin summary forbidden", "/api/admin/summary", external.accessToken, 403);
   await expectStatus("external admin lists forbidden", "/api/admin/lists", external.accessToken, 403);
   await expectStatus("missing token members rejected", "/api/admin/members", null, 401);
@@ -195,6 +233,8 @@ async function main() {
           "admin place ratings",
           "admin members",
           "import batches",
+          "import batch detail",
+          "import batch rollback plan",
           "member/external/no-token permission guards",
         ],
       },
