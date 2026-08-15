@@ -4,6 +4,7 @@ import { getProfileByUsername } from "@/server/auth/repository";
 import { isValidUsername, normalizeUsername } from "@/server/auth/username";
 import {
   canManageTeamMembers,
+  canReadTeamContent,
   deleteTeamMember,
   getTeamBySlug,
   getTeamMembership,
@@ -79,6 +80,23 @@ async function getWritableTeamForActor(actorUserId: string, teamSlug?: string) {
   return team;
 }
 
+async function getReadableTeamForActor(actorUserId: string, teamSlug?: string) {
+  const slug = teamSlug?.trim() || "what-to-eat";
+  const team = await getTeamBySlug(slug);
+
+  if (!team) {
+    throw new MemberWriteError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(team.id, actorUserId);
+
+  if (!canReadTeamContent(membership?.role)) {
+    throw new MemberWriteError("Current user cannot read team members.", "not_allowed");
+  }
+
+  return team;
+}
+
 function toAdminTeamMember(member: Awaited<ReturnType<typeof getTeamMembers>>[number]): AdminTeamMember {
   return {
     username: member.profile.username,
@@ -107,7 +125,7 @@ async function getTargetProfile(username: string) {
 }
 
 export async function getAdminMembers(input: GetAdminMembersInput): Promise<AdminTeamMember[]> {
-  const team = await getWritableTeamForActor(input.actorUserId, input.teamSlug);
+  const team = await getReadableTeamForActor(input.actorUserId, input.teamSlug);
   const members = await getTeamMembers(team.id);
 
   return members.map(toAdminTeamMember);
