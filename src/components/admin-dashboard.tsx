@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Database,
   Eye,
+  GripVertical,
   ImagePlus,
   ListChecks,
   LockKeyhole,
@@ -22,7 +23,8 @@ import {
   UserRoundCheck,
   UsersRound,
 } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+import type { DragEvent, FormEvent } from "react";
 import { getBrowserSupabase } from "@/lib/supabase";
 
 type AdminRole = "owner" | "member" | "viewer";
@@ -272,6 +274,8 @@ function AdminListPermissions({
   const [orderState, setOrderState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
   const [orderMessage, setOrderMessage] = useState("");
+  const [draggedPlaceId, setDraggedPlaceId] = useState<string | null>(null);
+  const [dragOverPlaceId, setDragOverPlaceId] = useState<string | null>(null);
 
   async function loadLists() {
     setLoadState("loading");
@@ -372,6 +376,71 @@ function AdminListPermissions({
     });
     setOrderState("idle");
     setOrderMessage("排序已调整，保存后生效。");
+  }
+
+  function moveListPlaceTo(draggedId: string, targetId: string) {
+    if (!canOrder || draggedId === targetId) {
+      return;
+    }
+
+    setListPlaces((current) => {
+      const fromIndex = current.findIndex((place) => place.id === draggedId);
+      const toIndex = current.findIndex((place) => place.id === targetId);
+
+      if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) {
+        return current;
+      }
+
+      const next = [...current];
+      const [draggedPlace] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, draggedPlace);
+      return next.map((place, nextIndex) => ({ ...place, sortOrder: nextIndex }));
+    });
+    setOrderState("idle");
+    setOrderMessage("排序已调整，保存后生效。");
+  }
+
+  function handleOrderDragStart(event: DragEvent<HTMLDivElement>, placeId: string) {
+    if (!canOrder || isBusy) {
+      event.preventDefault();
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", placeId);
+    setDraggedPlaceId(placeId);
+    setDragOverPlaceId(placeId);
+  }
+
+  function handleOrderDragOver(event: DragEvent<HTMLDivElement>, placeId: string) {
+    if (!canOrder || isBusy || !draggedPlaceId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    setDragOverPlaceId(placeId);
+  }
+
+  function handleOrderDrop(event: DragEvent<HTMLDivElement>, targetId: string) {
+    if (!canOrder || isBusy) {
+      return;
+    }
+
+    event.preventDefault();
+    const draggedId = event.dataTransfer.getData("text/plain") || draggedPlaceId;
+
+    if (draggedId) {
+      moveListPlaceTo(draggedId, targetId);
+    }
+
+    setDraggedPlaceId(null);
+    setDragOverPlaceId(null);
+  }
+
+  function handleOrderDragEnd() {
+    setDraggedPlaceId(null);
+    setDragOverPlaceId(null);
   }
 
   async function handleSaveListPlaceOrder() {
@@ -719,8 +788,23 @@ function AdminListPermissions({
             ) : (
               <div className="admin-list-order-rows" role="list">
                 {listPlaces.map((place, index) => (
-                  <div className="admin-list-order-row" key={place.id} role="listitem">
+                  <div
+                    aria-grabbed={draggedPlaceId === place.id}
+                    className={`admin-list-order-row${draggedPlaceId === place.id ? " dragging" : ""}${
+                      dragOverPlaceId === place.id && draggedPlaceId !== place.id ? " drag-over" : ""
+                    }`}
+                    draggable={canOrder && !isBusy}
+                    key={place.id}
+                    onDragEnd={handleOrderDragEnd}
+                    onDragOver={(event) => handleOrderDragOver(event, place.id)}
+                    onDragStart={(event) => handleOrderDragStart(event, place.id)}
+                    onDrop={(event) => handleOrderDrop(event, place.id)}
+                    role="listitem"
+                  >
                     <span className="admin-list-order-index">{index + 1}</span>
+                    <span aria-hidden="true" className="admin-list-order-grip">
+                      <GripVertical size={16} />
+                    </span>
                     <span className="admin-list-order-main">
                       <strong>{place.name}</strong>
                       <small>{[place.category, place.region].filter(Boolean).join(" · ") || "未记录分类地区"}</small>
@@ -762,7 +846,8 @@ function AdminListPermissions({
                     : "admin-inline-message"
               }
             >
-              {orderMessage || (canOrder ? "可用上移/下移调整公开页面中的店铺顺序。" : "当前角色只能查看榜单排序。")}
+              {orderMessage ||
+                (canOrder ? "可拖动店铺行，或用上移/下移调整公开页面中的店铺顺序。" : "当前角色只能查看榜单排序。")}
             </p>
           </div>
         </div>

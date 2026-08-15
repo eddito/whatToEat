@@ -134,6 +134,23 @@ try {
 
     const orderPanels = await page.locator(".admin-list-order-box").count();
     assertCheck("/admin order panel", orderPanels > 0, `count=${orderPanels}`);
+
+    await page.waitForSelector(".admin-list-order-row", { timeout: 20000 });
+    const orderRows = page.locator(".admin-list-order-row");
+    const orderRowCount = await orderRows.count();
+    assertCheck("/admin order rows", orderRowCount > 1, `count=${orderRowCount}`);
+
+    if (orderRowCount > 1) {
+      const firstPlaceBeforeDrag = await orderRows.nth(0).locator(".admin-list-order-main strong").innerText();
+      await orderRows.nth(0).dragTo(orderRows.nth(1));
+      await page.waitForTimeout(300);
+      const firstPlaceAfterDrag = await orderRows.nth(0).locator(".admin-list-order-main strong").innerText();
+      assertCheck(
+        "/admin order drag",
+        firstPlaceAfterDrag !== firstPlaceBeforeDrag,
+        `before=${JSON.stringify(firstPlaceBeforeDrag)} after=${JSON.stringify(firstPlaceAfterDrag)}`,
+      );
+    }
   } else {
     console.log("SKIP /admin login SMOKE_AUTH_USERNAME or SMOKE_AUTH_PASSWORD is missing.");
   }
