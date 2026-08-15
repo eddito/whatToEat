@@ -142,6 +142,12 @@ async function main() {
 
   const members = await expectStatus("owner admin members", "/api/admin/members", owner.accessToken, 200);
   assert(members.body?.members?.some((item) => item.username === OWNER_USERNAME), "Members should include owner", members);
+  const memberMembers = await expectStatus("member admin members", "/api/admin/members", member.accessToken, 200);
+  assert(
+    memberMembers.body?.members?.some((item) => item.username === MEMBER_USERNAME),
+    "Member should be able to read team members",
+    memberMembers,
+  );
 
   const importPlan = await expectStatus("owner import plan", "/api/admin/import-plan?archiveMissing=true", owner.accessToken, 200);
   assert(importPlan.body?.importPlan?.dryRun === true, "Import plan should be dry-run", importPlan);
@@ -229,6 +235,7 @@ async function main() {
           "admin place detail",
           "admin place ratings",
           "admin members",
+          "member admin members read",
           "import plan",
           "import batches",
           "import batch detail",

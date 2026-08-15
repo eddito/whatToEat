@@ -112,11 +112,11 @@ type PublicPlacePhotoFields = {
 
 | 函数 | 说明 |
 | --- | --- |
-| `getAdminMembers(input)` | owner 读取小队成员列表 |
+| `getAdminMembers(input)` | owner/member/viewer 读取小队成员列表 |
 | `upsertAdminMember(input)` | owner 添加成员或修改成员角色 |
 | `removeAdminMember(input)` | owner 移除成员 |
 
-权限：调用用户必须是目标小队的 `owner`。为避免误操作，owner 不能移除自己，也不能把自己的角色改成非 owner。
+权限：成员列表读取允许目标小队 `owner`、`member`、`viewer`；成员添加、角色调整和移除必须是目标小队 `owner`。为避免误操作，owner 不能移除自己，也不能把自己的角色改成非 owner。
 
 ### 导入批次
 
@@ -679,7 +679,7 @@ type UpsertAdminListResponse = {
 
 路径：`src/app/api/admin/members/route.ts`
 
-用途：owner 读取小队成员列表。
+用途：owner/member/viewer 读取小队成员列表。
 
 认证：
 ```txt
@@ -711,7 +711,7 @@ type GetAdminMembersResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
