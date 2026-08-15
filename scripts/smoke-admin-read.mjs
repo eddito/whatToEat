@@ -106,6 +106,20 @@ async function main() {
   assert((listPlaces.body?.places?.length ?? 0) > 0, "Admin list places should include places", listPlaces);
 
   const firstPlaceId = listPlaces.body.places[0].id;
+  const reorder = await requestJson("/api/admin/lists/red-list/places/order", {
+    method: "POST",
+    headers: authHeaders(member.accessToken),
+    body: JSON.stringify({
+      placeIds: listPlaces.body.places.map((place) => place.id),
+    }),
+  });
+  assert(reorder.status === 200, "Member should be able to save current list place order", reorder);
+  assert(
+    reorder.body?.result?.updated === listPlaces.body.places.length,
+    "List place reorder should report updated row count",
+    reorder,
+  );
+
   const adminPlaces = await expectStatus(
     "owner admin places",
     `/api/admin/places?query=${encodeURIComponent(firstPlaceId)}&limit=5`,
@@ -155,6 +169,7 @@ async function main() {
           "admin lists",
           "admin places",
           "admin list places",
+          "admin list place reorder",
           "admin place detail",
           "admin place ratings",
           "admin members",

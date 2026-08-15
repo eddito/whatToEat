@@ -1,7 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import {
+  ArrowDown,
+  ArrowUp,
   Database,
   Eye,
   ImagePlus,
@@ -107,6 +110,21 @@ type AdminListsResponse = {
   lists?: AdminList[];
   canManage?: boolean;
   error?: string;
+};
+
+type AdminListPlace = {
+  id: string;
+  name: string;
+  category: string;
+  region: string;
+  sortOrder: number;
+  archivedAt: string | null;
+};
+
+type AdminListPlacesResponse = {
+  places?: AdminListPlace[];
+  error?: string;
+  message?: string;
 };
 
 type AdminPlaceListAssignment = {
@@ -227,9 +245,18 @@ function toListForm(list: AdminList): ListFormState {
   };
 }
 
-function AdminListPermissions({ token, canManage }: { token: string; canManage: boolean }) {
+function AdminListPermissions({
+  token,
+  canManage,
+  canOrder,
+}: {
+  token: string;
+  canManage: boolean;
+  canOrder: boolean;
+}) {
   const [lists, setLists] = useState<AdminList[]>([]);
   const [selectedList, setSelectedList] = useState<AdminList | null>(null);
+  const [listPlaces, setListPlaces] = useState<AdminListPlace[]>([]);
   const [form, setForm] = useState<ListFormState>({ name: "", description: "", visibility: "public_rate" });
   const [createForm, setCreateForm] = useState<CreateListFormState>({
     slug: "",
@@ -241,7 +268,10 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
   const [saveState, setSaveState] = useState<RequestState>("idle");
   const [createState, setCreateState] = useState<RequestState>("idle");
   const [deleteState, setDeleteState] = useState<RequestState>("idle");
+  const [listPlacesState, setListPlacesState] = useState<RequestState>("idle");
+  const [orderState, setOrderState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
+  const [orderMessage, setOrderMessage] = useState("");
 
   async function loadLists() {
     setLoadState("loading");
@@ -266,6 +296,7 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
 
     if (nextLists.length === 0) {
       setSelectedList(null);
+      setListPlaces([]);
       setForm({ name: "", description: "", visibility: "public_rate" });
       setMessage("暂无榜单。");
       return;
@@ -283,12 +314,94 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
+  async function loadListPlaces(list: AdminList) {
+    setListPlacesState("loading");
+    setOrderMessage("");
+
+    const response = await fetch(`/api/admin/lists/${encodeURIComponent(list.slug)}/places`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json().catch(() => null)) as AdminListPlacesResponse | null;
+
+    if (!response.ok) {
+      setListPlaces([]);
+      setListPlacesState("error");
+      setOrderMessage(result?.message ?? result?.error ?? "榜单店铺加载失败。");
+      return;
+    }
+
+    setListPlaces((result?.places ?? []).sort((a, b) => a.sortOrder - b.sortOrder));
+    setListPlacesState("success");
+  }
+
+  useEffect(() => {
+    if (!selectedList) {
+      setListPlaces([]);
+      return;
+    }
+
+    void loadListPlaces(selectedList);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedList?.slug, token]);
+
   function selectList(list: AdminList) {
     setSelectedList(list);
     setForm(toListForm(list));
     setSaveState("idle");
     setDeleteState("idle");
+    setOrderState("idle");
     setMessage("");
+    setOrderMessage("");
+  }
+
+  function moveListPlace(index: number, direction: -1 | 1) {
+    const targetIndex = index + direction;
+
+    if (targetIndex < 0 || targetIndex >= listPlaces.length) {
+      return;
+    }
+
+    setListPlaces((current) => {
+      const next = [...current];
+      const currentPlace = next[index];
+      next[index] = next[targetIndex];
+      next[targetIndex] = currentPlace;
+      return next.map((place, nextIndex) => ({ ...place, sortOrder: nextIndex }));
+    });
+    setOrderState("idle");
+    setOrderMessage("排序已调整，保存后生效。");
+  }
+
+  async function handleSaveListPlaceOrder() {
+    if (!selectedList || !canOrder || listPlaces.length === 0) {
+      return;
+    }
+
+    setOrderState("loading");
+    setOrderMessage("");
+
+    const response = await fetch(`/api/admin/lists/${encodeURIComponent(selectedList.slug)}/places/order`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        placeIds: listPlaces.map((place) => place.id),
+      }),
+    });
+    const result = (await response.json().catch(() => null)) as { error?: string; message?: string } | null;
+
+    if (!response.ok) {
+      setOrderState("error");
+      setOrderMessage(result?.message ?? result?.error ?? "榜单排序保存失败。");
+      return;
+    }
+
+    setOrderState("success");
+    setOrderMessage("榜单排序已保存。");
   }
 
   async function handleCreate(event: FormEvent<HTMLFormElement>) {
@@ -400,7 +513,12 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
     setMessage(result?.message ?? "榜单已删除。");
   }
 
-  const isBusy = loadState === "loading" || saveState === "loading" || createState === "loading" || deleteState === "loading";
+  const isBusy =
+    loadState === "loading" ||
+    saveState === "loading" ||
+    createState === "loading" ||
+    deleteState === "loading" ||
+    orderState === "loading";
 
   return (
     <section className="container section">
@@ -576,6 +694,77 @@ function AdminListPermissions({ token, canManage }: { token: string; canManage: 
               </button>
             </div>
           </form>
+
+          <div className="admin-list-order-box">
+            <div className="admin-place-lists-head">
+              <div>
+                <strong>榜单排序</strong>
+                <p>{selectedList ? `${selectedList.name} · ${listPlaces.length} 家店铺` : "请选择榜单"}</p>
+              </div>
+              <button
+                className="button secondary"
+                disabled={!selectedList || !canOrder || isBusy || listPlaces.length <= 1}
+                onClick={handleSaveListPlaceOrder}
+                type="button"
+              >
+                <Save aria-hidden="true" size={16} />
+                {orderState === "loading" ? "保存中..." : "保存排序"}
+              </button>
+            </div>
+
+            {listPlacesState === "loading" ? (
+              <p className="section-note">正在加载榜单店铺...</p>
+            ) : listPlaces.length === 0 ? (
+              <p className="section-note">当前榜单暂无店铺。</p>
+            ) : (
+              <div className="admin-list-order-rows" role="list">
+                {listPlaces.map((place, index) => (
+                  <div className="admin-list-order-row" key={place.id} role="listitem">
+                    <span className="admin-list-order-index">{index + 1}</span>
+                    <span className="admin-list-order-main">
+                      <strong>{place.name}</strong>
+                      <small>{[place.category, place.region].filter(Boolean).join(" · ") || "未记录分类地区"}</small>
+                    </span>
+                    <span className="admin-list-order-actions">
+                      <button
+                        aria-label={`${place.name} 上移`}
+                        className="admin-icon-button"
+                        disabled={!canOrder || isBusy || index === 0}
+                        onClick={() => moveListPlace(index, -1)}
+                        title="上移"
+                        type="button"
+                      >
+                        <ArrowUp aria-hidden="true" size={16} />
+                      </button>
+                      <button
+                        aria-label={`${place.name} 下移`}
+                        className="admin-icon-button"
+                        disabled={!canOrder || isBusy || index === listPlaces.length - 1}
+                        onClick={() => moveListPlace(index, 1)}
+                        title="下移"
+                        type="button"
+                      >
+                        <ArrowDown aria-hidden="true" size={16} />
+                      </button>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p
+              aria-live="polite"
+              className={
+                orderState === "error" || listPlacesState === "error"
+                  ? "admin-inline-message error"
+                  : orderState === "success"
+                    ? "admin-inline-message success"
+                    : "admin-inline-message"
+              }
+            >
+              {orderMessage || (canOrder ? "可用上移/下移调整公开页面中的店铺顺序。" : "当前角色只能查看榜单排序。")}
+            </p>
+          </div>
         </div>
       </div>
     </section>
@@ -1033,7 +1222,13 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
 
               <div className="admin-photo-uploader">
                 {selectedPlace?.coverPhotoUrl ? (
-                  <img className="admin-photo-preview" src={selectedPlace.coverPhotoUrl} alt={`${selectedPlace.name}封面`} />
+                  <Image
+                    className="admin-photo-preview"
+                    src={selectedPlace.coverPhotoUrl}
+                    alt={`${selectedPlace.name}封面`}
+                    width={480}
+                    height={300}
+                  />
                 ) : (
                   <div className="admin-photo-empty">
                     <ImagePlus aria-hidden="true" size={18} />
@@ -1552,7 +1747,13 @@ export function AdminDashboard() {
         </div>
       </section>
 
-      {token ? <AdminListPermissions canManage={summary.currentUser.role === "owner"} token={token} /> : null}
+      {token ? (
+        <AdminListPermissions
+          canManage={summary.currentUser.role === "owner"}
+          canOrder={summary.currentUser.role !== "viewer"}
+          token={token}
+        />
+      ) : null}
 
       {token ? <AdminPlaceMaintenance canEdit={summary.currentUser.role !== "viewer"} token={token} /> : null}
 

@@ -6,14 +6,14 @@ import { normalizeRegion, splitCategory } from "@/lib/display";
 import { getListPageData } from "@/lib/public-data";
 
 type ListPageProps = {
-  params: {
+  params: Promise<{
     slug: string;
-  };
-  searchParams?: {
+  }>;
+  searchParams?: Promise<{
     q?: string | string[];
     region?: string | string[];
     category?: string | string[];
-  };
+  }>;
 };
 
 function getSearchValue(value: string | string[] | undefined) {
@@ -38,7 +38,8 @@ function getRankingScore(place: { mixedScore?: number; teamScore: number }) {
 }
 
 export default async function ListPage({ params, searchParams }: ListPageProps) {
-  const pageData = await getListPageData(params.slug);
+  const [{ slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const pageData = await getListPageData(slug);
 
   if (!pageData) {
     notFound();
@@ -50,9 +51,9 @@ export default async function ListPage({ params, searchParams }: ListPageProps) 
   );
   const regions = Array.from(new Set(listPlaces.map((place) => normalizeRegion(place.region)).filter(Boolean))).sort();
   const categories = Array.from(new Set(listPlaces.flatMap((place) => splitCategory(place.category)).filter(Boolean))).sort();
-  const keyword = getSearchValue(searchParams?.q).trim();
-  const selectedRegion = getSearchValue(searchParams?.region);
-  const selectedCategory = getSearchValue(searchParams?.category);
+  const keyword = getSearchValue(resolvedSearchParams?.q).trim();
+  const selectedRegion = getSearchValue(resolvedSearchParams?.region);
+  const selectedCategory = getSearchValue(resolvedSearchParams?.category);
   const normalizedKeyword = keyword.toLowerCase();
   const filteredPlaces = listPlaces.filter((place) => {
     const matchesRegion = selectedRegion ? normalizeRegion(place.region) === selectedRegion : true;

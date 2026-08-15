@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ChevronRight, MapPin } from "lucide-react";
 import { normalizeCategory, normalizeRegion } from "@/lib/display";
 import type { Place } from "@/lib/types";
@@ -25,7 +26,13 @@ export function PlaceCard({ place }: { place: Place }) {
   return (
     <article className="place-card">
       {place.coverPhotoUrl ? (
-        <img className="place-card-photo" src={place.coverPhotoUrl} alt={`${place.name}封面`} loading="lazy" />
+        <Image
+          className="place-card-photo"
+          src={place.coverPhotoUrl}
+          alt={`${place.name}封面`}
+          width={640}
+          height={360}
+        />
       ) : null}
 
       <div className="place-card-top">

@@ -2,17 +2,22 @@
   "name": "what-to-eat",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.21.0",
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:safe": "powershell -ExecutionPolicy Bypass -File scripts/start-dev.ps1",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:seed": "node scripts/seed-supabase.mjs",
     "db:seed:dry-run": "node scripts/seed-supabase.mjs --dry-run",
     "db:rollback-import": "node scripts/seed-supabase.mjs --rollback-batch",
     "auth:create-user": "node scripts/create-auth-user.mjs",
     "smoke:public": "node scripts/smoke-public-pages.mjs",
+    "smoke:browser": "node scripts/smoke-browser.mjs",
     "smoke:supabase": "node scripts/smoke-supabase-public.mjs",
     "smoke:auth": "node scripts/smoke-authenticated.mjs",
     "smoke:change-password": "node scripts/smoke-change-password.mjs",
@@ -25,17 +30,18 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.50.0",
     "lucide-react": "^0.468.0",
-    "next": "^14.2.23",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "next": "^16.2.12",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.2",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "eslint": "^9.17.0",
-    "eslint-config-next": "^14.2.23",
+    "eslint-config-next": "^16.2.12",
+    "playwright-core": "1.62.1",
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.2"

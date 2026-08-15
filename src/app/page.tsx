@@ -30,20 +30,20 @@ export default async function HomePage() {
           </div>
         </div>
 
-        <div className="stat-grid home-stats">
-          <div className="stat-card">
+        <div className="home-stat-strip" aria-label="探店数据概览">
+          <div>
             <span className="stat-value">{places.length}</span>
             <span className="stat-label">店铺总数</span>
           </div>
-          <div className="stat-card">
+          <div>
             <span className="stat-value">{visitedCount}</span>
             <span className="stat-label">已探店</span>
           </div>
-          <div className="stat-card">
+          <div>
             <span className="stat-value">{scoredCount}</span>
             <span className="stat-label">已评分</span>
           </div>
-          <div className="stat-card">
+          <div>
             <span className="stat-value">{regions.length}</span>
             <span className="stat-label">覆盖地区</span>
           </div>

@@ -1,17 +1,19 @@
 import Link from "next/link";
+import Image from "next/image";
 import { MapPinned, Star } from "lucide-react";
 import { notFound } from "next/navigation";
 import { getPlacePageData } from "@/lib/public-data";
 import { RatingForm } from "@/components/rating-form";
 
 type PlacePageProps = {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 };
 
 export default async function PlacePage({ params }: PlacePageProps) {
-  const pageData = await getPlacePageData(params.id);
+  const { id } = await params;
+  const pageData = await getPlacePageData(id);
 
   if (!pageData) {
     notFound();
@@ -30,7 +32,14 @@ export default async function PlacePage({ params }: PlacePageProps) {
       <section className="container detail-layout">
         <div className="detail-main">
           {place.coverPhotoUrl ? (
-            <img className="place-detail-photo" src={place.coverPhotoUrl} alt={`${place.name}封面`} />
+            <Image
+              className="place-detail-photo"
+              src={place.coverPhotoUrl}
+              alt={`${place.name}封面`}
+              width={960}
+              height={540}
+              priority
+            />
           ) : null}
 
           <article className="info-card">

@@ -24,7 +24,8 @@
 - Supabase Project URL 已提供：`https://lickxydbtkyijgjmpnqo.supabase.co`。
 - 暂时使用 Vercel 默认免费域名；正式域名后置。
 - 本地预览地址：`http://127.0.0.1:3000`
-- 当前构建状态：Next.js 生产构建通过。
+- 当前构建状态：Next.js 16 生产构建通过。
+- 运行时要求：Node.js `>=20.9.0`，包管理器使用 `pnpm`。
 
 ## 官方入口
 
@@ -91,8 +92,9 @@
 
 - 连接 GitHub 仓库。
 - 设置 Framework Preset 为 Next.js。
-- 配置 build command：`npm run build`。
-- 配置 install command：`npm install` 或项目锁文件对应命令。
+- 配置 build command：`pnpm build`。
+- 配置 install command：`pnpm install --frozen-lockfile`。
+- 配置 Node.js version：`20.x` 或更高，至少 `20.9.0`。
 - 配置环境变量。
 - 启用 preview deployments。
 - 绑定域名，如有。

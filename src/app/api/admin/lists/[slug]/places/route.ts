@@ -15,9 +15,10 @@ export async function GET(
   {
     params,
   }: {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
   },
 ) {
+  const { slug } = await params;
   const url = new URL(request.url);
   const parsed = adminListPlacesQuerySchema.safeParse(Object.fromEntries(url.searchParams));
 
@@ -36,7 +37,7 @@ export async function GET(
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const places = await getAdminPlacesByList({
       userId: user.id,
-      slug: params.slug,
+      slug,
       ...parsed.data,
     });
 

@@ -11,12 +11,16 @@
 
 ## Local Setup
 
+Next.js 16 requires Node.js `>=20.9.0`. Use `pnpm` for this project.
+
 ```bash
-npm install
-npm run dev
+pnpm install
+pnpm dev:safe
 ```
 
 复制 `.env.example` 为 `.env.local`，填入 Supabase 和高德地图环境变量。
+
+如果启动时提示 Node 版本过低，请先切换到 Node.js 20.9.0 或更高版本，再重新运行 `pnpm dev:safe`。
 
 `SUPABASE_SECRET_KEY` 只能用于服务端环境变量，不能提交到 GitHub。
 

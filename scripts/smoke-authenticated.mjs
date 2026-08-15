@@ -241,6 +241,34 @@ const lists = await fetchJson("/api/admin/lists", {
     `count=${lists.json?.lists?.length ?? 0}`,
   );
 
+  const firstAdminList = lists.json?.lists?.[0];
+
+  if (firstAdminList?.slug) {
+    const listPlaces = await fetchJson(`/api/admin/lists/${encodeURIComponent(firstAdminList.slug)}/places`, {
+      headers: authHeaders,
+    });
+    assertCheck("admin list places status", listPlaces.response.status === 200, `status=${listPlaces.response.status}`);
+    assertCheck(
+      "admin list places data",
+      Array.isArray(listPlaces.json?.places),
+      `count=${listPlaces.json?.places?.length ?? 0}`,
+    );
+
+    if ((listPlaces.json?.places?.length ?? 0) > 0) {
+      const reorder = await fetchJson(`/api/admin/lists/${encodeURIComponent(firstAdminList.slug)}/places/order`, {
+        method: "POST",
+        headers: {
+          ...authHeaders,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          placeIds: listPlaces.json.places.map((place) => place.id),
+        }),
+      });
+      assertCheck("admin list place order save", reorder.response.status === 200, `status=${reorder.response.status}`);
+    }
+  }
+
   if (lists.json?.canManage === false && lists.json?.lists?.[0]) {
     const firstList = lists.json.lists[0];
     const forbiddenPatch = await fetchJson("/api/admin/lists", {

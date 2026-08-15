@@ -24,9 +24,10 @@ export async function POST(
   {
     params,
   }: {
-    params: { slug: string };
+    params: Promise<{ slug: string }>;
   },
 ) {
+  const { slug } = await params;
   let body: unknown;
 
   try {
@@ -59,7 +60,7 @@ export async function POST(
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const result = await reorderAdminListPlaces({
       userId: user.id,
-      slug: params.slug,
+      slug,
       ...parsed.data,
     });
 

@@ -7,14 +7,16 @@ export async function GET(
   {
     params,
   }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
   },
 ) {
+  const { id } = await params;
+
   try {
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const place = await getAdminPlace({
       userId: user.id,
-      id: params.id,
+      id,
     });
 
     return NextResponse.json({

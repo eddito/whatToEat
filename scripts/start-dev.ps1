@@ -7,9 +7,27 @@ $ErrorActionPreference = "Stop"
 
 $workspace = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $selfPid = $PID
+$minimumNodeMajor = 20
+$minimumNodeMinor = 9
 
 Write-Host "Workspace: $workspace"
 Write-Host "Port: $Port"
+
+$node = Get-Command node -ErrorAction SilentlyContinue
+if (-not $node) {
+  throw "Node.js was not found in PATH. Install Node.js >= $minimumNodeMajor.$minimumNodeMinor.0 before starting Next.js."
+}
+
+$nodeVersionText = (& $node.Source -p "process.versions.node").Trim()
+$nodeVersionParts = $nodeVersionText.Split(".")
+$nodeMajor = [int]$nodeVersionParts[0]
+$nodeMinor = [int]$nodeVersionParts[1]
+
+if ($nodeMajor -lt $minimumNodeMajor -or ($nodeMajor -eq $minimumNodeMajor -and $nodeMinor -lt $minimumNodeMinor)) {
+  throw "Node.js $nodeVersionText is too old for Next.js 16. Use Node.js >= $minimumNodeMajor.$minimumNodeMinor.0, then run pnpm dev:safe again."
+}
+
+Write-Host "Node.js: $nodeVersionText"
 
 $projectNextProcesses = Get-CimInstance Win32_Process |
   Where-Object {
