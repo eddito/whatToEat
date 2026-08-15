@@ -12,6 +12,7 @@ import {
   ListChecks,
   LockKeyhole,
   Pencil,
+  RefreshCw,
   Save,
   Search,
   ShieldCheck,
@@ -168,6 +169,74 @@ type AdminPlaceListsResponse = {
   message?: string;
 };
 
+type AdminImportPlan = {
+  dryRun: true;
+  sourceName: string;
+  teamSlug: string;
+  archiveMissing: boolean;
+  summary: {
+    listsCreated: number;
+    listsUpdated: number;
+    placesCreated: number;
+    placesUpdated: number;
+    listLinksCreated: number;
+    listLinksUpdated: number;
+    ratingsCreated: number;
+    ratingsUpdated: number;
+    ratingsSkipped: number;
+    placesArchivedMissing: number;
+  };
+  counts: {
+    seedPlaces: number;
+    seedLists: number;
+    importedRatings: number;
+  };
+};
+
+type AdminImportBatch = {
+  id: string;
+  sourceName: string;
+  operation: string;
+  status: string;
+  counts: {
+    places: number;
+    listPlaces: number;
+    ratings: number;
+  };
+  createdAt: string;
+  finishedAt: string | null;
+  rolledBackAt: string | null;
+};
+
+type AdminImportRollbackPlan = {
+  batch: AdminImportBatch;
+  dryRun: true;
+  impact: {
+    ratingsToDelete: number;
+    listPlacesToDelete: number;
+    placesToArchive: number;
+  };
+  warnings: string[];
+};
+
+type AdminImportPlanResponse = {
+  importPlan?: AdminImportPlan;
+  error?: string;
+  message?: string;
+};
+
+type AdminImportBatchesResponse = {
+  importBatches?: AdminImportBatch[];
+  error?: string;
+  message?: string;
+};
+
+type AdminImportRollbackPlanResponse = {
+  rollbackPlan?: AdminImportRollbackPlan;
+  error?: string;
+  message?: string;
+};
+
 type ListFormState = {
   name: string;
   description: string;
@@ -207,6 +276,14 @@ const visibilityNotes: Record<ListVisibility, string> = {
   private: "仅小队成员可见。",
   public_view: "外部访客可查看，登录外部用户不可评分。",
   public_rate: "外部访客可查看，登录外部用户可评分。",
+};
+
+const importStatusLabels: Record<string, string> = {
+  completed: "已完成",
+  failed: "失败",
+  rolled_back: "已回滚",
+  pending: "等待中",
+  running: "运行中",
 };
 
 const emptyPlaceForm: PlaceFormState = {
@@ -1756,6 +1833,192 @@ function AdminMemberManagement({ token, canManage }: { token: string; canManage:
   );
 }
 
+function AdminImportOperations({ canManage, token }: { canManage: boolean; token: string }) {
+  const [plan, setPlan] = useState<AdminImportPlan | null>(null);
+  const [batches, setBatches] = useState<AdminImportBatch[]>([]);
+  const [rollbackPlan, setRollbackPlan] = useState<AdminImportRollbackPlan | null>(null);
+  const [loadState, setLoadState] = useState<RequestState>("idle");
+  const [rollbackState, setRollbackState] = useState<RequestState>("idle");
+  const [message, setMessage] = useState("");
+
+  async function loadImportData() {
+    if (!canManage) {
+      return;
+    }
+
+    setLoadState("loading");
+    setMessage("");
+
+    const headers = {
+      authorization: `Bearer ${token}`,
+    };
+    const [planResponse, batchesResponse] = await Promise.all([
+      fetch("/api/admin/import-plan?archiveMissing=true", { headers }),
+      fetch("/api/admin/import-batches?limit=5", { headers }),
+    ]);
+    const planResult = (await planResponse.json().catch(() => null)) as AdminImportPlanResponse | null;
+    const batchesResult = (await batchesResponse.json().catch(() => null)) as AdminImportBatchesResponse | null;
+
+    if (!planResponse.ok || !batchesResponse.ok) {
+      setLoadState("error");
+      setMessage(
+        planResult?.message ??
+          planResult?.error ??
+          batchesResult?.message ??
+          batchesResult?.error ??
+          "导入运维数据加载失败。",
+      );
+      return;
+    }
+
+    setPlan(planResult?.importPlan ?? null);
+    setBatches(batchesResult?.importBatches ?? []);
+    setLoadState("success");
+    setMessage("导入预检和批次记录已刷新。");
+  }
+
+  async function handleRollbackPlan(batchId: string) {
+    setRollbackState("loading");
+    setMessage("");
+
+    const response = await fetch(`/api/admin/import-batches/${encodeURIComponent(batchId)}/rollback-plan`, {
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+    });
+    const result = (await response.json().catch(() => null)) as AdminImportRollbackPlanResponse | null;
+
+    if (!response.ok || !result?.rollbackPlan) {
+      setRollbackState("error");
+      setMessage(result?.message ?? result?.error ?? "回滚影响读取失败。");
+      return;
+    }
+
+    setRollbackPlan(result.rollbackPlan);
+    setRollbackState("success");
+    setMessage("已读取只读回滚影响，不会修改数据。");
+  }
+
+  useEffect(() => {
+    void loadImportData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canManage, token]);
+
+  if (!canManage) {
+    return null;
+  }
+
+  const planMetrics = plan
+    ? [
+        { label: "种子店铺", value: plan.counts.seedPlaces },
+        { label: "店铺更新", value: plan.summary.placesUpdated },
+        { label: "评分更新", value: plan.summary.ratingsUpdated },
+        { label: "将归档缺失", value: plan.summary.placesArchivedMissing },
+      ]
+    : [];
+
+  return (
+    <section className="container section compact-section">
+      <div className="admin-panel admin-import-panel">
+        <div className="admin-place-lists-head">
+          <div>
+            <strong>导入运维</strong>
+            <p>Owner 可查看 seed dry-run 预检、最近导入批次和只读回滚影响。</p>
+          </div>
+          <button className="button secondary" disabled={loadState === "loading"} onClick={() => void loadImportData()} type="button">
+            <RefreshCw aria-hidden="true" size={15} />
+            {loadState === "loading" ? "刷新中..." : "刷新"}
+          </button>
+        </div>
+
+        {plan ? (
+          <div className="admin-import-plan" aria-label="导入预检">
+            <div>
+              <span className="eyebrow">{plan.sourceName}</span>
+              <strong>只读 dry-run 预检</strong>
+              <p>{plan.archiveMissing ? "已包含缺失项归档预估。" : "未包含缺失项归档预估。"}</p>
+            </div>
+            <div className="admin-import-metrics">
+              {planMetrics.map((metric) => (
+                <span key={metric.label}>
+                  <strong>{metric.value}</strong>
+                  <small>{metric.label}</small>
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <p className="section-note">{loadState === "loading" ? "正在读取导入预检..." : "暂无导入预检数据。"}</p>
+        )}
+
+        <div className="admin-import-batches" aria-label="最近导入批次">
+          {batches.length === 0 ? (
+            <p className="section-note">{loadState === "loading" ? "正在读取导入批次..." : "暂无导入批次。"}</p>
+          ) : (
+            batches.map((batch) => (
+              <div className="admin-import-batch-row" key={batch.id}>
+                <div>
+                  <strong>{batch.sourceName}</strong>
+                  <small>
+                    {formatDateTime(batch.createdAt)} · {batch.operation} · {importStatusLabels[batch.status] ?? batch.status}
+                  </small>
+                </div>
+                <div className="admin-import-batch-counts">
+                  <span>{batch.counts.places} 店铺</span>
+                  <span>{batch.counts.listPlaces} 关联</span>
+                  <span>{batch.counts.ratings} 评分</span>
+                </div>
+                <button
+                  className="button secondary"
+                  disabled={rollbackState === "loading"}
+                  onClick={() => void handleRollbackPlan(batch.id)}
+                  type="button"
+                >
+                  查看影响
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        {rollbackPlan ? (
+          <div className="admin-import-rollback" aria-label="只读回滚影响">
+            <strong>只读回滚影响</strong>
+            <div className="admin-import-metrics">
+              <span>
+                <strong>{rollbackPlan.impact.placesToArchive}</strong>
+                <small>将归档店铺</small>
+              </span>
+              <span>
+                <strong>{rollbackPlan.impact.listPlacesToDelete}</strong>
+                <small>将删除关联</small>
+              </span>
+              <span>
+                <strong>{rollbackPlan.impact.ratingsToDelete}</strong>
+                <small>将删除评分</small>
+              </span>
+            </div>
+            <p className="section-note">{rollbackPlan.warnings[0] ?? "该预览不会修改数据。"}</p>
+          </div>
+        ) : null}
+
+        <p
+          aria-live="polite"
+          className={
+            loadState === "error" || rollbackState === "error"
+              ? "admin-inline-message error"
+              : loadState === "success" || rollbackState === "success"
+                ? "admin-inline-message success"
+                : "admin-inline-message"
+          }
+        >
+          {message || "这里只做只读预检；真实导入和回滚仍需人工确认后执行。"}
+        </p>
+      </div>
+    </section>
+  );
+}
+
 export function AdminDashboard() {
   const supabase = getBrowserSupabase();
   const [state, setState] = useState<LoadState>("loading");
@@ -1909,6 +2172,8 @@ export function AdminDashboard() {
       ) : null}
 
       {token ? <AdminPlaceMaintenance canEdit={summary.currentUser.role !== "viewer"} token={token} /> : null}
+
+      {token ? <AdminImportOperations canManage={summary.currentUser.role === "owner"} token={token} /> : null}
 
       {token ? <AdminMemberManagement canManage={summary.currentUser.role === "owner"} token={token} /> : null}
     </>

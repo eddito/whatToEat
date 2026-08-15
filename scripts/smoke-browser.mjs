@@ -151,6 +151,10 @@ try {
         `before=${JSON.stringify(firstPlaceBeforeDrag)} after=${JSON.stringify(firstPlaceAfterDrag)}`,
       );
     }
+
+    await page.waitForSelector("text=导入运维", { timeout: 20000 });
+    const importPanels = await page.locator(".admin-import-panel").count();
+    assertCheck("/admin import panel", importPanels > 0, `count=${importPanels}`);
   } else {
     console.log("SKIP /admin login SMOKE_AUTH_USERNAME or SMOKE_AUTH_PASSWORD is missing.");
   }

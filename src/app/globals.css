@@ -1794,6 +1794,116 @@ button {
   width: fit-content;
 }
 
+.admin-import-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-import-plan,
+.admin-import-rollback {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.admin-import-plan strong,
+.admin-import-rollback strong,
+.admin-import-plan p,
+.admin-import-rollback p {
+  margin: 0;
+}
+
+.admin-import-plan p,
+.admin-import-rollback p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.admin-import-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-import-rollback .admin-import-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-import-metrics span {
+  display: grid;
+  gap: 3px;
+  min-height: 58px;
+  border: 1px solid rgba(241, 207, 194, 0.82);
+  border-radius: 6px;
+  background: var(--surface-strong);
+  padding: 9px 10px;
+}
+
+.admin-import-metrics strong {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-import-metrics small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 780;
+}
+
+.admin-import-batches {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-import-batch-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.42fr) auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  padding: 10px;
+}
+
+.admin-import-batch-row strong,
+.admin-import-batch-row small {
+  display: block;
+}
+
+.admin-import-batch-row small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-import-batch-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-import-batch-counts span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-strong);
+  padding: 0 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .admin-photo-uploader {
   display: grid;
   grid-template-columns: minmax(180px, 0.34fr) minmax(0, 1fr);
@@ -2106,8 +2216,16 @@ button {
   .admin-place-editor,
   .admin-form-grid,
   .admin-permission-preview,
-  .admin-photo-uploader {
+  .admin-photo-uploader,
+  .admin-import-plan,
+  .admin-import-rollback,
+  .admin-import-batch-row {
     grid-template-columns: 1fr;
+  }
+
+  .admin-import-metrics,
+  .admin-import-rollback .admin-import-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .admin-place-list-assignment {
