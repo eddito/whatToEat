@@ -14,6 +14,10 @@ const photoUpdateRequestSchema = z.object({
   sortOrder: z.number().int().min(0).max(10000).optional(),
 });
 
+type RouteContext = {
+  params: Promise<{ id: string }>;
+};
+
 function getPlaceId(params: { id: string }) {
   return decodeURIComponent(params.id);
 }
@@ -84,7 +88,7 @@ function handlePhotoError(error: unknown) {
   );
 }
 
-export async function POST(request: Request, context: { params: { id: string } }) {
+export async function POST(request: Request, context: RouteContext) {
   let formData: FormData;
 
   try {
@@ -114,10 +118,11 @@ export async function POST(request: Request, context: { params: { id: string } }
   }
 
   try {
+    const params = await context.params;
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const result = await uploadAdminPlacePhoto({
       userId: user.id,
-      placeId: getPlaceId(context.params),
+      placeId: getPlaceId(params),
       file,
       isCover: parseBooleanFormValue(formData.get("isCover")),
       sortOrder: parseSortOrderFormValue(formData.get("sortOrder")),
@@ -132,7 +137,7 @@ export async function POST(request: Request, context: { params: { id: string } }
   }
 }
 
-export async function PATCH(request: Request, context: { params: { id: string } }) {
+export async function PATCH(request: Request, context: RouteContext) {
   let body: unknown;
 
   try {
@@ -162,10 +167,11 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 
   try {
+    const params = await context.params;
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const result = await updateAdminPlacePhoto({
       userId: user.id,
-      placeId: getPlaceId(context.params),
+      placeId: getPlaceId(params),
       ...parsed.data,
     });
 
@@ -178,7 +184,7 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 }
 
-export async function DELETE(request: Request, context: { params: { id: string } }) {
+export async function DELETE(request: Request, context: RouteContext) {
   const photoId = new URL(request.url).searchParams.get("photoId");
 
   if (!photoId || !z.string().uuid().safeParse(photoId).success) {
@@ -193,10 +199,11 @@ export async function DELETE(request: Request, context: { params: { id: string }
   }
 
   try {
+    const params = await context.params;
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const result = await deleteAdminPlacePhoto({
       userId: user.id,
-      placeId: getPlaceId(context.params),
+      placeId: getPlaceId(params),
       photoId,
     });
 

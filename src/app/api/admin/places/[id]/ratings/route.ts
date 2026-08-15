@@ -51,14 +51,16 @@ export async function GET(
   {
     params,
   }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
   },
 ) {
+  const { id } = await params;
+
   try {
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const ratings = await getAdminPlaceRatings({
       userId: user.id,
-      placeId: params.id,
+      placeId: id,
     });
 
     return NextResponse.json({
@@ -75,9 +77,10 @@ export async function DELETE(
   {
     params,
   }: {
-    params: { id: string };
+    params: Promise<{ id: string }>;
   },
 ) {
+  const { id } = await params;
   const ratingId = new URL(request.url).searchParams.get("ratingId");
 
   if (!ratingId || !z.string().uuid().safeParse(ratingId).success) {
@@ -95,7 +98,7 @@ export async function DELETE(
     const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
     const result = await deleteAdminPlaceRating({
       userId: user.id,
-      placeId: params.id,
+      placeId: id,
       ratingId,
     });
 
