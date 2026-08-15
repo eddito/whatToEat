@@ -97,6 +97,7 @@ type PublicPlacePhotoFields = {
 | `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
 | `getAdminPlaces(input)` | owner/member/viewer 按团队读取后台店铺列表，支持关键词/分类/区域/归档筛选 |
 | `getAdminSummary(input)` | owner/member/viewer 读取后台汇总计数 |
+| `getAdminFilterOptions(input)` | owner/member/viewer 读取后台筛选选项 |
 | `getAdminArchivedPlaces(input)` | owner/member/viewer 读取已归档店铺列表 |
 | `getAdminPlace(input)` | owner/member/viewer 读取店铺后台详情 |
 | `getAdminPlacesByList(input)` | owner/member/viewer 读取榜单内店铺管理视图 |
@@ -473,6 +474,51 @@ type GetAdminSummaryResponse = {
       members: number;
     };
     generatedAt: string;
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `GET /api/admin/filter-options`
+
+路径：`src/app/api/admin/filter-options/route.ts`
+
+用途：owner/member/viewer 读取后台筛选器需要的分类、区域、榜单和归档计数。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+
+成功响应：
+```ts
+type GetAdminFilterOptionsResponse = {
+  ok: true;
+  filterOptions: {
+    categories: string[];
+    regions: string[];
+    lists: Array<{
+      slug: string;
+      name: string;
+      visibility: "private" | "public_view" | "public_rate";
+    }>;
+    counts: {
+      activePlaces: number;
+      archivedPlaces: number;
+    };
   };
 };
 ```
@@ -1662,6 +1708,7 @@ temporaryPassword: TempUser_2026
 - `GET /api/auth/me`
 - `POST /api/auth/refresh`
 - `GET /api/admin/summary`
+- `GET /api/admin/filter-options`
 - `GET /api/admin/lists`
 - `GET /api/admin/places`
 - `GET /api/admin/lists/[slug]/places`
@@ -1674,6 +1721,7 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/import-batches/[id]/rollback-plan`
 - `POST /api/admin/import-batches/[id]/rollback`
 - owner/member/external/未登录权限路径
+- 后台筛选选项读取权限与 categories/regions
 - 导入预检 dry-run 计划读取权限和 seed place 计数
 - 后台汇总计数读取权限与 active place 计数
 - 导入批次详情计数和 preview 结构

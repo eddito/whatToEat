@@ -28,7 +28,7 @@
 | B7 | 成员管理接口 | 已完成 | 成员列表只读、owner-only 成员添加、角色调整和移除接口已实现 |
 | B8 | 导入脚本和 HTTP 预检运维能力 | 已完成 | seed dry-run、HTTP dry-run 预检、批次追踪、归档缺失项和按批次回滚 |
 | B9 | 导入批次后台读取与回滚 | 已完成 | owner-only 导入批次列表、详情、关联数据计数、审计预览、只读回滚计划和显式确认回滚接口 |
-| B10 | 后台只读管理数据 | 进行中 | 成员列表、后台汇总、后台榜单列表、店铺详情、已归档店铺、榜单内店铺管理视图和店铺评分明细接口已实现 |
+| B10 | 后台只读管理数据 | 进行中 | 成员列表、后台汇总、筛选选项、后台榜单列表、店铺详情、已归档店铺、榜单内店铺管理视图和店铺评分明细接口已实现 |
 | B11 | 登录态读取 | 已完成 | 当前用户资料、小队角色和 refresh token 换新接口已实现 |
 
 ## 任务进度表
@@ -86,6 +86,7 @@
 | BE-049 | 实现导入批次显式确认回滚接口 | 已完成 | `POST /api/admin/import-batches/[id]/rollback`、`rollbackAdminImportBatch` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖保护栏 |
 | BE-050 | 实现 seed 导入 HTTP dry-run 预检接口 | 已完成 | `GET /api/admin/import-plan`、`getAdminImportPlan` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
 | BE-051 | 拆分成员列表读取和成员管理权限 | 已完成 | `getAdminMembers` 允许 owner/member/viewer 读取，写操作保持 owner-only | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
+| BE-052 | 实现后台筛选选项读取接口 | 已完成 | `GET /api/admin/filter-options`、`getAdminFilterOptions` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
 
 ## 完成记录
 
@@ -153,6 +154,7 @@
 | 2026-08-15 | 实现导入批次显式确认回滚接口 | `src/app/api/admin/import-batches/[id]/rollback/route.ts`、`src/server/imports/repository.ts`、`src/server/imports/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖缺少 `confirm: true` 不执行、member 即使确认也禁止 |
 | 2026-08-16 | 实现 seed 导入 HTTP dry-run 预检接口 | `src/app/api/admin/import-plan/route.ts`、`src/server/imports/repository.ts`、`src/server/imports/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 owner 可读、member 禁止、返回 dry-run 和 seed place 计数 |
 | 2026-08-16 | 拆分成员列表读取和成员管理权限 | `src/server/teams/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 member 可读成员列表，写操作仍由原 smoke 保持 owner-only |
+| 2026-08-16 | 实现后台筛选选项读取接口 | `src/app/api/admin/filter-options/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 owner/member 可读、external 禁止、返回 categories/regions |
 
 ## 当前数据库快照
 

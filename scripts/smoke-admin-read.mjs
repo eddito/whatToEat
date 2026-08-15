@@ -116,6 +116,24 @@ async function main() {
   const memberSummary = await expectStatus("member admin summary", "/api/admin/summary", member.accessToken, 200);
   assert(getSummaryRole(memberSummary) === "member", "Admin summary should include member role", memberSummary);
 
+  const filterOptions = await expectStatus("owner admin filter options", "/api/admin/filter-options", owner.accessToken, 200);
+  assert(
+    (filterOptions.body?.filterOptions?.categories?.length ?? 0) > 0,
+    "Filter options should include categories",
+    filterOptions,
+  );
+  const memberFilterOptions = await expectStatus(
+    "member admin filter options",
+    "/api/admin/filter-options",
+    member.accessToken,
+    200,
+  );
+  assert(
+    (memberFilterOptions.body?.filterOptions?.regions?.length ?? 0) > 0,
+    "Member should be able to read filter options",
+    memberFilterOptions,
+  );
+
   const listPlaces = await expectStatus(
     "member admin list places",
     "/api/admin/lists/red-list/places",
@@ -239,6 +257,7 @@ async function main() {
   });
   assert(memberRollback.status === 403, "Member confirmed rollback should return 403", memberRollback);
   await expectStatus("external admin summary forbidden", "/api/admin/summary", external.accessToken, 403);
+  await expectStatus("external admin filter options forbidden", "/api/admin/filter-options", external.accessToken, 403);
   await expectStatus("external admin lists forbidden", "/api/admin/lists", external.accessToken, 403);
   await expectStatus("missing token members rejected", "/api/admin/members", null, 401);
 
@@ -251,6 +270,7 @@ async function main() {
           "owner login and /api/auth/me",
           "refresh token",
           "admin summary",
+          "admin filter options",
           "admin lists",
           "admin places",
           "admin list places",
