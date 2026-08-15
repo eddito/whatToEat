@@ -20,6 +20,13 @@ export type ImportBatchCounts = {
   ratings: number;
 };
 
+export type ImportBatchRollbackSummary = {
+  ratingsDeleted: number;
+  listLinksDeleted: number;
+  placesArchived: number;
+  rolledBackAt: string;
+};
+
 export type ImportBatchPlacePreviewRecord = {
   id: string;
   import_key: string | null;
@@ -214,4 +221,59 @@ export async function getImportBatchRatingPreview(input: {
       ...row,
       place: Array.isArray(row.place) ? row.place[0] : row.place,
     })) as ImportBatchRatingPreviewRecord[];
+}
+
+export async function rollbackImportBatchRecords(batchId: string): Promise<ImportBatchRollbackSummary> {
+  const supabase = createSupabaseAdminClient();
+  const counts = await getImportBatchCounts(batchId);
+  const rolledBackAt = new Date().toISOString();
+
+  const ratingsDelete = await supabase.from("ratings").delete().eq("import_batch_id", batchId);
+  if (ratingsDelete.error) {
+    throw ratingsDelete.error;
+  }
+
+  const listPlacesDelete = await supabase.from("list_places").delete().eq("import_batch_id", batchId);
+  if (listPlacesDelete.error) {
+    throw listPlacesDelete.error;
+  }
+
+  const placesArchive = await supabase
+    .from("places")
+    .update({
+      archived_at: rolledBackAt,
+      updated_at: rolledBackAt,
+    })
+    .eq("import_batch_id", batchId)
+    .is("archived_at", null);
+  if (placesArchive.error) {
+    throw placesArchive.error;
+  }
+
+  return {
+    ratingsDeleted: counts.ratings,
+    listLinksDeleted: counts.listPlaces,
+    placesArchived: counts.places,
+    rolledBackAt,
+  };
+}
+
+export async function markImportBatchRolledBack(input: {
+  batchId: string;
+  summary: Record<string, unknown>;
+  rolledBackAt: string;
+}) {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase
+    .from("import_batches")
+    .update({
+      status: "rolled_back",
+      rolled_back_at: input.rolledBackAt,
+      summary: input.summary,
+    })
+    .eq("id", input.batchId);
+
+  if (error) {
+    throw error;
+  }
 }
