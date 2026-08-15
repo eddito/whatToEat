@@ -125,6 +125,7 @@ type PublicPlacePhotoFields = {
 | 函数 | 说明 |
 | --- | --- |
 | `getAdminImportBatches(input)` | owner 读取导入批次列表和关联数据计数 |
+| `getAdminImportBatch(input)` | owner 读取单个导入批次详情、关联数据计数和审计预览 |
 
 权限：调用用户必须是目标小队的 `owner`。
 
@@ -863,6 +864,89 @@ type GetAdminImportBatchesResponse = {
 | 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `GET /api/admin/import-batches/[id]`
+
+路径：`src/app/api/admin/import-batches/[id]/route.ts`
+
+用途：owner 读取单个导入批次详情，用于后台审计 seed/import 影响范围。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | `import_batches.id` |
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+| `previewLimit` | 否 | 每类预览数量，范围 1-50，默认 20 |
+
+成功响应：
+```ts
+type GetAdminImportBatchResponse = {
+  ok: true;
+  importBatch: {
+    id: string;
+    teamId: string | null;
+    sourceName: string;
+    operation: string;
+    status: string;
+    summary: Record<string, unknown>;
+    counts: {
+      places: number;
+      listPlaces: number;
+      ratings: number;
+    };
+    createdAt: string;
+    finishedAt: string | null;
+    rolledBackAt: string | null;
+    preview: {
+      places: Array<{
+        id: string;
+        importKey: string | null;
+        name: string;
+        category: string | null;
+        region: string | null;
+        archivedAt: string | null;
+      }>;
+      listPlaces: Array<{
+        listId: string;
+        placeId: string;
+        listSlug: string | null;
+        listName: string | null;
+        placeImportKey: string | null;
+        placeName: string | null;
+        sortOrder: number;
+      }>;
+      ratings: Array<{
+        id: string;
+        placeId: string;
+        placeImportKey: string | null;
+        placeName: string | null;
+        source: string;
+        raterLabel: string | null;
+        score: number;
+      }>;
+    };
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | path 或 query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 404 | `batch_not_found` | 批次不存在，或批次属于其他小队 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `POST /api/admin/places/archive`
 
 路径：`src/app/api/admin/places/archive/route.ts`
@@ -1391,8 +1475,10 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/places/[id]/ratings`
 - `GET /api/admin/members`
 - `GET /api/admin/import-batches`
+- `GET /api/admin/import-batches/[id]`
 - owner/member/external/未登录权限路径
 - 后台汇总计数读取权限与 active place 计数
+- 导入批次详情计数和 preview 结构
 
 ### `pnpm smoke:admin-write`
 
