@@ -300,3 +300,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-08-02 | 新增发布前检查清单并同步部署工作流的 Next.js 16、pnpm 和 Node.js 要求 | Codex | 部署准备、上线验收 |
 | 2026-08-15 | 优化地图探索页，补充搜索、地区/类型筛选、移动端导航修正和无经纬度点位兜底 | Codex | 地图体验、移动端适配、测试数据清理 |
 | 2026-08-15 | 补齐后台榜单内店铺拖拽排序，并加入浏览器 smoke 覆盖 | Codex | 榜单排序维护、后台交互 |
+| 2026-08-16 | 将后台首页统计接入服务层 `getAdminSummary` 新契约，并保留前端旧字段兼容 | Codex | 后台统计、前后端联调 |

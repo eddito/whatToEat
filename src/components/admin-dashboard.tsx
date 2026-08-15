@@ -52,6 +52,28 @@ type AdminSummary = {
   }>;
 };
 
+type AdminSummaryResponse = Partial<AdminSummary> & {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  summary?: {
+    team: {
+      id: string;
+      name: string;
+      slug: string;
+      role: AdminRole;
+    };
+    counts: {
+      lists: number;
+      activePlaces: number;
+      archivedPlaces: number;
+      ratings: number;
+      members: number;
+    };
+    generatedAt: string;
+  };
+};
+
 type LoadState = "loading" | "ready" | "signed-out" | "forbidden" | "error";
 type RequestState = "idle" | "loading" | "success" | "error";
 
@@ -214,6 +236,44 @@ function formatDateTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function normalizeAdminSummary(result: AdminSummaryResponse | null): AdminSummary | null {
+  if (!result) {
+    return null;
+  }
+
+  if (result.summary) {
+    return {
+      team: {
+        name: result.summary.team.name,
+        slug: result.summary.team.slug,
+      },
+      currentUser: result.currentUser ?? {
+        id: "",
+        role: result.summary.team.role,
+        name: "当前账号",
+      },
+      stats: result.stats ?? {
+        places: result.summary.counts.activePlaces,
+        lists: result.summary.counts.lists,
+        ratings: result.summary.counts.ratings,
+        members: result.summary.counts.members,
+      },
+      members: result.members ?? [],
+    };
+  }
+
+  if (result.team && result.currentUser && result.stats) {
+    return {
+      team: result.team,
+      currentUser: result.currentUser,
+      stats: result.stats,
+      members: result.members ?? [],
+    };
+  }
+
+  return null;
 }
 
 function toPlaceForm(place: AdminPlace): PlaceFormState {
@@ -1727,7 +1787,7 @@ export function AdminDashboard() {
           authorization: `Bearer ${token}`,
         },
       });
-      const result = (await response.json().catch(() => null)) as AdminSummary | { error?: string } | null;
+      const result = (await response.json().catch(() => null)) as AdminSummaryResponse | null;
 
       if (!mounted) {
         return;
@@ -1739,7 +1799,15 @@ export function AdminDashboard() {
         return;
       }
 
-      setSummary(result as AdminSummary);
+      const nextSummary = normalizeAdminSummary(result);
+
+      if (!nextSummary) {
+        setState("error");
+        setMessage("后台数据加载失败。");
+        return;
+      }
+
+      setSummary(nextSummary);
       setToken(token);
       setState("ready");
     }

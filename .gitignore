@@ -8,3 +8,5 @@ coverage
 *.log
 *.tsbuildinfo
 out
+outputs
+spreadsheet_work
