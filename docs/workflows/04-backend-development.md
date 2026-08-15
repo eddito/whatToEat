@@ -27,7 +27,7 @@
 | B6 | 后台写入接口 | 已完成 | 店铺新增/编辑、软归档和榜单新增/编辑接口已实现 |
 | B7 | 成员管理接口 | 已完成 | owner-only 成员添加、角色调整和移除接口已实现 |
 | B8 | 导入脚本运维能力 | 已完成 | seed dry-run、批次追踪、归档缺失项和按批次回滚 |
-| B9 | 导入批次后台读取 | 已完成 | owner-only 导入批次列表、详情、关联数据计数和审计预览接口 |
+| B9 | 导入批次后台读取 | 已完成 | owner-only 导入批次列表、详情、关联数据计数、审计预览和只读回滚计划接口 |
 | B10 | 后台只读管理数据 | 进行中 | 成员列表、后台汇总、后台榜单列表、店铺详情、已归档店铺、榜单内店铺管理视图和店铺评分明细接口已实现 |
 | B11 | 登录态读取 | 已完成 | 当前用户资料、小队角色和 refresh token 换新接口已实现 |
 
@@ -82,6 +82,7 @@
 | BE-045 | 细化 viewer 角色后台内容只读权限 | 已完成 | `canReadTeamContent`、后台内容 GET 接口允许 viewer | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过 |
 | BE-046 | 实现后台汇总计数接口 | 已完成 | `GET /api/admin/summary`、`getAdminSummary`、team 内容计数读取 | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
 | BE-047 | 实现导入批次详情审计接口 | 已完成 | `GET /api/admin/import-batches/[id]`、`getAdminImportBatch`、places/list_places/ratings preview | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
+| BE-048 | 实现导入批次只读回滚计划接口 | 已完成 | `GET /api/admin/import-batches/[id]/rollback-plan`、`getAdminImportBatchRollbackPlan` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
 
 ## 完成记录
 
@@ -145,6 +146,7 @@
 | 2026-08-15 | 细化 viewer 角色后台内容只读权限 | `src/server/teams/repository.ts`、`src/server/places/service.ts`、`src/server/ratings/service.ts`、`scripts/smoke-admin-write.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过；`testexternal` 临时 viewer 已移除 |
 | 2026-08-15 | 实现后台汇总计数接口 | `src/app/api/admin/summary/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`src/server/teams/repository.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 owner/member 可读、external 禁止 |
 | 2026-08-15 | 实现导入批次详情审计接口 | `src/app/api/admin/import-batches/[id]/route.ts`、`src/server/imports/repository.ts`、`src/server/imports/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 owner 可读、member 禁止、preview 结构存在 |
+| 2026-08-15 | 实现导入批次只读回滚计划接口 | `src/app/api/admin/import-batches/[id]/rollback-plan/route.ts`、`src/server/imports/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 owner 可读、member 禁止、dry-run impact 与批次计数一致 |
 
 ## 当前数据库快照
 
@@ -163,7 +165,7 @@
 
 1. 后续 integration 接入后台首页统计时使用 `GET /api/admin/summary`。
 2. 后续如需检查归档缺失项，运行 `pnpm db:seed -- --archive-missing --dry-run`。
-3. 后续可以继续补后台运维能力，例如导入预检 dry-run HTTP 化、批次回滚 API 和更细的成员角色策略。
+3. 后续可以继续补后台运维能力，例如导入预检 dry-run HTTP 化、需要确认后的真实批次回滚 API 和更细的成员角色策略。
 
 ## 记录规则
 

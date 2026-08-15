@@ -126,6 +126,7 @@ type PublicPlacePhotoFields = {
 | --- | --- |
 | `getAdminImportBatches(input)` | owner 读取导入批次列表和关联数据计数 |
 | `getAdminImportBatch(input)` | owner 读取单个导入批次详情、关联数据计数和审计预览 |
+| `getAdminImportBatchRollbackPlan(input)` | owner 读取单个导入批次的只读回滚计划 |
 
 权限：调用用户必须是目标小队的 `owner`。
 
@@ -947,6 +948,74 @@ type GetAdminImportBatchResponse = {
 | 404 | `batch_not_found` | 批次不存在，或批次属于其他小队 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `GET /api/admin/import-batches/[id]/rollback-plan`
+
+路径：`src/app/api/admin/import-batches/[id]/rollback-plan/route.ts`
+
+用途：owner 在真正执行回滚前读取只读 dry-run 计划，确认会被删除或归档的数据范围。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | `import_batches.id` |
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `teamSlug` | 否 | 目标小队，默认 `what-to-eat` |
+
+成功响应：
+```ts
+type GetAdminImportBatchRollbackPlanResponse = {
+  ok: true;
+  rollbackPlan: {
+    batch: {
+      id: string;
+      teamId: string | null;
+      sourceName: string;
+      operation: string;
+      status: string;
+      summary: Record<string, unknown>;
+      counts: {
+        places: number;
+        listPlaces: number;
+        ratings: number;
+      };
+      createdAt: string;
+      finishedAt: string | null;
+      rolledBackAt: string | null;
+    };
+    dryRun: true;
+    impact: {
+      ratingsToDelete: number;
+      listPlacesToDelete: number;
+      placesToArchive: number;
+    };
+    warnings: string[];
+  };
+};
+```
+
+说明：
+- 该接口不执行任何写入。
+- 回滚计划与 `scripts/seed-supabase.mjs --rollback-batch <id> --dry-run` 的操作语义保持一致：删除该批次评分和榜单关联，软归档该批次店铺。
+- 回滚不会恢复被导入覆盖前的旧字段值。
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | path 或 query 参数不合法 |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 404 | `batch_not_found` | 批次不存在，或批次属于其他小队 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `POST /api/admin/places/archive`
 
 路径：`src/app/api/admin/places/archive/route.ts`
@@ -1476,9 +1545,11 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/members`
 - `GET /api/admin/import-batches`
 - `GET /api/admin/import-batches/[id]`
+- `GET /api/admin/import-batches/[id]/rollback-plan`
 - owner/member/external/未登录权限路径
 - 后台汇总计数读取权限与 active place 计数
 - 导入批次详情计数和 preview 结构
+- 导入批次只读回滚计划 impact
 
 ### `pnpm smoke:admin-write`
 

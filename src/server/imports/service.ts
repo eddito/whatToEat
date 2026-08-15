@@ -73,6 +73,17 @@ export type AdminImportBatchDetail = AdminImportBatch & {
   };
 };
 
+export type AdminImportBatchRollbackPlan = {
+  batch: AdminImportBatch;
+  dryRun: true;
+  impact: {
+    ratingsToDelete: number;
+    listPlacesToDelete: number;
+    placesToArchive: number;
+  };
+  warnings: string[];
+};
+
 export class ImportBatchReadError extends Error {
   constructor(
     message: string,
@@ -194,5 +205,45 @@ export async function getAdminImportBatch(input: GetAdminImportBatchInput): Prom
         score: Number(rating.score),
       })),
     },
+  };
+}
+
+export async function getAdminImportBatchRollbackPlan(
+  input: GetAdminImportBatchInput,
+): Promise<AdminImportBatchRollbackPlan> {
+  const detail = await getAdminImportBatch({
+    ...input,
+    previewLimit: 1,
+  });
+  const warnings = [
+    "Rollback plan is read-only and does not modify data.",
+    "Rollback would delete ratings and list-place links tracked by this batch.",
+    "Rollback would soft-archive places tracked by this batch; it does not restore overwritten older field values.",
+  ];
+
+  if (detail.rolledBackAt) {
+    warnings.push("This batch is already marked as rolled back.");
+  }
+
+  return {
+    batch: {
+      id: detail.id,
+      teamId: detail.teamId,
+      sourceName: detail.sourceName,
+      operation: detail.operation,
+      status: detail.status,
+      summary: detail.summary,
+      counts: detail.counts,
+      createdAt: detail.createdAt,
+      finishedAt: detail.finishedAt,
+      rolledBackAt: detail.rolledBackAt,
+    },
+    dryRun: true,
+    impact: {
+      ratingsToDelete: detail.counts.ratings,
+      listPlacesToDelete: detail.counts.listPlaces,
+      placesToArchive: detail.counts.places,
+    },
+    warnings,
   };
 }
