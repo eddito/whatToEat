@@ -7,6 +7,8 @@ import {
   getImportBatchPlacePreview,
   getImportBatchRatingPreview,
   getImportBatches,
+  markImportBatchRolledBack,
+  rollbackImportBatchRecords,
   type ImportBatchRecord,
 } from "@/server/imports/repository";
 import { canManageTeamMembers, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
@@ -84,10 +86,25 @@ export type AdminImportBatchRollbackPlan = {
   warnings: string[];
 };
 
+export type RollbackAdminImportBatchInput = GetAdminImportBatchInput & {
+  confirm: boolean;
+};
+
+export type AdminImportBatchRollbackResult = {
+  batchId: string;
+  status: "rolled_back";
+  rolledBackAt: string;
+  summary: {
+    ratingsDeleted: number;
+    listLinksDeleted: number;
+    placesArchived: number;
+  };
+};
+
 export class ImportBatchReadError extends Error {
   constructor(
     message: string,
-    public readonly code: "team_not_found" | "batch_not_found" | "not_allowed",
+    public readonly code: "team_not_found" | "batch_not_found" | "batch_already_rolled_back" | "not_allowed",
   ) {
     super(message);
     this.name = "ImportBatchReadError";
@@ -245,5 +262,45 @@ export async function getAdminImportBatchRollbackPlan(
       placesToArchive: detail.counts.places,
     },
     warnings,
+  };
+}
+
+export async function rollbackAdminImportBatch(
+  input: RollbackAdminImportBatchInput,
+): Promise<AdminImportBatchRollbackResult> {
+  if (!input.confirm) {
+    throw new ImportBatchReadError("Rollback requires explicit confirmation.", "not_allowed");
+  }
+
+  const detail = await getAdminImportBatch({
+    ...input,
+    previewLimit: 1,
+  });
+
+  if (detail.rolledBackAt || detail.status === "rolled_back") {
+    throw new ImportBatchReadError("Import batch is already rolled back.", "batch_already_rolled_back");
+  }
+
+  const rollback = await rollbackImportBatchRecords(detail.id);
+  const summary = {
+    ratingsDeleted: rollback.ratingsDeleted,
+    listLinksDeleted: rollback.listLinksDeleted,
+    placesArchived: rollback.placesArchived,
+  };
+
+  await markImportBatchRolledBack({
+    batchId: detail.id,
+    rolledBackAt: rollback.rolledBackAt,
+    summary: {
+      ...detail.summary,
+      rollback: summary,
+    },
+  });
+
+  return {
+    batchId: detail.id,
+    status: "rolled_back",
+    rolledBackAt: rollback.rolledBackAt,
+    summary,
   };
 }

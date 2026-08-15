@@ -127,6 +127,7 @@ type PublicPlacePhotoFields = {
 | `getAdminImportBatches(input)` | owner 读取导入批次列表和关联数据计数 |
 | `getAdminImportBatch(input)` | owner 读取单个导入批次详情、关联数据计数和审计预览 |
 | `getAdminImportBatchRollbackPlan(input)` | owner 读取单个导入批次的只读回滚计划 |
+| `rollbackAdminImportBatch(input)` | owner 显式确认后回滚单个导入批次 |
 
 权限：调用用户必须是目标小队的 `owner`。
 
@@ -1018,6 +1019,65 @@ type GetAdminImportBatchRollbackPlanResponse = {
 | 404 | `batch_not_found` | 批次不存在，或批次属于其他小队 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `POST /api/admin/import-batches/[id]/rollback`
+
+路径：`src/app/api/admin/import-batches/[id]/rollback/route.ts`
+
+用途：owner 显式确认后执行导入批次回滚。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | `import_batches.id` |
+
+请求体：
+```ts
+type RollbackAdminImportBatchRequest = {
+  confirm: true;
+  teamSlug?: string;
+};
+```
+
+说明：
+- `confirm` 必须严格为 `true`，否则返回 400 且不执行写入。
+- 仅目标小队 `owner` 可执行。
+- 执行语义与回滚计划一致：删除该批次评分和榜单关联，软归档该批次未归档店铺。
+- 执行后会更新 `import_batches.status = "rolled_back"`、`rolled_back_at` 和 `summary.rollback`。
+- 该操作不会恢复导入覆盖前的旧字段值。
+
+成功响应：
+```ts
+type RollbackAdminImportBatchResponse = {
+  ok: true;
+  rollback: {
+    batchId: string;
+    status: "rolled_back";
+    rolledBackAt: string;
+    summary: {
+      ratingsDeleted: number;
+      listLinksDeleted: number;
+      placesArchived: number;
+    };
+  };
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体不是 JSON，或缺少 `confirm: true` |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner |
+| 404 | `team_not_found` | 目标小队不存在 |
+| 404 | `batch_not_found` | 批次不存在，或批次属于其他小队 |
+| 409 | `batch_already_rolled_back` | 批次已经回滚 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `POST /api/admin/places/archive`
 
 路径：`src/app/api/admin/places/archive/route.ts`
@@ -1548,10 +1608,12 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/import-batches`
 - `GET /api/admin/import-batches/[id]`
 - `GET /api/admin/import-batches/[id]/rollback-plan`
+- `POST /api/admin/import-batches/[id]/rollback`
 - owner/member/external/未登录权限路径
 - 后台汇总计数读取权限与 active place 计数
 - 导入批次详情计数和 preview 结构
 - 导入批次只读回滚计划 impact
+- 导入批次真实回滚保护栏：缺少 `confirm: true` 返回 400，member 即使确认也返回 403
 
 ### `pnpm smoke:admin-write`
 

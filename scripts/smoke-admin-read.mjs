@@ -198,6 +198,15 @@ async function main() {
     "Rollback plan should mirror import batch place count",
     rollbackPlan,
   );
+  const missingConfirmRollback = await requestJson(
+    `/api/admin/import-batches/${encodeURIComponent(importBatchId)}/rollback`,
+    {
+      method: "POST",
+      headers: authHeaders(owner.accessToken),
+      body: JSON.stringify({ confirm: false }),
+    },
+  );
+  assert(missingConfirmRollback.status === 400, "Rollback without confirm: true should return 400", missingConfirmRollback);
 
   await expectStatus("member import batches forbidden", "/api/admin/import-batches", member.accessToken, 403);
   await expectStatus(
@@ -212,6 +221,12 @@ async function main() {
     member.accessToken,
     403,
   );
+  const memberRollback = await requestJson(`/api/admin/import-batches/${encodeURIComponent(importBatchId)}/rollback`, {
+    method: "POST",
+    headers: authHeaders(member.accessToken),
+    body: JSON.stringify({ confirm: true }),
+  });
+  assert(memberRollback.status === 403, "Member confirmed rollback should return 403", memberRollback);
   await expectStatus("external admin summary forbidden", "/api/admin/summary", external.accessToken, 403);
   await expectStatus("external admin lists forbidden", "/api/admin/lists", external.accessToken, 403);
   await expectStatus("missing token members rejected", "/api/admin/members", null, 401);
@@ -235,6 +250,7 @@ async function main() {
           "import batches",
           "import batch detail",
           "import batch rollback plan",
+          "import batch rollback guards",
           "member/external/no-token permission guards",
         ],
       },
