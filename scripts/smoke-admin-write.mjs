@@ -9,6 +9,7 @@ const TARGET_MEMBER_USERNAME = "testmembertarget";
 const LIST_SLUG = "red-list";
 const SMOKE_LIST_SLUG = "admin-smoke-list";
 const SMOKE_PLACE_ID = "red-list-1";
+const LEGACY_SMOKE_PLACE_ID = "admin-smoke-place";
 
 function getBaseUrl() {
   return (process.env.BACKEND_SMOKE_URL || process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
@@ -247,6 +248,13 @@ async function main() {
     previousSmokeListDelete.status === 200 || previousSmokeListDelete.status === 404,
     "Previous smoke list cleanup should return 200 or 404",
     previousSmokeListDelete,
+  );
+
+  const legacySmokePlaceArchive = await archivePlace(ownerToken, LEGACY_SMOKE_PLACE_ID, true);
+  assert(
+    legacySmokePlaceArchive.status === 200 || legacySmokePlaceArchive.status === 404,
+    "Legacy smoke place cleanup should return 200 or 404",
+    legacySmokePlaceArchive,
   );
 
   let smokeListCreated = false;

@@ -298,3 +298,4 @@ mixed_score = team_score * team_weight + external_score * external_weight
 | 2026-08-02 | 补充 Node.js 版本要求、README 本地启动说明和 `dev:safe` 启动前版本检查 | Codex | 本地开发稳定性 |
 | 2026-08-02 | 新增 `smoke:browser` 浏览器关键路径检查，覆盖公开页、详情页、后台登录和排序面板 | Codex | E2E 验证、客户端异常捕获 |
 | 2026-08-02 | 新增发布前检查清单并同步部署工作流的 Next.js 16、pnpm 和 Node.js 要求 | Codex | 部署准备、上线验收 |
+| 2026-08-15 | 优化地图探索页，补充搜索、地区/类型筛选、移动端导航修正和无经纬度点位兜底 | Codex | 地图体验、移动端适配、测试数据清理 |
