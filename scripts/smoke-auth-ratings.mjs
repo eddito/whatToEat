@@ -1,4 +1,6 @@
 const DEFAULT_BASE_URL = "http://127.0.0.1:3101";
+const OWNER_USERNAME = "testowner";
+const OWNER_PASSWORD = "TestOwner_2026";
 const MEMBER_USERNAME = "testuser";
 const MEMBER_PASSWORD = "TestUser_2026";
 const EXTERNAL_USERNAME = "testexternal";
@@ -75,7 +77,24 @@ async function deleteRating(placeId, token) {
   });
 }
 
+async function getAdminRatings(placeId, token) {
+  return requestJson(`/api/admin/places/${encodeURIComponent(placeId)}/ratings`, {
+    headers: token ? { authorization: `Bearer ${token}` } : undefined,
+  });
+}
+
+async function deleteAdminRating(placeId, ratingId, token) {
+  return requestJson(
+    `/api/admin/places/${encodeURIComponent(placeId)}/ratings?ratingId=${encodeURIComponent(ratingId)}`,
+    {
+      method: "DELETE",
+      headers: token ? { authorization: `Bearer ${token}` } : undefined,
+    },
+  );
+}
+
 async function main() {
+  const ownerToken = await login(OWNER_USERNAME, OWNER_PASSWORD);
   const memberToken = await login(MEMBER_USERNAME, MEMBER_PASSWORD);
   const externalToken = await login(EXTERNAL_USERNAME, EXTERNAL_PASSWORD);
 
@@ -111,6 +130,36 @@ async function main() {
   assert(externalRead.status === 200, "External rating read should return 200", externalRead);
   assert(externalRead.body?.rating?.id === externalRating.body?.rating?.id, "External rating read should return own rating", externalRead);
 
+  const externalAdminDelete = await deleteAdminRating("red-list-1", externalRating.body.rating.id, externalToken);
+  assert(externalAdminDelete.status === 403, "External admin rating delete should return 403", externalAdminDelete);
+
+  const ownerAdminRatings = await getAdminRatings("red-list-1", ownerToken);
+  assert(ownerAdminRatings.status === 200, "Owner admin ratings should return 200", ownerAdminRatings);
+  assert(
+    ownerAdminRatings.body?.ratings?.some((rating) => rating.id === externalRating.body.rating.id),
+    "Owner admin ratings should include external smoke rating",
+    ownerAdminRatings,
+  );
+
+  const ownerAdminDelete = await deleteAdminRating("red-list-1", externalRating.body.rating.id, ownerToken);
+  assert(ownerAdminDelete.status === 200, "Owner admin rating delete should return 200", ownerAdminDelete);
+  assert(ownerAdminDelete.body?.deleted === true, "Owner admin rating delete should report deleted true", ownerAdminDelete);
+
+  const externalReadAfterAdminDelete = await getRating("red-list-1", externalToken);
+  assert(
+    externalReadAfterAdminDelete.status === 200,
+    "External rating read after admin delete should return 200",
+    externalReadAfterAdminDelete,
+  );
+  assert(
+    externalReadAfterAdminDelete.body?.rating === null,
+    "External rating should be null after admin delete",
+    externalReadAfterAdminDelete,
+  );
+
+  const externalRestored = await rate("red-list-1", 3.7, externalToken, "external smoke test");
+  assert(externalRestored.status === 200, "External rating restore should return 200", externalRestored);
+
   const forbiddenExternalRating = await rate("retry-list-1", 3.2, externalToken, "external forbidden smoke test");
   assert(
     forbiddenExternalRating.status === 403,
@@ -124,6 +173,7 @@ async function main() {
         ok: true,
         baseUrl: getBaseUrl(),
         checks: [
+          "owner login",
           "member login",
           "external login",
           "missing token rejected",
@@ -131,6 +181,9 @@ async function main() {
           "member own rating read/delete/restore",
           "external public_rate rating",
           "external own rating read",
+          "external admin rating delete rejected",
+          "owner admin rating read/delete",
+          "external rating restore after admin delete",
           "external public_view-only rating rejected",
         ],
       },

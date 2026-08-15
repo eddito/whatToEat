@@ -22,6 +22,7 @@ export type RatingRecord = {
 };
 
 export type AdminRatingRecord = RatingRecord & {
+  place_id: string;
   user_id: string | null;
   rater_label: string | null;
   created_at: string;
@@ -164,6 +165,48 @@ export async function deleteUserRating(input: {
   return existing;
 }
 
+export async function getRatingById(ratingId: string): Promise<AdminRatingRecord | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("ratings")
+    .select(
+      `
+      id,
+      place_id,
+      user_id,
+      source,
+      rater_label,
+      score,
+      note,
+      created_at,
+      updated_at,
+      profile:profiles (
+        id,
+        username,
+        display_name,
+        avatar_url
+      )
+    `,
+    )
+    .eq("id", ratingId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as unknown as AdminRatingRecord | null;
+}
+
+export async function deleteRatingById(ratingId: string): Promise<void> {
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("ratings").delete().eq("id", ratingId);
+
+  if (error) {
+    throw error;
+  }
+}
+
 export async function getRatingsForPlace(placeId: string): Promise<AdminRatingRecord[]> {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
@@ -171,6 +214,7 @@ export async function getRatingsForPlace(placeId: string): Promise<AdminRatingRe
     .select(
       `
       id,
+      place_id,
       user_id,
       source,
       rater_label,

@@ -1,6 +1,50 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getUserFromAuthorizationHeader, SessionError } from "@/server/auth/session";
-import { getAdminPlaceRatings, RatingError } from "@/server/ratings/service";
+import { deleteAdminPlaceRating, getAdminPlaceRatings, RatingError } from "@/server/ratings/service";
+
+function getRatingStatus(error: RatingError) {
+  if (error.code === "place_not_found" || error.code === "rating_not_found") {
+    return 404;
+  }
+
+  return 403;
+}
+
+function handleRatingError(error: unknown, fallbackMessage: string) {
+  if (error instanceof SessionError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "unauthorized",
+        message: error.message,
+      },
+      { status: 401 },
+    );
+  }
+
+  if (error instanceof RatingError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: error.code,
+        message: error.message,
+      },
+      { status: getRatingStatus(error) },
+    );
+  }
+
+  console.error(error);
+
+  return NextResponse.json(
+    {
+      ok: false,
+      error: "internal_error",
+      message: fallbackMessage,
+    },
+    { status: 500 },
+  );
+}
 
 export async function GET(
   request: Request,
@@ -22,39 +66,45 @@ export async function GET(
       ratings,
     });
   } catch (error) {
-    if (error instanceof SessionError) {
-      return NextResponse.json(
-        {
-          ok: false,
-          error: "unauthorized",
-          message: error.message,
-        },
-        { status: 401 },
-      );
-    }
+    return handleRatingError(error, "Unexpected admin place ratings read error.");
+  }
+}
 
-    if (error instanceof RatingError) {
-      const status = error.code === "place_not_found" ? 404 : 403;
+export async function DELETE(
+  request: Request,
+  {
+    params,
+  }: {
+    params: { id: string };
+  },
+) {
+  const ratingId = new URL(request.url).searchParams.get("ratingId");
 
-      return NextResponse.json(
-        {
-          ok: false,
-          error: error.code,
-          message: error.message,
-        },
-        { status },
-      );
-    }
-
-    console.error(error);
-
+  if (!ratingId || !z.string().uuid().safeParse(ratingId).success) {
     return NextResponse.json(
       {
         ok: false,
-        error: "internal_error",
-        message: "Unexpected admin place ratings read error.",
+        error: "invalid_request",
+        message: "Valid ratingId is required.",
       },
-      { status: 500 },
+      { status: 400 },
     );
+  }
+
+  try {
+    const user = await getUserFromAuthorizationHeader(request.headers.get("authorization"));
+    const result = await deleteAdminPlaceRating({
+      userId: user.id,
+      placeId: params.id,
+      ratingId,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      rating: result.rating,
+      deleted: result.deleted,
+    });
+  } catch (error) {
+    return handleRatingError(error, "Unexpected admin place rating delete error.");
   }
 }

@@ -1,7 +1,9 @@
 import "server-only";
 
 import {
+  deleteRatingById,
   deleteUserRating,
+  getRatingById,
   getRatingsForPlace,
   getRatingTarget,
   getUserRating,
@@ -40,6 +42,11 @@ export type DeleteUserRatingResult = UserRatingResult & {
   deleted: boolean;
 };
 
+export type DeleteAdminPlaceRatingResult = {
+  rating: AdminPlaceRating | null;
+  deleted: boolean;
+};
+
 export type AdminPlaceRating = {
   id: string;
   userId: string | null;
@@ -57,7 +64,7 @@ export type AdminPlaceRating = {
 export class RatingError extends Error {
   constructor(
     message: string,
-    public readonly code: "place_not_found" | "place_not_public" | "rating_not_allowed",
+    public readonly code: "place_not_found" | "place_not_public" | "rating_not_allowed" | "rating_not_found",
   ) {
     super(message);
     this.name = "RatingError";
@@ -128,6 +135,37 @@ export async function getAdminPlaceRatings(input: {
   const ratings = await getRatingsForPlace(place.id);
 
   return ratings.map(toAdminPlaceRating);
+}
+
+export async function deleteAdminPlaceRating(input: {
+  userId: string;
+  placeId: string;
+  ratingId: string;
+}): Promise<DeleteAdminPlaceRatingResult> {
+  const place = await getPlaceByStableId(input.placeId);
+
+  if (!place) {
+    throw new RatingError("Place not found.", "place_not_found");
+  }
+
+  const membership = await getTeamMembership(place.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new RatingError("Rating is not allowed for this place.", "rating_not_allowed");
+  }
+
+  const rating = await getRatingById(input.ratingId);
+
+  if (!rating || rating.place_id !== place.id) {
+    throw new RatingError("Rating not found.", "rating_not_found");
+  }
+
+  await deleteRatingById(input.ratingId);
+
+  return {
+    rating: toAdminPlaceRating(rating),
+    deleted: true,
+  };
 }
 
 export async function upsertRating(input: UpsertRatingInput): Promise<UpsertRatingResult> {

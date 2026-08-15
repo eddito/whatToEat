@@ -1083,6 +1083,58 @@ type GetAdminPlaceRatingsResponse = {
 | 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `DELETE /api/admin/places/[id]/ratings`
+
+路径：`src/app/api/admin/places/[id]/ratings/route.ts`
+
+用途：owner/member 删除店铺下的某条评分，用于后台清理误评分或无效外部评分。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 店铺 `places.import_key` 或 UUID |
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `ratingId` | 是 | `ratings.id` |
+
+成功响应：
+```ts
+type DeleteAdminPlaceRatingResponse = {
+  ok: true;
+  rating: {
+    id: string;
+    userId: string | null;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    source: "team_member" | "external";
+    raterLabel: string | null;
+    score: number;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  deleted: true;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 缺少合法 `ratingId` |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `rating_not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
+| 404 | `rating_not_found` | 评分不存在或不属于目标店铺 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `GET /api/admin/lists/[slug]/places`
 
 路径：`src/app/api/admin/lists/[slug]/places/route.ts`
@@ -1244,8 +1296,11 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 - `POST /api/ratings`
 - `GET /api/ratings`
 - `DELETE /api/ratings`
+- `GET /api/admin/places/[id]/ratings`
+- `DELETE /api/admin/places/[id]/ratings`
 - member 写入/读取/删除/恢复 team_member 评分
 - external 写入/读取 external 评分
+- owner 后台读取并删除指定评分
 - external 给 public_view-only 榜单评分返回 403
 
 ### `pnpm smoke:change-password`
