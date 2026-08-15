@@ -51,6 +51,12 @@ export type PlaceListRecord = {
   list: PublicListRecord;
 };
 
+export type AdminFilterPlaceRecord = {
+  category: string | null;
+  region: string | null;
+  archived_at: string | null;
+};
+
 export type RatingRecord = {
   id: string;
   place_id: string;
@@ -135,6 +141,20 @@ export async function getListsForTeam(teamId: string): Promise<PublicListRecord[
   }
 
   return (data ?? []) as PublicListRecord[];
+}
+
+export async function getFilterPlacesForTeam(teamId: string): Promise<AdminFilterPlaceRecord[]> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("places")
+    .select("category, region, archived_at")
+    .eq("team_id", teamId);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as AdminFilterPlaceRecord[];
 }
 
 export type TeamContentCounts = {

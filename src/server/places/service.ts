@@ -6,6 +6,7 @@ import {
   archivePlaceRecord,
   deletePhotoRecord,
   getArchivedPlacesForTeam,
+  getFilterPlacesForTeam,
   getListBySlug,
   getListPlaceLinks,
   getListsForTeam,
@@ -167,6 +168,11 @@ export type GetAdminSummaryInput = {
   teamSlug?: string;
 };
 
+export type GetAdminFilterOptionsInput = {
+  userId: string;
+  teamSlug?: string;
+};
+
 export type GetAdminListPlacesInput = {
   userId: string;
   slug: string;
@@ -274,6 +280,20 @@ export type AdminSummary = {
     members: number;
   };
   generatedAt: string;
+};
+
+export type AdminFilterOptions = {
+  categories: string[];
+  regions: string[];
+  lists: Array<{
+    slug: string;
+    name: string;
+    visibility: ListVisibility;
+  }>;
+  counts: {
+    activePlaces: number;
+    archivedPlaces: number;
+  };
 };
 
 export type AdminPlacePhotoMutationResult = {
@@ -1017,6 +1037,42 @@ export async function getAdminSummary(input: GetAdminSummaryInput): Promise<Admi
       members,
     },
     generatedAt: new Date().toISOString(),
+  };
+}
+
+function uniqueSorted(values: Array<string | null | undefined>) {
+  return Array.from(new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])).sort((a, b) =>
+    a.localeCompare(b, "zh-Hans-CN"),
+  );
+}
+
+export async function getAdminFilterOptions(input: GetAdminFilterOptionsInput): Promise<AdminFilterOptions> {
+  const team = await getTeamBySlug(input.teamSlug?.trim() || "what-to-eat");
+
+  if (!team) {
+    throw new PlaceWriteError("Team not found.", "team_not_found");
+  }
+
+  const membership = await getTeamMembership(team.id, input.userId);
+
+  if (!canReadTeamContent(membership?.role)) {
+    throw new PlaceWriteError("Current user cannot read filter options for this team.", "not_allowed");
+  }
+
+  const [lists, places] = await Promise.all([getListsForTeam(team.id), getFilterPlacesForTeam(team.id)]);
+
+  return {
+    categories: uniqueSorted(places.map((place) => place.category)),
+    regions: uniqueSorted(places.map((place) => place.region)),
+    lists: lists.map((list) => ({
+      slug: list.slug,
+      name: list.name,
+      visibility: list.visibility,
+    })),
+    counts: {
+      activePlaces: places.filter((place) => !place.archived_at).length,
+      archivedPlaces: places.filter((place) => place.archived_at).length,
+    },
   };
 }
 
