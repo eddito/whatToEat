@@ -1343,6 +1343,31 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/import-batches`
 - owner/member/external/未登录权限路径
 
+### `pnpm smoke:admin-write`
+
+路径：`scripts/smoke-admin-write.mjs`
+
+用途：验证后台写入接口闭环。该脚本会写入/更新固定测试榜单和测试店铺，临时归档后恢复测试店铺，临时调整榜单前两项排序后恢复，并临时添加再移除测试成员。
+
+运行前置：
+- 本地后端服务运行在 `http://127.0.0.1:3101`，或设置 `BACKEND_SMOKE_URL`
+- 测试账号 `testowner/testuser/testexternal/testmembertarget` 已存在
+
+覆盖：
+- `POST /api/auth/login`
+- `POST /api/admin/lists`
+- `POST /api/admin/places`
+- `POST /api/admin/places/archive`
+- `GET /api/admin/lists/[slug]/places`
+- `POST /api/admin/lists/[slug]/places/order`
+- `POST /api/admin/members`
+- `DELETE /api/admin/members`
+- external 写榜单返回 403
+- member 可写榜单、店铺、归档/恢复店铺、调整榜单排序
+- 重复排序 id 返回 400
+- member 管理成员返回 403
+- owner 可添加并移除测试成员
+
 ### `pnpm smoke:admin-photos`
 
 路径：`scripts/smoke-admin-photos.mjs`
