@@ -1,14 +1,18 @@
 import "server-only";
 
 import {
+  deleteRatingById,
+  deleteUserRating,
+  getRatingById,
   getRatingsForPlace,
   getRatingTarget,
+  getUserRating,
   upsertUserRating,
   type AdminRatingRecord,
   type RatingRecord,
 } from "@/server/ratings/repository";
 import { getPlaceByStableId } from "@/server/places/repository";
-import { canManageTeamContent, getTeamMembership } from "@/server/teams/repository";
+import { canManageTeamContent, canReadTeamContent, getTeamMembership } from "@/server/teams/repository";
 
 export type UpsertRatingInput = {
   userId: string;
@@ -17,10 +21,30 @@ export type UpsertRatingInput = {
   note?: string | null;
 };
 
+export type RatingTargetInput = {
+  userId: string;
+  placeId: string;
+};
+
 export type UpsertRatingResult = {
   rating: RatingRecord;
   source: "team_member" | "external";
   role: "owner" | "member" | "viewer" | null;
+};
+
+export type UserRatingResult = {
+  rating: RatingRecord | null;
+  source: "team_member" | "external";
+  role: "owner" | "member" | "viewer" | null;
+};
+
+export type DeleteUserRatingResult = UserRatingResult & {
+  deleted: boolean;
+};
+
+export type DeleteAdminPlaceRatingResult = {
+  rating: AdminPlaceRating | null;
+  deleted: boolean;
 };
 
 export type AdminPlaceRating = {
@@ -40,11 +64,40 @@ export type AdminPlaceRating = {
 export class RatingError extends Error {
   constructor(
     message: string,
-    public readonly code: "place_not_found" | "place_not_public" | "rating_not_allowed",
+    public readonly code: "place_not_found" | "place_not_public" | "rating_not_allowed" | "rating_not_found",
   ) {
     super(message);
     this.name = "RatingError";
   }
+}
+
+async function getWritableRatingContext(input: {
+  userId: string;
+  placeId: string;
+}) {
+  const target = await getRatingTarget(input.placeId);
+
+  if (!target) {
+    throw new RatingError("Place not found.", "place_not_found");
+  }
+
+  if (target.publicLists.length === 0) {
+    throw new RatingError("Place is not public.", "place_not_public");
+  }
+
+  const membership = await getTeamMembership(target.teamId, input.userId);
+  const canWriteTeamRating = membership?.role === "owner" || membership?.role === "member";
+  const canWriteExternalRating = target.publicLists.some((list) => list.visibility === "public_rate");
+
+  if (!canWriteTeamRating && !canWriteExternalRating) {
+    throw new RatingError("Rating is not allowed for this place.", "rating_not_allowed");
+  }
+
+  return {
+    target,
+    source: canWriteTeamRating ? ("team_member" as const) : ("external" as const),
+    role: membership?.role ?? null,
+  };
 }
 
 function toAdminPlaceRating(rating: AdminRatingRecord): AdminPlaceRating {
@@ -75,7 +128,7 @@ export async function getAdminPlaceRatings(input: {
 
   const membership = await getTeamMembership(place.team_id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new RatingError("Rating is not allowed for this place.", "rating_not_allowed");
   }
 
@@ -84,38 +137,82 @@ export async function getAdminPlaceRatings(input: {
   return ratings.map(toAdminPlaceRating);
 }
 
-export async function upsertRating(input: UpsertRatingInput): Promise<UpsertRatingResult> {
-  const target = await getRatingTarget(input.placeId);
+export async function deleteAdminPlaceRating(input: {
+  userId: string;
+  placeId: string;
+  ratingId: string;
+}): Promise<DeleteAdminPlaceRatingResult> {
+  const place = await getPlaceByStableId(input.placeId);
 
-  if (!target) {
+  if (!place) {
     throw new RatingError("Place not found.", "place_not_found");
   }
 
-  if (target.publicLists.length === 0) {
-    throw new RatingError("Place is not public.", "place_not_public");
-  }
+  const membership = await getTeamMembership(place.team_id, input.userId);
 
-  const membership = await getTeamMembership(target.teamId, input.userId);
-  const canWriteTeamRating = membership?.role === "owner" || membership?.role === "member";
-  const canWriteExternalRating = target.publicLists.some((list) => list.visibility === "public_rate");
-
-  if (!canWriteTeamRating && !canWriteExternalRating) {
+  if (!canManageTeamContent(membership?.role)) {
     throw new RatingError("Rating is not allowed for this place.", "rating_not_allowed");
   }
 
-  const source = canWriteTeamRating ? "team_member" : "external";
+  const rating = await getRatingById(input.ratingId);
+
+  if (!rating || rating.place_id !== place.id) {
+    throw new RatingError("Rating not found.", "rating_not_found");
+  }
+
+  await deleteRatingById(input.ratingId);
+
+  return {
+    rating: toAdminPlaceRating(rating),
+    deleted: true,
+  };
+}
+
+export async function upsertRating(input: UpsertRatingInput): Promise<UpsertRatingResult> {
+  const context = await getWritableRatingContext(input);
   const rating = await upsertUserRating({
-    teamId: target.teamId,
-    placeId: target.placeId,
+    teamId: context.target.teamId,
+    placeId: context.target.placeId,
     userId: input.userId,
-    source,
+    source: context.source,
     score: input.score,
     note: input.note?.trim() || null,
   });
 
   return {
     rating,
-    source,
-    role: membership?.role ?? null,
+    source: context.source,
+    role: context.role,
+  };
+}
+
+export async function getMyRating(input: RatingTargetInput): Promise<UserRatingResult> {
+  const context = await getWritableRatingContext(input);
+  const rating = await getUserRating({
+    placeId: context.target.placeId,
+    userId: input.userId,
+    source: context.source,
+  });
+
+  return {
+    rating,
+    source: context.source,
+    role: context.role,
+  };
+}
+
+export async function deleteMyRating(input: RatingTargetInput): Promise<DeleteUserRatingResult> {
+  const context = await getWritableRatingContext(input);
+  const rating = await deleteUserRating({
+    placeId: context.target.placeId,
+    userId: input.userId,
+    source: context.source,
+  });
+
+  return {
+    rating,
+    deleted: Boolean(rating),
+    source: context.source,
+    role: context.role,
   };
 }

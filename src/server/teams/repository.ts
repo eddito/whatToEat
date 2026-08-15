@@ -171,6 +171,10 @@ export function canManageTeamContent(role: TeamRole | null | undefined) {
   return role === "owner" || role === "member";
 }
 
+export function canReadTeamContent(role: TeamRole | null | undefined) {
+  return role === "owner" || role === "member" || role === "viewer";
+}
+
 export function canManageTeamMembers(role: TeamRole | null | undefined) {
   return role === "owner";
 }

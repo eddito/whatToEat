@@ -61,10 +61,13 @@ export type RatingRecord = {
 };
 
 export type PhotoRecord = {
+  id: string;
   place_id: string;
   url: string;
+  storage_path: string | null;
   is_cover: boolean;
   sort_order: number;
+  created_at: string;
 };
 
 export type UserRatingHistoryRecord = RatingRecord & {
@@ -117,10 +120,6 @@ export type UserRatingHistoryRecord = RatingRecord & {
         }> | null;
       }>
     | null;
-};
-
-export type TeamMembershipRecord = {
-  role: "owner" | "member" | "viewer";
 };
 
 const PUBLIC_VISIBILITIES: ListVisibility[] = ["public_view", "public_rate"];
@@ -725,7 +724,7 @@ export async function getRatingsForPlaces(placeIds: string[]) {
   return data as RatingRecord[];
 }
 
-export async function getPhotosForPlaces(placeIds: string[]) {
+export async function getPhotosForPlaces(placeIds: string[]): Promise<PhotoRecord[]> {
   if (placeIds.length === 0) {
     return [];
   }
@@ -733,49 +732,17 @@ export async function getPhotosForPlaces(placeIds: string[]) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
     .from("photos")
-    .select("place_id, url, is_cover, sort_order")
+    .select("id, place_id, url, storage_path, is_cover, sort_order, created_at")
     .in("place_id", placeIds)
     .order("is_cover", { ascending: false })
-    .order("sort_order", { ascending: true });
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
 
   if (error) {
     throw error;
   }
 
-  return data as PhotoRecord[];
-}
-
-export async function getTeamMembership(teamId: string, userId: string) {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("team_members")
-    .select("role")
-    .eq("team_id", teamId)
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as TeamMembershipRecord | null;
-}
-
-export async function getUserRatingForPlace(placeId: string, userId: string, source: RatingSource) {
-  const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase
-    .from("ratings")
-    .select("id, place_id, source, rater_label, score, note")
-    .eq("place_id", placeId)
-    .eq("user_id", userId)
-    .eq("source", source)
-    .maybeSingle();
-
-  if (error) {
-    throw error;
-  }
-
-  return data as RatingRecord | null;
+  return (data ?? []) as PhotoRecord[];
 }
 
 export async function getUserRatingHistory(userId: string, limit = 30) {
@@ -819,45 +786,116 @@ export async function getUserRatingHistory(userId: string, limit = 30) {
   return data as unknown as UserRatingHistoryRecord[];
 }
 
-export async function upsertUserRating(input: {
-  existingRatingId?: string;
-  teamId: string;
-  placeId: string;
-  userId: string;
-  raterLabel: string;
-  source: RatingSource;
-  score: number;
-  note?: string;
-}) {
+export async function getPhotoById(photoId: string): Promise<PhotoRecord | null> {
   const supabase = createSupabaseAdminClient();
-  const payload = {
-    team_id: input.teamId,
-    place_id: input.placeId,
-    user_id: input.userId,
-    rater_label: input.raterLabel,
-    source: input.source,
-    score: input.score,
-    note: input.note || null,
-    updated_at: new Date().toISOString(),
-  };
-
-  const query = input.existingRatingId
-    ? supabase.from("ratings").update(payload).eq("id", input.existingRatingId).select("id, score, note").single()
-    : supabase.from("ratings").insert(payload).select("id, score, note").single();
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from("photos")
+    .select("id, place_id, url, storage_path, is_cover, sort_order, created_at")
+    .eq("id", photoId)
+    .maybeSingle();
 
   if (error) {
     throw error;
   }
 
-  return data as { id: string; score: number; note: string | null };
+  return data as PhotoRecord | null;
 }
 
-export async function deleteUserRating(ratingId: string) {
+export async function clearCoverPhotos(placeId: string) {
   const supabase = createSupabaseAdminClient();
-  const { error } = await supabase.from("ratings").delete().eq("id", ratingId);
+  const { error } = await supabase.from("photos").update({ is_cover: false }).eq("place_id", placeId);
 
   if (error) {
     throw error;
   }
+}
+
+export async function insertPhotoRecord(input: {
+  placeId: string;
+  url: string;
+  storagePath: string;
+  isCover: boolean;
+  sortOrder: number;
+}): Promise<PhotoRecord> {
+  if (input.isCover) {
+    await clearCoverPhotos(input.placeId);
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("photos")
+    .insert({
+      place_id: input.placeId,
+      url: input.url,
+      storage_path: input.storagePath,
+      is_cover: input.isCover,
+      sort_order: input.sortOrder,
+    })
+    .select("id, place_id, url, storage_path, is_cover, sort_order, created_at")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PhotoRecord;
+}
+
+export async function updatePhotoRecord(input: {
+  photoId: string;
+  placeId: string;
+  isCover?: boolean;
+  sortOrder?: number;
+}): Promise<PhotoRecord | null> {
+  if (input.isCover) {
+    await clearCoverPhotos(input.placeId);
+  }
+
+  const payload: {
+    is_cover?: boolean;
+    sort_order?: number;
+  } = {};
+
+  if (input.isCover !== undefined) {
+    payload.is_cover = input.isCover;
+  }
+
+  if (input.sortOrder !== undefined) {
+    payload.sort_order = input.sortOrder;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("photos")
+    .update(payload)
+    .eq("id", input.photoId)
+    .eq("place_id", input.placeId)
+    .select("id, place_id, url, storage_path, is_cover, sort_order, created_at")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PhotoRecord | null;
+}
+
+export async function deletePhotoRecord(input: {
+  photoId: string;
+  placeId: string;
+}): Promise<PhotoRecord | null> {
+  const photo = await getPhotoById(input.photoId);
+
+  if (!photo || photo.place_id !== input.placeId) {
+    return null;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("photos").delete().eq("id", input.photoId).eq("place_id", input.placeId);
+
+  if (error) {
+    throw error;
+  }
+
+  return photo;
 }

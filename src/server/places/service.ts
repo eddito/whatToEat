@@ -5,6 +5,7 @@ import { getMixedScore } from "@/lib/score";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
   archivePlaceRecord,
+  deletePhotoRecord,
   getArchivedPlacesForTeam,
   getListBySlug,
   getListPlaceLinks,
@@ -14,12 +15,14 @@ import {
   getPlacesForTeam,
   getPlacesForPublicListId,
   getPhotosForPlaces,
+  getPhotoById,
   getPublicListBySlug,
   getPublicLists,
   getPublicListsForPlace,
   getPlaceByStableId,
   getPublicPlaceByStableId,
   getRatingsForPlaces,
+  insertPhotoRecord,
   isUuid,
   type ListVisibility,
   type PhotoRecord,
@@ -29,9 +32,15 @@ import {
   upsertListPlace,
   upsertListRecord,
   upsertPlaceRecord,
+  updatePhotoRecord,
   updateListPlaceSortOrders,
 } from "@/server/places/repository";
-import { canManageTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
+import { createSupabaseAdminClient } from "@/server/supabase/admin";
+import { canManageTeamContent, canReadTeamContent, getTeamBySlug, getTeamMembership } from "@/server/teams/repository";
+
+const PLACE_PHOTOS_BUCKET = "place-photos";
+const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
+const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 export type PublicListStats = {
   count: number;
@@ -67,8 +76,16 @@ export type PublicPlace = {
   externalRatingCount: number;
   mixedScore: number;
   coverPhotoUrl?: string;
+  photoCount: number;
   longitude?: number;
   latitude?: number;
+};
+
+export type PublicPlacePhoto = {
+  id: string;
+  url: string;
+  isCover: boolean;
+  sortOrder: number;
 };
 
 export type PublicMapPlace = {
@@ -153,6 +170,28 @@ export type ReorderAdminListPlacesInput = {
   placeIds: string[];
 };
 
+export type UploadAdminPlacePhotoInput = {
+  userId: string;
+  placeId: string;
+  file: File;
+  isCover?: boolean;
+  sortOrder?: number;
+};
+
+export type UpdateAdminPlacePhotoInput = {
+  userId: string;
+  placeId: string;
+  photoId: string;
+  isCover?: boolean;
+  sortOrder?: number;
+};
+
+export type DeleteAdminPlacePhotoInput = {
+  userId: string;
+  placeId: string;
+  photoId: string;
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
@@ -196,6 +235,7 @@ export type AdminList = PublicList & {
 export type AdminPlaceDetail = PublicPlace & {
   teamId: string;
   archivedAt: string | null;
+  photos: PublicPlacePhoto[];
   lists: Array<{
     slug: string;
     name: string;
@@ -208,6 +248,11 @@ export type AdminPlaceSummary = PublicPlace & {
   listSlugs: string[];
   listNames: string[];
   archivedAt: string | null;
+};
+
+export type AdminPlacePhotoMutationResult = {
+  photo: PublicPlacePhoto | null;
+  deleted?: boolean;
 };
 
 export class ListWriteError extends Error {
@@ -227,6 +272,22 @@ export class ListPlaceOrderError extends Error {
   ) {
     super(message);
     this.name = "ListPlaceOrderError";
+  }
+}
+
+export class PlacePhotoError extends Error {
+  constructor(
+    message: string,
+    public readonly code:
+      | "place_not_found"
+      | "photo_not_found"
+      | "not_allowed"
+      | "invalid_file"
+      | "file_too_large"
+      | "storage_error",
+  ) {
+    super(message);
+    this.name = "PlacePhotoError";
   }
 }
 
@@ -268,14 +329,44 @@ function buildRatingSummary(placeId: string, ratings: RatingRecord[]) {
   };
 }
 
-function getCoverPhotoUrl(placeId: string, photos: PhotoRecord[]) {
-  return photos
-    .filter((photo) => photo.place_id === placeId)
-    .sort((a, b) => Number(b.is_cover) - Number(a.is_cover) || a.sort_order - b.sort_order)[0]?.url;
+function toPublicPlacePhoto(photo: PhotoRecord): PublicPlacePhoto {
+  return {
+    id: photo.id,
+    url: photo.url,
+    isCover: photo.is_cover,
+    sortOrder: photo.sort_order,
+  };
 }
 
-function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: RatingRecord[], photos: PhotoRecord[] = []): PublicPlace {
+function getSortedPhotos(photos: PhotoRecord[]) {
+  return [...photos].sort(
+    (a, b) =>
+      Number(b.is_cover) - Number(a.is_cover) ||
+      a.sort_order - b.sort_order ||
+      a.created_at.localeCompare(b.created_at),
+  );
+}
+
+function getPhotosByPlace(photos: PhotoRecord[]) {
+  const photosByPlace = new Map<string, PhotoRecord[]>();
+
+  for (const photo of photos) {
+    const current = photosByPlace.get(photo.place_id) ?? [];
+    current.push(photo);
+    photosByPlace.set(photo.place_id, current);
+  }
+
+  return photosByPlace;
+}
+
+function toPublicPlace(
+  place: PlaceRecord,
+  list: PublicListRecord,
+  ratings: RatingRecord[],
+  photos: PhotoRecord[] = [],
+): PublicPlace {
   const ratingSummary = buildRatingSummary(place.id, ratings);
+  const sortedPhotos = getSortedPhotos(photos);
 
   return {
     id: getStablePlaceId(place),
@@ -296,7 +387,8 @@ function toPublicPlace(place: PlaceRecord, list: PublicListRecord, ratings: Rati
     externalScore: ratingSummary.externalScore,
     externalRatingCount: ratingSummary.externalRatingCount,
     mixedScore: ratingSummary.mixedScore,
-    coverPhotoUrl: getCoverPhotoUrl(place.id, photos),
+    coverPhotoUrl: sortedPhotos[0]?.url,
+    photoCount: sortedPhotos.length,
     longitude: place.longitude ?? undefined,
     latitude: place.latitude ?? undefined,
   };
@@ -309,6 +401,41 @@ function optionalText(value: string | null | undefined) {
 
 function buildImportKey(listSlug: string) {
   return `${listSlug}-${randomUUID().slice(0, 8)}`;
+}
+
+function getPhotoExtension(file: File) {
+  const originalName = file.name.trim().toLowerCase();
+  const extension = originalName.match(/\.([a-z0-9]+)$/)?.[1];
+
+  if (extension && ["jpg", "jpeg", "png", "webp", "gif"].includes(extension)) {
+    return extension === "jpeg" ? "jpg" : extension;
+  }
+
+  if (file.type === "image/jpeg") return "jpg";
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  if (file.type === "image/gif") return "gif";
+
+  return "bin";
+}
+
+async function getManageablePhotoPlace(input: {
+  userId: string;
+  placeId: string;
+}) {
+  const place = await getPlaceByStableId(input.placeId);
+
+  if (!place) {
+    throw new PlacePhotoError("Place not found.", "place_not_found");
+  }
+
+  const membership = await getTeamMembership(place.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlacePhotoError("Current user cannot manage photos for this place.", "not_allowed");
+  }
+
+  return place;
 }
 
 function getStatsFromPlaces(places: PublicPlace[]): PublicListStats {
@@ -338,8 +465,9 @@ async function getPublicPlacesForListRecord(list: PublicListRecord) {
   const places = rows.map((row) => row.place);
   const placeIds = places.map((place) => place.id);
   const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+  const photosByPlace = getPhotosByPlace(photos);
 
-  return places.map((place) => toPublicPlace(place, list, ratings, photos));
+  return places.map((place) => toPublicPlace(place, list, ratings, photosByPlace.get(place.id)));
 }
 
 export async function getLists(): Promise<PublicList[]> {
@@ -395,8 +523,7 @@ export async function getPlace(id: string): Promise<PublicPlace | null> {
     return null;
   }
 
-  const ratings = await getRatingsForPlaces([place.id]);
-  const photos = await getPhotosForPlaces([place.id]);
+  const [ratings, photos] = await Promise.all([getRatingsForPlaces([place.id]), getPhotosForPlaces([place.id])]);
 
   return toPublicPlace(place, lists[0], ratings, photos);
 }
@@ -503,6 +630,7 @@ export function getListStatsFromPlaces(places: Place[]): PublicListStats {
       externalScore: place.externalScore,
       externalRatingCount: place.externalRatingCount,
       mixedScore: place.mixedScore,
+      photoCount: 0,
     })),
   );
 }
@@ -638,7 +766,7 @@ export async function getAdminLists(input: GetAdminListsInput): Promise<AdminLis
 
   const membership = await getTeamMembership(team.id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new ListWriteError("Current user cannot read lists for this team.", "not_allowed");
   }
 
@@ -647,11 +775,13 @@ export async function getAdminLists(input: GetAdminListsInput): Promise<AdminLis
     lists.map(async (list) => {
       const rows = await getPlacesForListId({ listId: list.id });
       const places = rows.map((row) => row.place);
-      const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+      const placeIds = places.map((place) => place.id);
+      const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+      const photosByPlace = getPhotosByPlace(photos);
 
       return {
         list,
-        places: places.map((place) => toPublicPlace(place, list, ratings)),
+        places: places.map((place) => toPublicPlace(place, list, ratings, photosByPlace.get(place.id))),
       };
     }),
   );
@@ -696,7 +826,7 @@ export async function getAdminArchivedPlaces(input: GetAdminArchivedPlacesInput)
 
   const membership = await getTeamMembership(team.id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read archived places for this team.", "not_allowed");
   }
 
@@ -738,13 +868,14 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
 
   const membership = await getTeamMembership(place.team_id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read this place.", "not_allowed");
   }
 
-  const [listRows, ratings] = await Promise.all([
+  const [listRows, ratings, photos] = await Promise.all([
     getListsForPlaces([place.id]),
     getRatingsForPlaces([place.id]),
+    getPhotosForPlaces([place.id]),
   ]);
   const primaryList = listRows[0]?.list ?? {
     id: "",
@@ -756,9 +887,10 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
   };
 
   return {
-    ...toPublicPlace(place, primaryList, ratings),
+    ...toPublicPlace(place, primaryList, ratings, photos),
     teamId: place.team_id,
     archivedAt: place.archived_at,
+    photos: getSortedPhotos(photos).map(toPublicPlacePhoto),
     lists: listRows.map((row) => ({
       slug: row.list.slug,
       name: row.list.name,
@@ -799,7 +931,7 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
 
   const membership = await getTeamMembership(team.id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read places for this team.", "not_allowed");
   }
 
@@ -815,11 +947,14 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
   )
     .filter((place) => placeMatchesQuery(place, input.query ?? ""))
     .slice(0, limit);
-  const [listRows, ratings] = await Promise.all([
+  const placeIds = places.map((place) => place.id);
+  const [listRows, ratings, photos] = await Promise.all([
     getListsForPlaces(places.map((place) => place.id)),
-    getRatingsForPlaces(places.map((place) => place.id)),
+    getRatingsForPlaces(placeIds),
+    getPhotosForPlaces(placeIds),
   ]);
   const listsByPlace = new Map<string, PublicListRecord[]>();
+  const photosByPlace = getPhotosByPlace(photos);
 
   for (const row of listRows) {
     const lists = listsByPlace.get(row.place_id) ?? [];
@@ -839,7 +974,7 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
     };
 
     return {
-      ...toPublicPlace(place, primaryList, ratings),
+      ...toPublicPlace(place, primaryList, ratings, photosByPlace.get(place.id)),
       teamId: place.team_id,
       listSlugs: lists.map((list) => list.slug),
       listNames: lists.map((list) => list.name),
@@ -857,7 +992,7 @@ export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Prom
 
   const membership = await getTeamMembership(list.team_id, input.userId);
 
-  if (!canManageTeamContent(membership?.role)) {
+  if (!canReadTeamContent(membership?.role)) {
     throw new PlaceWriteError("Current user cannot read places for this list.", "not_allowed");
   }
 
@@ -866,13 +1001,122 @@ export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Prom
     includeArchived: input.includeArchived,
   });
   const places = rows.map((row) => row.place);
-  const ratings = await getRatingsForPlaces(places.map((place) => place.id));
+  const placeIds = places.map((place) => place.id);
+  const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+  const photosByPlace = getPhotosByPlace(photos);
 
   return rows.map((row) => ({
-    ...toPublicPlace(row.place, list, ratings),
+    ...toPublicPlace(row.place, list, ratings, photosByPlace.get(row.place.id)),
     sortOrder: row.sort_order,
     archivedAt: row.place.archived_at,
   }));
+}
+
+export async function uploadAdminPlacePhoto(input: UploadAdminPlacePhotoInput): Promise<AdminPlacePhotoMutationResult> {
+  const place = await getManageablePhotoPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+
+  if (!ALLOWED_PHOTO_TYPES.has(input.file.type)) {
+    throw new PlacePhotoError("Photo must be a jpeg, png, webp, or gif image.", "invalid_file");
+  }
+
+  if (input.file.size <= 0) {
+    throw new PlacePhotoError("Photo file is empty.", "invalid_file");
+  }
+
+  if (input.file.size > MAX_PHOTO_BYTES) {
+    throw new PlacePhotoError("Photo exceeds the 10MB limit.", "file_too_large");
+  }
+
+  const extension = getPhotoExtension(input.file);
+  const storagePath = `${place.team_id}/${place.id}/${randomUUID()}.${extension}`;
+  const supabase = createSupabaseAdminClient();
+  const { error: uploadError } = await supabase.storage
+    .from(PLACE_PHOTOS_BUCKET)
+    .upload(storagePath, input.file, {
+      contentType: input.file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new PlacePhotoError(uploadError.message, "storage_error");
+  }
+
+  const { data } = supabase.storage.from(PLACE_PHOTOS_BUCKET).getPublicUrl(storagePath);
+  let photo: PhotoRecord;
+
+  try {
+    photo = await insertPhotoRecord({
+      placeId: place.id,
+      url: data.publicUrl,
+      storagePath,
+      isCover: input.isCover ?? false,
+      sortOrder: input.sortOrder ?? 0,
+    });
+  } catch (error) {
+    await supabase.storage.from(PLACE_PHOTOS_BUCKET).remove([storagePath]);
+    throw error;
+  }
+
+  return {
+    photo: toPublicPlacePhoto(photo),
+  };
+}
+
+export async function updateAdminPlacePhoto(input: UpdateAdminPlacePhotoInput): Promise<AdminPlacePhotoMutationResult> {
+  const place = await getManageablePhotoPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+  const existingPhoto = await getPhotoById(input.photoId);
+
+  if (!existingPhoto || existingPhoto.place_id !== place.id) {
+    throw new PlacePhotoError("Photo not found.", "photo_not_found");
+  }
+
+  const photo = await updatePhotoRecord({
+    photoId: input.photoId,
+    placeId: place.id,
+    isCover: input.isCover,
+    sortOrder: input.sortOrder,
+  });
+
+  return {
+    photo: photo ? toPublicPlacePhoto(photo) : null,
+  };
+}
+
+export async function deleteAdminPlacePhoto(input: DeleteAdminPlacePhotoInput): Promise<AdminPlacePhotoMutationResult> {
+  const place = await getManageablePhotoPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+  const existingPhoto = await getPhotoById(input.photoId);
+
+  if (!existingPhoto || existingPhoto.place_id !== place.id) {
+    throw new PlacePhotoError("Photo not found.", "photo_not_found");
+  }
+
+  if (existingPhoto.storage_path) {
+    const supabase = createSupabaseAdminClient();
+    const { error } = await supabase.storage.from(PLACE_PHOTOS_BUCKET).remove([existingPhoto.storage_path]);
+
+    if (error) {
+      throw new PlacePhotoError(error.message, "storage_error");
+    }
+  }
+
+  const photo = await deletePhotoRecord({
+    photoId: input.photoId,
+    placeId: place.id,
+  });
+
+  return {
+    photo: photo ? toPublicPlacePhoto(photo) : null,
+    deleted: Boolean(photo),
+  };
 }
 
 export async function reorderAdminListPlaces(

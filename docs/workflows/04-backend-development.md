@@ -73,6 +73,13 @@
 | BE-036 | 实现后台店铺列表查询接口 | 已完成 | `GET /api/admin/places`、`getAdminPlaces` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 通过 |
 | BE-037 | 实现账号联系方式校验修改密码接口 | 已完成 | `POST /api/auth/change-password`、`profiles.contact_email/contact_phone`、username 规则收紧 | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:change-password` 通过 |
 | BE-038 | 新增修改密码 smoke 脚本 | 已完成 | `pnpm smoke:change-password`、`scripts/smoke-change-password.mjs` | `node --check`、`tsc --noEmit`、`pnpm smoke:change-password` 通过 |
+| BE-039 | 实现当前用户评分读取和删除接口 | 已完成 | `GET /api/ratings`、`DELETE /api/ratings`、`getMyRating/deleteMyRating` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
+| BE-040 | 接入店铺照片公开读取契约 | 已完成 | `photos` 读取、`coverPhotoUrl/photoCount`、后台详情 `photos` | `tsc --noEmit`、`next build`、`pnpm smoke:admin-read` 通过 |
+| BE-041 | 实现店铺照片上传和真删除接口 | 已完成 | `place-photos` bucket、`photos.storage_path`、`POST/PATCH/DELETE /api/admin/places/[id]/photos` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:admin-photos` 通过 |
+| BE-042 | 新增店铺照片上传/真删除 smoke 脚本 | 已完成 | `pnpm smoke:admin-photos`、`scripts/smoke-admin-photos.mjs` | `node --check`、`tsc --noEmit`、`next build`、远端 smoke 通过 |
+| BE-043 | 实现后台评分删除接口 | 已完成 | `DELETE /api/admin/places/[id]/ratings`、`deleteAdminPlaceRating` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
+| BE-044 | 新增后台写入 smoke 脚本 | 已完成 | `pnpm smoke:admin-write`、`scripts/smoke-admin-write.mjs` | `node --check`、`tsc --noEmit`、`next build`、远端 smoke 通过 |
+| BE-045 | 细化 viewer 角色后台内容只读权限 | 已完成 | `canReadTeamContent`、后台内容 GET 接口允许 viewer | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过 |
 
 ## 完成记录
 
@@ -127,6 +134,13 @@
 | 2026-08-02 | 收紧测试账号命名规则 | `scripts/smoke-auth-ratings.mjs`、`scripts/smoke-admin-read.mjs`、`supabase/schema.sql` | 执行新 schema 后，历史测试账号会从 `test_user/test_external/test_owner/test_member_target` 迁移为 `testuser/testexternal/testowner/testmembertarget` |
 | 2026-08-02 | 更新远端测试账号联系方式 | Supabase Auth、`profiles`、`team_members` | `testuser/testowner/testexternal` 已按新 username 规则更新，并写入 `contact_email/contact_phone` |
 | 2026-08-02 | 远端修改密码闭环验证 | Supabase Auth、`profiles.contact_email` | `pnpm smoke:change-password` 通过：错误邮箱返回 `contact_mismatch`，正确邮箱可修改密码，旧密码失效，新密码可登录，最后恢复 `TestUser_2026` |
+| 2026-08-02 | 实现当前用户评分读取和删除接口 | `src/app/api/ratings/route.ts`、`src/server/ratings/repository.ts`、`src/server/ratings/service.ts`、`scripts/smoke-auth-ratings.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过 |
+| 2026-08-02 | 接入店铺照片公开读取契约 | `src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `tsc --noEmit`、`next build`、`pnpm smoke:admin-read` 通过 |
+| 2026-08-02 | 实现店铺照片上传和真删除接口 | `supabase/schema.sql`、`src/app/api/admin/places/[id]/photos/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:admin-photos` 通过；远端 `place-photos` 公开 10MB，上传后已真删除 |
+| 2026-08-02 | 新增店铺照片上传/真删除 smoke 脚本 | `scripts/smoke-admin-photos.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-photos` 通过 |
+| 2026-08-15 | 实现后台评分删除接口 | `src/app/api/admin/places/[id]/ratings/route.ts`、`src/server/ratings/repository.ts`、`src/server/ratings/service.ts`、`scripts/smoke-auth-ratings.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、`pnpm smoke:auth-ratings` 通过；owner 可删除指定评分，external 删除后台评分返回 403，测试评分已恢复 |
+| 2026-08-15 | 新增后台写入 smoke 脚本 | `scripts/smoke-admin-write.mjs`、`package.json`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过；测试成员已移除，测试店铺已恢复未归档 |
+| 2026-08-15 | 细化 viewer 角色后台内容只读权限 | `src/server/teams/repository.ts`、`src/server/places/service.ts`、`src/server/ratings/service.ts`、`scripts/smoke-admin-write.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-write` 通过；`testexternal` 临时 viewer 已移除 |
 
 ## 当前数据库快照
 

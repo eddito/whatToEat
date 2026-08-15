@@ -59,6 +59,7 @@ Username 规则：
 | `places` | 店铺 | 基础信息、口味、评价、停车、来源、地图字段、`archived_at` |
 | `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
 | `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
+| `photos` | 店铺图片 | `place_id`、`url`、`storage_path`、`is_cover`、`sort_order` |
 | `import_batches` | 导入批次 | `team_id`、`source_name`、`operation`、`status`、`summary`、`finished_at`、`rolled_back_at` |
 
 `profiles.email` 已从业务表移除。Supabase `auth.users.email` 仅由 Supabase Auth 内部使用。
@@ -78,6 +79,14 @@ Username 规则：
 | `getMapPlaces()` | 获取地图页需要的公开店铺数据 |
 | `getListStats(slug)` | 获取公开榜单统计 |
 
+`PublicPlace` 通用照片字段：
+```ts
+type PublicPlacePhotoFields = {
+  coverPhotoUrl?: string;
+  photoCount: number;
+};
+```
+
 ### 店铺管理
 
 路径：`src/server/places/service.ts`
@@ -86,15 +95,15 @@ Username 规则：
 | --- | --- |
 | `upsertAdminPlace(input)` | owner/member 新增或编辑店铺，并维护榜单关联 |
 | `archiveAdminPlace(input)` | owner/member 软归档或恢复店铺 |
-| `getAdminPlaces(input)` | owner/member 按团队读取后台店铺列表，支持关键词/分类/区域/归档筛选 |
-| `getAdminArchivedPlaces(input)` | owner/member 读取已归档店铺列表 |
-| `getAdminPlace(input)` | owner/member 读取店铺后台详情 |
-| `getAdminPlacesByList(input)` | owner/member 读取榜单内店铺管理视图 |
-| `getAdminLists(input)` | owner/member 读取后台榜单列表，包含 private 榜单 |
+| `getAdminPlaces(input)` | owner/member/viewer 按团队读取后台店铺列表，支持关键词/分类/区域/归档筛选 |
+| `getAdminArchivedPlaces(input)` | owner/member/viewer 读取已归档店铺列表 |
+| `getAdminPlace(input)` | owner/member/viewer 读取店铺后台详情 |
+| `getAdminPlacesByList(input)` | owner/member/viewer 读取榜单内店铺管理视图 |
+| `getAdminLists(input)` | owner/member/viewer 读取后台榜单列表，包含 private 榜单 |
 | `reorderAdminListPlaces(input)` | owner/member 调整榜单内店铺排序 |
 | `upsertAdminList(input)` | owner/member 新增或编辑榜单 |
 
-权限：调用用户必须是目标榜单所在小队的 `owner` 或 `member`。
+权限：后台内容读取允许目标小队 `owner`、`member`、`viewer`；后台内容写入、归档、排序和图片管理要求 `owner` 或 `member`。
 
 ### 成员管理
 
@@ -124,9 +133,9 @@ Username 规则：
 
 | 函数 | 说明 |
 | --- | --- |
-| `getAdminPlaceRatings(input)` | owner/member 读取店铺评分明细 |
+| `getAdminPlaceRatings(input)` | owner/member/viewer 读取店铺评分明细 |
 
-权限：调用用户必须是目标店铺所在小队的 `owner` 或 `member`。
+权限：评分明细读取允许目标小队 `owner`、`member`、`viewer`；删除评分要求 `owner` 或 `member`。
 
 ## HTTP 接口
 
@@ -299,6 +308,48 @@ type RefreshResponse = {
 | 401 | `profile_not_found` | Auth 用户缺少业务 profile |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `GET /api/ratings`
+
+路径：`src/app/api/ratings/route.ts`
+
+用途：读取当前登录用户对某家公开店铺的自己的评分。会自动按团队成员身份返回 `team_member` 评分，否则在 `public_rate` 榜单下返回 `external` 评分。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `placeId` | 是 | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type GetMyRatingResponse = {
+  ok: true;
+  rating: {
+    id: string;
+    source: "team_member" | "external";
+    score: number;
+    note: string | null;
+    updated_at: string;
+  } | null;
+  source: "team_member" | "external";
+  role: "owner" | "member" | "viewer" | null;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 缺少或无效 `placeId` |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `place_not_public` | 店铺不在公开榜单中 |
+| 403 | `rating_not_allowed` | 当前用户无权读取自己的评分上下文 |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `POST /api/ratings`
 
 路径：`src/app/api/ratings/route.ts`
@@ -339,11 +390,54 @@ type UpsertRatingRequest = {
 | 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `DELETE /api/ratings`
+
+路径：`src/app/api/ratings/route.ts`
+
+用途：删除当前登录用户对某家公开店铺的自己的评分。没有已保存评分时也返回 200，`deleted` 为 `false`。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `placeId` | 是 | 店铺 `places.import_key` 或 UUID |
+
+成功响应：
+```ts
+type DeleteMyRatingResponse = {
+  ok: true;
+  rating: {
+    id: string;
+    source: "team_member" | "external";
+    score: number;
+    note: string | null;
+    updated_at: string;
+  } | null;
+  deleted: boolean;
+  source: "team_member" | "external";
+  role: "owner" | "member" | "viewer" | null;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 缺少或无效 `placeId` |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `place_not_public` | 店铺不在公开榜单中 |
+| 403 | `rating_not_allowed` | 当前用户无权删除该评分上下文 |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `GET /api/admin/places`
 
 路径：`src/app/api/admin/places/route.ts`
 
-用途：owner/member 按小队读取后台店铺列表，供后台店铺管理、选店和搜索使用。
+用途：owner/member/viewer 按小队读取后台店铺列表，供后台店铺管理、选店和搜索使用。
 
 认证：
 ```txt
@@ -378,7 +472,7 @@ type GetAdminPlacesResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -448,7 +542,7 @@ type UpsertAdminPlaceResponse = {
 
 路径：`src/app/api/admin/lists/route.ts`
 
-用途：owner/member 读取小队全部榜单列表，包含 private/public_view/public_rate，并附带未归档店铺统计。
+用途：owner/member/viewer 读取小队全部榜单列表，包含 private/public_view/public_rate，并附带未归档店铺统计。
 
 认证：
 ```txt
@@ -475,7 +569,7 @@ type GetAdminListsResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
 | 404 | `team_not_found` | 目标小队不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -776,7 +870,7 @@ type ArchiveAdminPlaceResponse = {
 
 路径：`src/app/api/admin/places/[id]/route.ts`
 
-用途：owner/member 读取店铺后台详情，包含基础字段、归档状态、所属榜单和团队评分汇总。
+用途：owner/member/viewer 读取店铺后台详情，包含基础字段、归档状态、所属榜单和团队评分汇总。
 
 认证：
 ```txt
@@ -795,6 +889,12 @@ type GetAdminPlaceResponse = {
   place: PublicPlace & {
     teamId: string;
     archivedAt: string | null;
+    photos: Array<{
+      id: string;
+      url: string;
+      isCover: boolean;
+      sortOrder: number;
+    }>;
     lists: Array<{
       slug: string;
       name: string;
@@ -808,7 +908,7 @@ type GetAdminPlaceResponse = {
 | HTTP | `error` | 场景 |
 | ---: | --- | --- |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member/viewer |
 | 404 | `place_not_found` | 店铺不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -816,7 +916,7 @@ type GetAdminPlaceResponse = {
 
 路径：`src/app/api/admin/places/archived/route.ts`
 
-用途：owner/member 读取已归档店铺列表，用于后台恢复或检查归档数据。
+用途：owner/member/viewer 读取已归档店铺列表，用于后台恢复或检查归档数据。
 
 认证：
 ```txt
@@ -851,15 +951,101 @@ type GetAdminArchivedPlacesResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标小队 owner/member/viewer |
 | 404 | `team_not_found` | 目标小队不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `POST /api/admin/places/[id]/photos`
+
+路径：`src/app/api/admin/places/[id]/photos/route.ts`
+
+用途：owner/member 给店铺上传图片到公开 Storage bucket `place-photos`，单张最大 10MB，支持 jpeg/png/webp/gif。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+Content-Type: multipart/form-data
+```
+
+FormData：
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `file` | 是 | 图片文件，最大 10MB |
+| `isCover` | 否 | `true/false`，设为封面时会清除同店铺其它封面 |
+| `sortOrder` | 否 | 0-10000 的整数 |
+
+成功响应：
+```ts
+type UploadAdminPlacePhotoResponse = {
+  ok: true;
+  photo: {
+    id: string;
+    url: string;
+    isCover: boolean;
+    sortOrder: number;
+  };
+};
+```
+
+### `PATCH /api/admin/places/[id]/photos`
+
+用途：owner/member 修改店铺图片封面状态或排序。
+
+请求体：
+```ts
+type UpdateAdminPlacePhotoRequest = {
+  photoId: string;
+  isCover?: boolean;
+  sortOrder?: number;
+};
+```
+
+成功响应：
+```ts
+type UpdateAdminPlacePhotoResponse = UploadAdminPlacePhotoResponse;
+```
+
+### `DELETE /api/admin/places/[id]/photos`
+
+用途：owner/member 删除店铺图片。删除时会先真实删除 `place-photos` 里的 Storage object，再删除 `photos` 记录。
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `photoId` | 是 | `photos.id` |
+
+成功响应：
+```ts
+type DeleteAdminPlacePhotoResponse = {
+  ok: true;
+  photo: {
+    id: string;
+    url: string;
+    isCover: boolean;
+    sortOrder: number;
+  } | null;
+  deleted: boolean;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体、form-data 或 photoId 不合法 |
+| 400 | `invalid_file` | 文件为空或不是允许的图片类型 |
+| 400 | `file_too_large` | 文件超过 10MB |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
+| 404 | `photo_not_found` | 图片不存在或不属于目标店铺 |
+| 502 | `storage_error` | Supabase Storage 上传或删除失败 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `GET /api/admin/places/[id]/ratings`
 
 路径：`src/app/api/admin/places/[id]/ratings/route.ts`
 
-用途：owner/member 读取店铺评分明细，用于后台查看团队评分、外部评分和备注。
+用途：owner/member/viewer 读取店铺评分明细，用于后台查看团队评分、外部评分和备注。
 
 认证：
 ```txt
@@ -895,15 +1081,67 @@ type GetAdminPlaceRatingsResponse = {
 | HTTP | `error` | 场景 |
 | ---: | --- | --- |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `rating_not_allowed` | 当前用户不是目标店铺所在小队 owner/member/viewer |
+| 404 | `place_not_found` | 店铺不存在 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
+### `DELETE /api/admin/places/[id]/ratings`
+
+路径：`src/app/api/admin/places/[id]/ratings/route.ts`
+
+用途：owner/member 删除店铺下的某条评分，用于后台清理误评分或无效外部评分。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+Path 参数：
+| 参数 | 说明 |
+| --- | --- |
+| `id` | 店铺 `places.import_key` 或 UUID |
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `ratingId` | 是 | `ratings.id` |
+
+成功响应：
+```ts
+type DeleteAdminPlaceRatingResponse = {
+  ok: true;
+  rating: {
+    id: string;
+    userId: string | null;
+    username: string | null;
+    displayName: string | null;
+    avatarUrl: string | null;
+    source: "team_member" | "external";
+    raterLabel: string | null;
+    score: number;
+    note: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+  deleted: true;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 缺少合法 `ratingId` |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
 | 403 | `rating_not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
 | 404 | `place_not_found` | 店铺不存在 |
+| 404 | `rating_not_found` | 评分不存在或不属于目标店铺 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
 ### `GET /api/admin/lists/[slug]/places`
 
 路径：`src/app/api/admin/lists/[slug]/places/route.ts`
 
-用途：owner/member 读取某个榜单下的店铺管理视图，用于后台表格、编辑入口和排序展示。
+用途：owner/member/viewer 读取某个榜单下的店铺管理视图，用于后台表格、编辑入口和排序展示。
 
 认证：
 ```txt
@@ -936,7 +1174,7 @@ type GetAdminListPlacesResponse = {
 | ---: | --- | --- |
 | 400 | `invalid_request` | query 参数不合法 |
 | 401 | `unauthorized` | 缺少或无效 bearer token |
-| 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member |
+| 403 | `not_allowed` | 当前用户不是目标榜单所在小队 owner/member/viewer |
 | 404 | `list_not_found` | 榜单不存在 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
@@ -1055,6 +1293,18 @@ pnpm auth:create-user -- --username yang --password "<password>" --display-name 
 
 用途：验证后端登录和评分权限闭环。该脚本会写入/更新远端 Supabase 测试评分。
 
+覆盖：
+- `POST /api/auth/login`
+- `POST /api/ratings`
+- `GET /api/ratings`
+- `DELETE /api/ratings`
+- `GET /api/admin/places/[id]/ratings`
+- `DELETE /api/admin/places/[id]/ratings`
+- member 写入/读取/删除/恢复 team_member 评分
+- external 写入/读取 external 评分
+- owner 后台读取并删除指定评分
+- external 给 public_view-only 榜单评分返回 403
+
 ### `pnpm smoke:change-password`
 
 路径：`scripts/smoke-change-password.mjs`
@@ -1094,3 +1344,55 @@ temporaryPassword: TempUser_2026
 - `GET /api/admin/members`
 - `GET /api/admin/import-batches`
 - owner/member/external/未登录权限路径
+
+### `pnpm smoke:admin-write`
+
+路径：`scripts/smoke-admin-write.mjs`
+
+用途：验证后台写入接口闭环。该脚本会写入/更新固定测试榜单和测试店铺，临时归档后恢复测试店铺，临时调整榜单前两项排序后恢复，并临时添加再移除测试成员。
+
+运行前置：
+- 本地后端服务运行在 `http://127.0.0.1:3101`，或设置 `BACKEND_SMOKE_URL`
+- 测试账号 `testowner/testuser/testexternal/testmembertarget` 已存在
+
+覆盖：
+- `POST /api/auth/login`
+- `POST /api/admin/lists`
+- `POST /api/admin/places`
+- `POST /api/admin/places/archive`
+- `GET /api/admin/places`
+- `GET /api/admin/places/[id]`
+- `GET /api/admin/places/[id]/ratings`
+- `GET /api/admin/lists/[slug]/places`
+- `POST /api/admin/lists/[slug]/places/order`
+- `POST /api/admin/members`
+- `DELETE /api/admin/members`
+- external 写榜单返回 403
+- viewer 可读后台榜单、店铺、榜单内店铺、店铺详情和评分明细，但写榜单返回 403
+- member 可写榜单、店铺、归档/恢复店铺、调整榜单排序
+- 重复排序 id 返回 400
+- member 管理成员返回 403
+- owner 可添加并移除测试成员
+
+### `pnpm smoke:admin-photos`
+
+路径：`scripts/smoke-admin-photos.mjs`
+
+用途：验证后台店铺照片上传、元数据更新和真删除闭环。该脚本会向公开 Storage bucket `place-photos` 上传一张 1x1 PNG，测试结束后删除 Storage object 和 `photos` 记录。
+
+运行前置：
+- 本地后端服务运行在 `http://127.0.0.1:3101`，或设置 `BACKEND_SMOKE_URL`
+- 远端 Supabase 已执行包含 `photos.storage_path` 和 `place-photos` bucket 配置的最新 `supabase/schema.sql`
+- 测试账号 `testowner/testuser/testexternal` 已存在
+
+覆盖：
+- `POST /api/auth/login`
+- `POST /api/admin/places/[id]/photos`
+- `PATCH /api/admin/places/[id]/photos`
+- `DELETE /api/admin/places/[id]/photos`
+- `GET /api/admin/places/[id]`
+- 未登录上传返回 401
+- external 上传返回 403
+- owner 上传照片并成为封面
+- member 更新照片 `isCover/sortOrder`
+- owner 删除照片并确认详情中不再返回该照片
