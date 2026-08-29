@@ -110,6 +110,18 @@ type AdminPlace = {
   updatedAt: string;
   coverPhotoUrl?: string;
   photoCount: number;
+  dishPhotos?: AdminDishPhoto[];
+  supportsDishPhotos?: boolean;
+};
+
+type AdminDishPhoto = {
+  id: string;
+  url: string;
+  photoType: "place" | "dish";
+  dishName: string;
+  dishDescription: string;
+  isCover: boolean;
+  sortOrder: number;
 };
 
 type AdminPlacesResponse = {
@@ -365,6 +377,14 @@ function toPlaceForm(place: AdminPlace): PlaceFormState {
     parkingNote: place.parkingNote,
     sourceLabel: place.sourceLabel,
     visited: place.visited,
+  };
+}
+
+function normalizeAdminPlace(place: AdminPlace): AdminPlace {
+  return {
+    ...place,
+    dishPhotos: place.dishPhotos ?? [],
+    supportsDishPhotos: Array.isArray(place.dishPhotos),
   };
 }
 
@@ -1000,10 +1020,15 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
   const [searchQuery, setSearchQuery] = useState("");
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [photoInputKey, setPhotoInputKey] = useState(0);
+  const [dishPhotoFile, setDishPhotoFile] = useState<File | null>(null);
+  const [dishPhotoInputKey, setDishPhotoInputKey] = useState(0);
+  const [dishName, setDishName] = useState("");
+  const [dishDescription, setDishDescription] = useState("");
   const [placeLists, setPlaceLists] = useState<AdminPlaceListAssignment[]>([]);
   const [loadState, setLoadState] = useState<RequestState>("loading");
   const [saveState, setSaveState] = useState<RequestState>("idle");
   const [uploadState, setUploadState] = useState<RequestState>("idle");
+  const [dishUploadState, setDishUploadState] = useState<RequestState>("idle");
   const [placeListState, setPlaceListState] = useState<RequestState>("idle");
   const [message, setMessage] = useState("");
 
@@ -1025,7 +1050,7 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
       return;
     }
 
-    const nextPlaces = result?.places ?? [];
+    const nextPlaces = (result?.places ?? []).map(normalizeAdminPlace);
     setPlaces(nextPlaces);
     setLoadState("success");
 
@@ -1034,6 +1059,9 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
       setForm(emptyPlaceForm);
       setPlaceLists([]);
       setPlaceListState("idle");
+      setDishPhotoFile(null);
+      setDishName("");
+      setDishDescription("");
       setMessage("没有匹配的店铺。");
       return;
     }
@@ -1085,10 +1113,15 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     setForm(toPlaceForm(place));
     setSaveState("idle");
     setUploadState("idle");
+    setDishUploadState("idle");
     setPlaceListState("idle");
     setPlaceLists([]);
     setPhotoFile(null);
     setPhotoInputKey((current) => current + 1);
+    setDishPhotoFile(null);
+    setDishPhotoInputKey((current) => current + 1);
+    setDishName("");
+    setDishDescription("");
     setMessage("");
   }
 
@@ -1188,6 +1221,70 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     setMessage(result?.message ?? "图片已上传。");
   }
 
+  async function handleUploadDishPhoto() {
+    if (!selectedPlace || !canEdit || !dishPhotoFile) {
+      return;
+    }
+
+    if (!selectedPlace.supportsDishPhotos) {
+      setDishUploadState("error");
+      setMessage("后端分支接入特色菜照片字段后即可保存。");
+      return;
+    }
+
+    setDishUploadState("loading");
+    setMessage("");
+
+    const body = new FormData();
+    body.append("file", dishPhotoFile);
+    body.append("photoType", "dish");
+    body.append("dishName", dishName.trim() || "特色菜");
+    body.append("dishDescription", dishDescription.trim());
+    body.append("sortOrder", String(selectedPlace.dishPhotos?.length ?? 0));
+
+    const response = await fetch(`/api/admin/places/${encodeURIComponent(selectedPlace.id)}/photos`, {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${token}`,
+      },
+      body,
+    });
+    const result = (await response.json().catch(() => null)) as {
+      error?: string;
+      message?: string;
+      photo?: AdminDishPhoto;
+    } | null;
+
+    if (!response.ok || !result?.photo) {
+      setDishUploadState("error");
+      setMessage(result?.message ?? result?.error ?? "特色菜照片上传失败。");
+      return;
+    }
+
+    const nextDishPhoto: AdminDishPhoto = {
+      id: result.photo.id,
+      url: result.photo.url,
+      photoType: "dish",
+      dishName: result.photo.dishName || dishName.trim() || "特色菜",
+      dishDescription: result.photo.dishDescription || dishDescription.trim(),
+      isCover: false,
+      sortOrder: result.photo.sortOrder ?? selectedPlace.dishPhotos?.length ?? 0,
+    };
+    const nextPlace = {
+      ...selectedPlace,
+      dishPhotos: [...(selectedPlace.dishPhotos ?? []), nextDishPhoto],
+    };
+
+    setSelectedPlace(nextPlace);
+    setPlaces((current) => current.map((place) => (place.id === nextPlace.id ? nextPlace : place)));
+    setDishPhotoFile(null);
+    setDishPhotoInputKey((current) => current + 1);
+    setDishName("");
+    setDishDescription("");
+    setDishUploadState("success");
+    setMessage("特色菜照片已上传。");
+  }
+
   function updatePlaceList(listId: string, updates: Partial<Pick<AdminPlaceListAssignment, "included" | "sortOrder">>) {
     setPlaceLists((current) => current.map((list) => (list.id === listId ? { ...list, ...updates } : list)));
     setPlaceListState("idle");
@@ -1233,6 +1330,7 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
     loadState === "loading" ||
     saveState === "loading" ||
     uploadState === "loading" ||
+    dishUploadState === "loading" ||
     placeListState === "loading";
 
   return (
@@ -1479,6 +1577,71 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
                   <p className="section-note">{selectedPlace ? `${selectedPlace.photoCount} 张图片，支持 JPG / PNG / WebP。` : "请选择店铺。"}</p>
                 </div>
               </div>
+
+              <div className="admin-dish-uploader">
+                <div className="admin-place-lists-head">
+                  <strong>特色菜照片</strong>
+                  <p>为这家店补充菜品图片、名称和介绍，公开列表页会展示缩略图。</p>
+                </div>
+
+                {selectedPlace && (selectedPlace.dishPhotos?.length ?? 0) > 0 ? (
+                  <div className="admin-dish-photo-grid" aria-label="已上传特色菜照片">
+                    {(selectedPlace.dishPhotos ?? []).map((photo) => (
+                      <span className="admin-dish-photo" key={photo.id}>
+                        <Image src={photo.url} alt={photo.dishName || "特色菜"} width={120} height={90} />
+                        <small>{photo.dishName || "特色菜"}</small>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="section-note">
+                    {selectedPlace?.supportsDishPhotos ? "暂无特色菜照片。" : "后端分支接入特色菜照片字段后即可保存。"}
+                  </p>
+                )}
+
+                <div className="admin-form-grid">
+                  <label className="field">
+                    <span>菜品名称</span>
+                    <input
+                      maxLength={80}
+                      onChange={(event) => setDishName(event.target.value)}
+                      placeholder="例如 招牌牛肉"
+                      value={dishName}
+                    />
+                  </label>
+                  <label className="field">
+                    <span>菜品图片</span>
+                    <input
+                      accept="image/jpeg,image/png,image/webp,image/gif"
+                      capture="environment"
+                      key={dishPhotoInputKey}
+                      onChange={(event) => setDishPhotoFile(event.target.files?.[0] ?? null)}
+                      type="file"
+                    />
+                  </label>
+                </div>
+
+                <label className="field">
+                  <span>详情介绍</span>
+                  <textarea
+                    maxLength={400}
+                    onChange={(event) => setDishDescription(event.target.value)}
+                    placeholder="口味、推荐理由、份量或避雷点"
+                    rows={3}
+                    value={dishDescription}
+                  />
+                </label>
+
+                <button
+                  className="button secondary"
+                  disabled={!selectedPlace || !canEdit || !selectedPlace.supportsDishPhotos || !dishPhotoFile || isBusy}
+                  onClick={handleUploadDishPhoto}
+                  type="button"
+                >
+                  <Upload aria-hidden="true" size={16} />
+                  {dishUploadState === "loading" ? "上传中..." : "上传特色菜"}
+                </button>
+              </div>
             </fieldset>
 
             <div className="admin-form-footer">
@@ -1488,9 +1651,13 @@ function AdminPlaceMaintenance({ token, canEdit }: { token: string; canEdit: boo
                   saveState === "error" ||
                   loadState === "error" ||
                   uploadState === "error" ||
+                  dishUploadState === "error" ||
                   placeListState === "error"
                     ? "admin-inline-message error"
-                    : saveState === "success" || uploadState === "success" || placeListState === "success"
+                    : saveState === "success" ||
+                        uploadState === "success" ||
+                        dishUploadState === "success" ||
+                        placeListState === "success"
                       ? "admin-inline-message success"
                       : "admin-inline-message"
                 }

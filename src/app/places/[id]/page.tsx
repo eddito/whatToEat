@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MapPinned, Star } from "lucide-react";
 import { notFound } from "next/navigation";
+import { DishPhotoGallery } from "@/components/dish-photo-gallery";
 import { getPlacePageData } from "@/lib/public-data";
 import { RatingForm } from "@/components/rating-form";
 
@@ -20,6 +21,7 @@ export default async function PlacePage({ params }: PlacePageProps) {
   }
 
   const { place } = pageData;
+  const dishPhotos = place.dishPhotos ?? [];
 
   return (
     <>
@@ -41,6 +43,12 @@ export default async function PlacePage({ params }: PlacePageProps) {
               priority
             />
           ) : null}
+
+          <article className="info-card">
+            <h2>特色菜照片</h2>
+            <DishPhotoGallery photos={dishPhotos} variant="detail" />
+            {dishPhotos.length === 0 ? <p className="section-note">暂无特色菜照片。</p> : null}
+          </article>
 
           <article className="info-card">
             <h2>店铺信息</h2>

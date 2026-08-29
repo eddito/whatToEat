@@ -24,8 +24,19 @@ export type Place = {
   mixedScore: number;
   legacyScore: number;
   coverPhotoUrl?: string;
+  dishPhotos?: PlaceDishPhoto[];
   longitude?: number;
   latitude?: number;
+};
+
+export type PlaceDishPhoto = {
+  id: string;
+  url: string;
+  photoType: "place" | "dish";
+  dishName: string;
+  dishDescription: string;
+  isCover: boolean;
+  sortOrder: number;
 };
 
 export type ListSummary = {

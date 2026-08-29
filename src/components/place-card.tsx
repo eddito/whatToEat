@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ChevronRight, MapPin } from "lucide-react";
+import { DishPhotoGallery } from "@/components/dish-photo-gallery";
 import { normalizeCategory, normalizeRegion } from "@/lib/display";
 import type { Place } from "@/lib/types";
 
@@ -51,6 +52,8 @@ export function PlaceCard({ place }: { place: Place }) {
       </div>
 
       <p className="review">{place.review || "还没有留下评价，等下一次探店补上。"}</p>
+
+      <DishPhotoGallery photos={place.dishPhotos} />
 
       <div className="rating-line" aria-label="成员评分">
         <span className="rating-stars" aria-hidden="true">
