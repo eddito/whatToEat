@@ -21,7 +21,7 @@ export default async function PlacePage({ params }: PlacePageProps) {
   }
 
   const { place } = pageData;
-  const dishPhotos = place.dishPhotos ?? [];
+  const featuredDishes = place.featuredDishes ?? [];
 
   return (
     <>
@@ -46,8 +46,8 @@ export default async function PlacePage({ params }: PlacePageProps) {
 
           <article className="info-card">
             <h2>特色菜照片</h2>
-            <DishPhotoGallery photos={dishPhotos} variant="detail" />
-            {dishPhotos.length === 0 ? <p className="section-note">暂无特色菜照片。</p> : null}
+            <DishPhotoGallery dishes={featuredDishes} variant="detail" />
+            {featuredDishes.length === 0 ? <p className="section-note">暂无特色菜照片。</p> : null}
           </article>
 
           <article className="info-card">

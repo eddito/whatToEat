@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Filter, ShieldCheck } from "lucide-react";
+import { Filter, Search, ShieldCheck } from "lucide-react";
 import { notFound } from "next/navigation";
 import { PlaceCard } from "@/components/place-card";
 import { normalizeRegion, splitCategory } from "@/lib/display";
@@ -13,8 +13,11 @@ type ListPageProps = {
     q?: string | string[];
     region?: string | string[];
     category?: string | string[];
+    sort?: string | string[];
   }>;
 };
+
+type SortKey = "score-desc" | "score-asc" | "name";
 
 function getSearchValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -37,6 +40,12 @@ function getRankingScore(place: { mixedScore?: number; teamScore: number }) {
   return place.mixedScore || place.teamScore;
 }
 
+function getSortValue(value: string | string[] | undefined): SortKey {
+  const sort = getSearchValue(value);
+
+  return sort === "score-asc" || sort === "name" ? sort : "score-desc";
+}
+
 export default async function ListPage({ params, searchParams }: ListPageProps) {
   const [{ slug }, resolvedSearchParams] = await Promise.all([params, searchParams]);
   const pageData = await getListPageData(slug);
@@ -54,27 +63,46 @@ export default async function ListPage({ params, searchParams }: ListPageProps) 
   const keyword = getSearchValue(resolvedSearchParams?.q).trim();
   const selectedRegion = getSearchValue(resolvedSearchParams?.region);
   const selectedCategory = getSearchValue(resolvedSearchParams?.category);
+  const selectedSort = getSortValue(resolvedSearchParams?.sort);
   const normalizedKeyword = keyword.toLowerCase();
-  const filteredPlaces = listPlaces.filter((place) => {
-    const matchesRegion = selectedRegion ? normalizeRegion(place.region) === selectedRegion : true;
-    const matchesCategory = selectedCategory ? splitCategory(place.category).includes(selectedCategory) : true;
-    const searchableText = [
-      place.name,
-      place.category,
-      place.region,
-      place.locationLabel,
-      place.signatureDishes,
-      place.review,
-      ...place.tasteTags,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    const matchesKeyword = normalizedKeyword ? searchableText.includes(normalizedKeyword) : true;
+  const filteredPlaces = listPlaces
+    .filter((place) => {
+      const matchesRegion = selectedRegion ? normalizeRegion(place.region) === selectedRegion : true;
+      const matchesCategory = selectedCategory ? splitCategory(place.category).includes(selectedCategory) : true;
+      const searchableText = [
+        place.name,
+        place.category,
+        place.region,
+        place.locationLabel,
+        place.signatureDishes,
+        place.review,
+        ...place.tasteTags,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      const matchesKeyword = normalizedKeyword ? searchableText.includes(normalizedKeyword) : true;
 
-    return matchesRegion && matchesCategory && matchesKeyword;
-  });
-  const hasActiveSearch = Boolean(keyword || selectedRegion || selectedCategory);
+      return matchesRegion && matchesCategory && matchesKeyword;
+    })
+    .sort((a, b) => {
+      if (selectedSort === "score-asc") {
+        return getRankingScore(a) - getRankingScore(b) || a.name.localeCompare(b.name, "zh-Hans-CN");
+      }
+
+      if (selectedSort === "name") {
+        return a.name.localeCompare(b.name, "zh-Hans-CN") || getRankingScore(b) - getRankingScore(a);
+      }
+
+      return getRankingScore(b) - getRankingScore(a) || a.name.localeCompare(b.name, "zh-Hans-CN");
+    });
+  const hasActiveSearch = Boolean(keyword || selectedRegion || selectedCategory || selectedSort !== "score-desc");
+  const baseFilterParams = {
+    q: keyword,
+    region: selectedRegion,
+    category: selectedCategory,
+    sort: selectedSort === "score-desc" ? "" : selectedSort,
+  };
   const visitedCount = listPlaces.filter((place) => place.visited).length;
 
   return (
@@ -98,7 +126,7 @@ export default async function ListPage({ params, searchParams }: ListPageProps) 
               <ShieldCheck aria-hidden="true" size={14} />
               {list.visibility === "public_rate" ? "公开查看" : "公开查看"}
             </span>
-            <span className="filter-button">
+            <span className="filter-button" aria-label="筛选区域">
               <Filter aria-hidden="true" size={16} />
               筛选
             </span>
@@ -119,18 +147,33 @@ export default async function ListPage({ params, searchParams }: ListPageProps) 
         </div>
 
         <div className="chip-filter-panel" aria-label="店铺筛选条件">
+          <form action={`/lists/${list.slug}`} className="list-search-form">
+            <label className="list-search-field">
+              <span>搜索店铺</span>
+              <Search aria-hidden="true" size={16} />
+              <input defaultValue={keyword} name="q" placeholder="店名、特色菜、位置或评价" type="search" />
+            </label>
+            {selectedRegion ? <input name="region" type="hidden" value={selectedRegion} /> : null}
+            {selectedCategory ? <input name="category" type="hidden" value={selectedCategory} /> : null}
+            {selectedSort !== "score-desc" ? <input name="sort" type="hidden" value={selectedSort} /> : null}
+            <button className="button secondary" type="submit">
+              <Search aria-hidden="true" size={15} />
+              搜索
+            </button>
+          </form>
+
           <div className="chip-group">
             <span className="chip-label">地区</span>
             <Link
               className={!selectedRegion ? "filter-chip active" : "filter-chip"}
-              href={buildFilterHref(list.slug, { q: keyword, category: selectedCategory })}
+              href={buildFilterHref(list.slug, { ...baseFilterParams, region: "" })}
             >
               全部
             </Link>
             {regions.map((region) => (
               <Link
                 className={selectedRegion === region ? "filter-chip active" : "filter-chip"}
-                href={buildFilterHref(list.slug, { q: keyword, region, category: selectedCategory })}
+                href={buildFilterHref(list.slug, { ...baseFilterParams, region })}
                 key={region}
               >
                 {region}
@@ -142,14 +185,14 @@ export default async function ListPage({ params, searchParams }: ListPageProps) 
             <span className="chip-label">类型</span>
             <Link
               className={!selectedCategory ? "filter-chip active dark" : "filter-chip"}
-              href={buildFilterHref(list.slug, { q: keyword, region: selectedRegion })}
+              href={buildFilterHref(list.slug, { ...baseFilterParams, category: "" })}
             >
               全部
             </Link>
             {categories.map((category) => (
               <Link
                 className={selectedCategory === category ? "filter-chip active dark" : "filter-chip"}
-                href={buildFilterHref(list.slug, { q: keyword, region: selectedRegion, category })}
+                href={buildFilterHref(list.slug, { ...baseFilterParams, category })}
                 key={category}
               >
                 {category}
@@ -159,9 +202,24 @@ export default async function ListPage({ params, searchParams }: ListPageProps) 
 
           <div className="chip-group">
             <span className="chip-label">排序</span>
-            <span className="filter-chip active dark">评分↓</span>
-            <span className="filter-chip">评分↑</span>
-            <span className="filter-chip">名称</span>
+            <Link
+              className={selectedSort === "score-desc" ? "filter-chip active dark" : "filter-chip"}
+              href={buildFilterHref(list.slug, { ...baseFilterParams, sort: "" })}
+            >
+              评分↓
+            </Link>
+            <Link
+              className={selectedSort === "score-asc" ? "filter-chip active dark" : "filter-chip"}
+              href={buildFilterHref(list.slug, { ...baseFilterParams, sort: "score-asc" })}
+            >
+              评分↑
+            </Link>
+            <Link
+              className={selectedSort === "name" ? "filter-chip active dark" : "filter-chip"}
+              href={buildFilterHref(list.slug, { ...baseFilterParams, sort: "name" })}
+            >
+              名称
+            </Link>
           </div>
         </div>
       </section>

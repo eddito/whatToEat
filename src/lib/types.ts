@@ -24,18 +24,16 @@ export type Place = {
   mixedScore: number;
   legacyScore: number;
   coverPhotoUrl?: string;
-  dishPhotos?: PlaceDishPhoto[];
+  featuredDishes?: PlaceDish[];
   longitude?: number;
   latitude?: number;
 };
 
-export type PlaceDishPhoto = {
+export type PlaceDish = {
   id: string;
-  url: string;
-  photoType: "place" | "dish";
-  dishName: string;
-  dishDescription: string;
-  isCover: boolean;
+  name: string;
+  description: string;
+  photoUrl: string;
   sortOrder: number;
 };
 

@@ -3024,6 +3024,52 @@ body {
   padding: 14px 12px;
 }
 
+.list-search-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.list-search-field {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.list-search-field span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.list-search-field svg {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+.list-search-field input {
+  min-height: 44px;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  padding: 0 12px 0 38px;
+}
+
+.list-search-field input:focus {
+  border-color: rgba(220, 38, 38, 0.48);
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+  outline: none;
+}
+
 .chip-group {
   display: flex;
   flex-wrap: wrap;
@@ -3494,6 +3540,14 @@ body {
 
   .list-board-actions {
     justify-content: space-between;
+  }
+
+  .list-search-form {
+    grid-template-columns: 1fr;
+  }
+
+  .list-search-form .button {
+    width: 100%;
   }
 
   .list-switcher {

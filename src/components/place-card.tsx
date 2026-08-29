@@ -53,7 +53,7 @@ export function PlaceCard({ place }: { place: Place }) {
 
       <p className="review">{place.review || "还没有留下评价，等下一次探店补上。"}</p>
 
-      <DishPhotoGallery photos={place.dishPhotos} />
+      <DishPhotoGallery dishes={place.featuredDishes} />
 
       <div className="rating-line" aria-label="成员评分">
         <span className="rating-stars" aria-hidden="true">
