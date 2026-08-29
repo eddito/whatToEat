@@ -75,6 +75,18 @@ export type PhotoRecord = {
   created_at: string;
 };
 
+export type PlaceDishRecord = {
+  id: string;
+  place_id: string;
+  name: string;
+  description: string | null;
+  photo_url: string;
+  storage_path: string | null;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
 const PUBLIC_VISIBILITIES: ListVisibility[] = ["public_view", "public_rate"];
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -771,6 +783,41 @@ export async function getPhotoById(photoId: string): Promise<PhotoRecord | null>
   return data as PhotoRecord | null;
 }
 
+export async function getDishesForPlaces(placeIds: string[]): Promise<PlaceDishRecord[]> {
+  if (placeIds.length === 0) {
+    return [];
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("place_dishes")
+    .select("id, place_id, name, description, photo_url, storage_path, sort_order, created_at, updated_at")
+    .in("place_id", placeIds)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as PlaceDishRecord[];
+}
+
+export async function getDishById(dishId: string): Promise<PlaceDishRecord | null> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("place_dishes")
+    .select("id, place_id, name, description, photo_url, storage_path, sort_order, created_at, updated_at")
+    .eq("id", dishId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PlaceDishRecord | null;
+}
+
 export async function clearCoverPhotos(placeId: string) {
   const supabase = createSupabaseAdminClient();
   const { error } = await supabase.from("photos").update({ is_cover: false }).eq("place_id", placeId);
@@ -868,4 +915,97 @@ export async function deletePhotoRecord(input: {
   }
 
   return photo;
+}
+
+export async function insertDishRecord(input: {
+  placeId: string;
+  name: string;
+  description: string | null;
+  photoUrl: string;
+  storagePath: string;
+  sortOrder: number;
+}): Promise<PlaceDishRecord> {
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("place_dishes")
+    .insert({
+      place_id: input.placeId,
+      name: input.name,
+      description: input.description,
+      photo_url: input.photoUrl,
+      storage_path: input.storagePath,
+      sort_order: input.sortOrder,
+    })
+    .select("id, place_id, name, description, photo_url, storage_path, sort_order, created_at, updated_at")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PlaceDishRecord;
+}
+
+export async function updateDishRecord(input: {
+  dishId: string;
+  placeId: string;
+  name?: string;
+  description?: string | null;
+  sortOrder?: number;
+}): Promise<PlaceDishRecord | null> {
+  const payload: {
+    name?: string;
+    description?: string | null;
+    sort_order?: number;
+    updated_at: string;
+  } = {
+    updated_at: new Date().toISOString(),
+  };
+
+  if (input.name !== undefined) {
+    payload.name = input.name;
+  }
+
+  if (input.description !== undefined) {
+    payload.description = input.description;
+  }
+
+  if (input.sortOrder !== undefined) {
+    payload.sort_order = input.sortOrder;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { data, error } = await supabase
+    .from("place_dishes")
+    .update(payload)
+    .eq("id", input.dishId)
+    .eq("place_id", input.placeId)
+    .select("id, place_id, name, description, photo_url, storage_path, sort_order, created_at, updated_at")
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as PlaceDishRecord | null;
+}
+
+export async function deleteDishRecord(input: {
+  dishId: string;
+  placeId: string;
+}): Promise<PlaceDishRecord | null> {
+  const dish = await getDishById(input.dishId);
+
+  if (!dish || dish.place_id !== input.placeId) {
+    return null;
+  }
+
+  const supabase = createSupabaseAdminClient();
+  const { error } = await supabase.from("place_dishes").delete().eq("id", input.dishId).eq("place_id", input.placeId);
+
+  if (error) {
+    throw error;
+  }
+
+  return dish;
 }

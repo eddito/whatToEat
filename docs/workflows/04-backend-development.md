@@ -87,6 +87,7 @@
 | BE-050 | 实现 seed 导入 HTTP dry-run 预检接口 | 已完成 | `GET /api/admin/import-plan`、`getAdminImportPlan` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
 | BE-051 | 拆分成员列表读取和成员管理权限 | 已完成 | `getAdminMembers` 允许 owner/member/viewer 读取，写操作保持 owner-only | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
 | BE-052 | 实现后台筛选选项读取接口 | 已完成 | `GET /api/admin/filter-options`、`getAdminFilterOptions` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 |
+| BE-053 | 实现店铺特色菜图片后端契约和上传/真删除接口 | 已完成 | `place_dishes`、`place-dishes` bucket、`featuredDishes`、`POST/PATCH/DELETE /api/admin/places/[id]/dishes`、`pnpm smoke:admin-dishes` | `node --check`、`tsc --noEmit`、`next build`、远端 `pnpm smoke:admin-dishes` 通过 |
 
 ## 完成记录
 
@@ -155,6 +156,7 @@
 | 2026-08-16 | 实现 seed 导入 HTTP dry-run 预检接口 | `src/app/api/admin/import-plan/route.ts`、`src/server/imports/repository.ts`、`src/server/imports/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 owner 可读、member 禁止、返回 dry-run 和 seed place 计数 |
 | 2026-08-16 | 拆分成员列表读取和成员管理权限 | `src/server/teams/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 member 可读成员列表，写操作仍由原 smoke 保持 owner-only |
 | 2026-08-16 | 实现后台筛选选项读取接口 | `src/app/api/admin/filter-options/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`scripts/smoke-admin-read.mjs`、`docs/backend/interfaces.md` | `node --check`、`tsc --noEmit`、`pnpm smoke:admin-read` 覆盖 owner/member 可读、external 禁止、返回 categories/regions |
+| 2026-08-16 | 实现店铺特色菜图片后端契约和上传/真删除接口 | `supabase/schema.sql`、`src/app/api/admin/places/[id]/dishes/route.ts`、`src/server/places/repository.ts`、`src/server/places/service.ts`、`scripts/smoke-admin-dishes.mjs`、`docs/backend/interfaces.md` | `node --check scripts/smoke-admin-dishes.mjs`、`pnpm exec tsc --noEmit`、`pnpm build`、远端 `pnpm smoke:admin-dishes` 通过；验证 owner 上传、member 更新、external/未登录拒绝、Storage object 与 `place_dishes` 真删除 |
 
 ## 当前数据库快照
 

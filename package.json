@@ -13,6 +13,7 @@
     "db:rollback-import": "node scripts/seed-supabase.mjs --rollback-batch",
     "auth:create-user": "node scripts/create-auth-user.mjs",
     "smoke:change-password": "node scripts/smoke-change-password.mjs",
+    "smoke:admin-dishes": "node scripts/smoke-admin-dishes.mjs",
     "smoke:admin-read": "node scripts/smoke-admin-read.mjs",
     "smoke:admin-photos": "node scripts/smoke-admin-photos.mjs",
     "smoke:admin-write": "node scripts/smoke-admin-write.mjs",

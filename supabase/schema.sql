@@ -182,10 +182,44 @@ create table if not exists public.photos (
 
 alter table public.photos add column if not exists storage_path text;
 
+create table if not exists public.place_dishes (
+  id uuid primary key default gen_random_uuid(),
+  place_id uuid not null references public.places(id) on delete cascade,
+  name text not null,
+  description text,
+  photo_url text not null,
+  storage_path text,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.place_dishes add column if not exists description text;
+alter table public.place_dishes add column if not exists storage_path text;
+alter table public.place_dishes add column if not exists sort_order integer not null default 0;
+alter table public.place_dishes add column if not exists updated_at timestamptz not null default now();
+
+create index if not exists place_dishes_place_sort_idx
+  on public.place_dishes (place_id, sort_order, created_at);
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'place-photos',
   'place-photos',
+  true,
+  10485760,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+  'place-dishes',
+  'place-dishes',
   true,
   10485760,
   array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -316,6 +350,7 @@ alter table public.lists enable row level security;
 alter table public.list_places enable row level security;
 alter table public.ratings enable row level security;
 alter table public.photos enable row level security;
+alter table public.place_dishes enable row level security;
 alter table public.import_batches enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
@@ -408,6 +443,20 @@ create policy "Public can read public place photos" on public.photos
       join public.list_places lp on lp.place_id = p.id
       join public.lists l on l.id = lp.list_id
       where p.id = photos.place_id
+        and l.visibility in ('public_view', 'public_rate')
+    )
+  );
+
+drop policy if exists "Public can read public place dishes" on public.place_dishes;
+create policy "Public can read public place dishes" on public.place_dishes
+  for select using (
+    exists (
+      select 1
+      from public.places p
+      join public.list_places lp on lp.place_id = p.id
+      join public.lists l on l.id = lp.list_id
+      where p.id = place_dishes.place_id
+        and p.archived_at is null
         and l.visibility in ('public_view', 'public_rate')
     )
   );
