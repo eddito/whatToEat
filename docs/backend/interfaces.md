@@ -60,6 +60,7 @@ Username 规则：
 | `list_places` | 榜单和店铺关联 | `list_id`、`place_id`、`sort_order` |
 | `ratings` | 评分 | `source`、`rater_label`、`score`、`note` |
 | `photos` | 店铺图片 | `place_id`、`url`、`storage_path`、`is_cover`、`sort_order` |
+| `place_dishes` | 店铺特色菜 | `place_id`、`name`、`description`、`photo_url`、`storage_path`、`sort_order` |
 | `import_batches` | 导入批次 | `team_id`、`source_name`、`operation`、`status`、`summary`、`finished_at`、`rolled_back_at` |
 
 `profiles.email` 已从业务表移除。Supabase `auth.users.email` 仅由 Supabase Auth 内部使用。
@@ -84,6 +85,13 @@ Username 规则：
 type PublicPlacePhotoFields = {
   coverPhotoUrl?: string;
   photoCount: number;
+  featuredDishes: Array<{
+    id: string;
+    name: string;
+    description: string;
+    photoUrl: string;
+    sortOrder: number;
+  }>;
 };
 ```
 
@@ -104,6 +112,9 @@ type PublicPlacePhotoFields = {
 | `getAdminLists(input)` | owner/member/viewer 读取后台榜单列表，包含 private 榜单 |
 | `reorderAdminListPlaces(input)` | owner/member 调整榜单内店铺排序 |
 | `upsertAdminList(input)` | owner/member 新增或编辑榜单 |
+| `uploadAdminPlaceDish(input)` | owner/member 上传店铺特色菜图片并写入特色菜记录 |
+| `updateAdminPlaceDish(input)` | owner/member 更新特色菜名称、介绍和排序 |
+| `deleteAdminPlaceDish(input)` | owner/member 真删除特色菜 Storage object 和数据库记录 |
 
 权限：后台内容读取允许目标小队 `owner`、`member`、`viewer`；后台内容写入、归档、排序和图片管理要求 `owner` 或 `member`。
 
@@ -1508,6 +1519,88 @@ type DeleteAdminPlaceRatingResponse = {
 | 404 | `rating_not_found` | 评分不存在或不属于目标店铺 |
 | 500 | `internal_error` | 未预期服务端错误 |
 
+### `POST /api/admin/places/[id]/dishes`
+
+路径：`src/app/api/admin/places/[id]/dishes/route.ts`
+
+用途：owner/member 给店铺添加特色菜，图片上传到公开 Storage bucket `place-dishes`，单张最大 10MB，支持 jpeg/png/webp/gif。
+
+认证：
+```txt
+Authorization: Bearer <accessToken>
+```
+
+请求格式：`multipart/form-data`
+
+| 字段 | 必填 | 说明 |
+| --- | --- | --- |
+| `file` | 是 | 特色菜图片 |
+| `name` | 是 | 特色菜名称 |
+| `description` | 否 | 详情介绍 |
+| `sortOrder` | 否 | 展示排序，0-10000，默认 0 |
+
+成功响应：
+```ts
+type UploadAdminPlaceDishResponse = {
+  ok: true;
+  dish: {
+    id: string;
+    name: string;
+    description: string;
+    photoUrl: string;
+    sortOrder: number;
+  };
+};
+```
+
+### `PATCH /api/admin/places/[id]/dishes`
+
+用途：owner/member 更新特色菜名称、详情介绍和排序。
+
+请求体：
+```ts
+type UpdateAdminPlaceDishRequest = {
+  dishId: string;
+  name?: string;
+  description?: string | null;
+  sortOrder?: number;
+};
+```
+
+成功响应：`UploadAdminPlaceDishResponse`
+
+### `DELETE /api/admin/places/[id]/dishes`
+
+用途：owner/member 删除特色菜。删除时会先真实删除 `place-dishes` 里的 Storage object，再删除 `place_dishes` 记录。
+
+Query 参数：
+| 参数 | 必填 | 说明 |
+| --- | --- | --- |
+| `dishId` | 是 | `place_dishes.id` |
+
+成功响应：
+```ts
+type DeleteAdminPlaceDishResponse = {
+  ok: true;
+  dish: UploadAdminPlaceDishResponse["dish"];
+  deleted: true;
+};
+```
+
+错误响应：
+| HTTP | `error` | 场景 |
+| ---: | --- | --- |
+| 400 | `invalid_request` | 请求体或 query 参数不合法 |
+| 400 | `invalid_name` | 特色菜名称为空 |
+| 400 | `invalid_file` | 文件为空或格式不支持 |
+| 400 | `file_too_large` | 图片超过 10MB |
+| 401 | `unauthorized` | 缺少或无效 bearer token |
+| 403 | `not_allowed` | 当前用户不是目标店铺所在小队 owner/member |
+| 404 | `place_not_found` | 店铺不存在 |
+| 404 | `dish_not_found` | 特色菜不存在或不属于目标店铺 |
+| 502 | `storage_error` | Supabase Storage 上传或删除失败 |
+| 500 | `internal_error` | 未预期服务端错误 |
+
 ### `GET /api/admin/lists/[slug]/places`
 
 路径：`src/app/api/admin/lists/[slug]/places/route.ts`
@@ -1773,6 +1866,22 @@ temporaryPassword: TempUser_2026
 - `POST /api/admin/places/[id]/photos`
 - `PATCH /api/admin/places/[id]/photos`
 - `DELETE /api/admin/places/[id]/photos`
+
+### `pnpm smoke:admin-dishes`
+
+路径：`scripts/smoke-admin-dishes.mjs`
+
+用途：验证后台店铺特色菜上传、元数据更新和真删除闭环。该脚本会向公开 Storage bucket `place-dishes` 上传一张 1x1 PNG，测试结束后删除 Storage object 和 `place_dishes` 记录。
+
+前置条件：
+- 后端本地服务运行在 `http://127.0.0.1:3101`，或通过 `BACKEND_SMOKE_URL` 指定
+- 远端 Supabase 已执行包含 `place_dishes` 和 `place-dishes` bucket 配置的最新 `supabase/schema.sql`
+- `testowner`、`testuser`、`testexternal` 三个测试账号存在，并保持默认密码
+
+覆盖接口：
+- `POST /api/admin/places/[id]/dishes`
+- `PATCH /api/admin/places/[id]/dishes`
+- `DELETE /api/admin/places/[id]/dishes`
 - `GET /api/admin/places/[id]`
 - 未登录上传返回 401
 - external 上传返回 403

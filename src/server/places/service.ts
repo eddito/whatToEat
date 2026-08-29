@@ -5,8 +5,11 @@ import { getMixedScore } from "@/lib/score";
 import type { ListSlug, ListSummary, Place } from "@/lib/types";
 import {
   archivePlaceRecord,
+  deleteDishRecord,
   deletePhotoRecord,
   getArchivedPlacesForTeam,
+  getDishById,
+  getDishesForPlaces,
   getFilterPlacesForTeam,
   getListBySlug,
   getListPlaceLinks,
@@ -24,9 +27,11 @@ import {
   getPublicPlaceByStableId,
   getRatingsForPlaces,
   getTeamContentCounts,
+  insertDishRecord,
   insertPhotoRecord,
   isUuid,
   type ListVisibility,
+  type PlaceDishRecord,
   type PhotoRecord,
   type PlaceRecord,
   type PublicListRecord,
@@ -34,6 +39,7 @@ import {
   upsertListPlace,
   upsertListRecord,
   upsertPlaceRecord,
+  updateDishRecord,
   updatePhotoRecord,
   updateListPlaceSortOrders,
 } from "@/server/places/repository";
@@ -48,6 +54,7 @@ import {
 } from "@/server/teams/repository";
 
 const PLACE_PHOTOS_BUCKET = "place-photos";
+const PLACE_DISHES_BUCKET = "place-dishes";
 const MAX_PHOTO_BYTES = 10 * 1024 * 1024;
 const ALLOWED_PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
@@ -86,6 +93,7 @@ export type PublicPlace = {
   mixedScore: number;
   coverPhotoUrl?: string;
   photoCount: number;
+  featuredDishes: PublicPlaceDish[];
   longitude?: number;
   latitude?: number;
 };
@@ -94,6 +102,14 @@ export type PublicPlacePhoto = {
   id: string;
   url: string;
   isCover: boolean;
+  sortOrder: number;
+};
+
+export type PublicPlaceDish = {
+  id: string;
+  name: string;
+  description: string;
+  photoUrl: string;
   sortOrder: number;
 };
 
@@ -211,6 +227,30 @@ export type DeleteAdminPlacePhotoInput = {
   photoId: string;
 };
 
+export type UploadAdminPlaceDishInput = {
+  userId: string;
+  placeId: string;
+  file: File;
+  name: string;
+  description?: string | null;
+  sortOrder?: number;
+};
+
+export type UpdateAdminPlaceDishInput = {
+  userId: string;
+  placeId: string;
+  dishId: string;
+  name?: string;
+  description?: string | null;
+  sortOrder?: number;
+};
+
+export type DeleteAdminPlaceDishInput = {
+  userId: string;
+  placeId: string;
+  dishId: string;
+};
+
 export class PlaceWriteError extends Error {
   constructor(
     message: string,
@@ -305,6 +345,11 @@ export type AdminPlacePhotoMutationResult = {
   deleted?: boolean;
 };
 
+export type AdminPlaceDishMutationResult = {
+  dish: PublicPlaceDish | null;
+  deleted?: boolean;
+};
+
 export class ListWriteError extends Error {
   constructor(
     message: string,
@@ -338,6 +383,23 @@ export class PlacePhotoError extends Error {
   ) {
     super(message);
     this.name = "PlacePhotoError";
+  }
+}
+
+export class PlaceDishError extends Error {
+  constructor(
+    message: string,
+    public readonly code:
+      | "place_not_found"
+      | "dish_not_found"
+      | "not_allowed"
+      | "invalid_file"
+      | "file_too_large"
+      | "invalid_name"
+      | "storage_error",
+  ) {
+    super(message);
+    this.name = "PlaceDishError";
   }
 }
 
@@ -388,6 +450,16 @@ function toPublicPlacePhoto(photo: PhotoRecord): PublicPlacePhoto {
   };
 }
 
+function toPublicPlaceDish(dish: PlaceDishRecord): PublicPlaceDish {
+  return {
+    id: dish.id,
+    name: dish.name,
+    description: dish.description ?? "",
+    photoUrl: dish.photo_url,
+    sortOrder: dish.sort_order,
+  };
+}
+
 function getSortedPhotos(photos: PhotoRecord[]) {
   return [...photos].sort(
     (a, b) =>
@@ -409,11 +481,24 @@ function getPhotosByPlace(photos: PhotoRecord[]) {
   return photosByPlace;
 }
 
+function getDishesByPlace(dishes: PlaceDishRecord[]) {
+  const dishesByPlace = new Map<string, PlaceDishRecord[]>();
+
+  for (const dish of dishes) {
+    const current = dishesByPlace.get(dish.place_id) ?? [];
+    current.push(dish);
+    dishesByPlace.set(dish.place_id, current);
+  }
+
+  return dishesByPlace;
+}
+
 function toPublicPlace(
   place: PlaceRecord,
   list: PublicListRecord,
   ratings: RatingRecord[],
   photos: PhotoRecord[] = [],
+  dishes: PlaceDishRecord[] = [],
 ): PublicPlace {
   const ratingSummary = buildRatingSummary(place.id, ratings);
   const sortedPhotos = getSortedPhotos(photos);
@@ -439,6 +524,7 @@ function toPublicPlace(
     mixedScore: ratingSummary.mixedScore,
     coverPhotoUrl: sortedPhotos[0]?.url,
     photoCount: sortedPhotos.length,
+    featuredDishes: dishes.map(toPublicPlaceDish),
     longitude: place.longitude ?? undefined,
     latitude: place.latitude ?? undefined,
   };
@@ -488,6 +574,25 @@ async function getManageablePhotoPlace(input: {
   return place;
 }
 
+async function getManageableDishPlace(input: {
+  userId: string;
+  placeId: string;
+}) {
+  const place = await getPlaceByStableId(input.placeId);
+
+  if (!place) {
+    throw new PlaceDishError("Place not found.", "place_not_found");
+  }
+
+  const membership = await getTeamMembership(place.team_id, input.userId);
+
+  if (!canManageTeamContent(membership?.role)) {
+    throw new PlaceDishError("Current user cannot manage featured dishes for this place.", "not_allowed");
+  }
+
+  return place;
+}
+
 function getStatsFromPlaces(places: PublicPlace[]): PublicListStats {
   const scored = places.filter((place) => place.teamScore > 0);
   const avg =
@@ -514,10 +619,17 @@ async function getPublicPlacesForListRecord(list: PublicListRecord) {
   const rows = await getPlacesForPublicListId(list.id);
   const places = rows.map((row) => row.place);
   const placeIds = places.map((place) => place.id);
-  const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+  const [ratings, photos, dishes] = await Promise.all([
+    getRatingsForPlaces(placeIds),
+    getPhotosForPlaces(placeIds),
+    getDishesForPlaces(placeIds),
+  ]);
   const photosByPlace = getPhotosByPlace(photos);
+  const dishesByPlace = getDishesByPlace(dishes);
 
-  return places.map((place) => toPublicPlace(place, list, ratings, photosByPlace.get(place.id)));
+  return places.map((place) =>
+    toPublicPlace(place, list, ratings, photosByPlace.get(place.id), dishesByPlace.get(place.id)),
+  );
 }
 
 export async function getLists(): Promise<PublicList[]> {
@@ -573,9 +685,13 @@ export async function getPlace(id: string): Promise<PublicPlace | null> {
     return null;
   }
 
-  const [ratings, photos] = await Promise.all([getRatingsForPlaces([place.id]), getPhotosForPlaces([place.id])]);
+  const [ratings, photos, dishes] = await Promise.all([
+    getRatingsForPlaces([place.id]),
+    getPhotosForPlaces([place.id]),
+    getDishesForPlaces([place.id]),
+  ]);
 
-  return toPublicPlace(place, lists[0], ratings, photos);
+  return toPublicPlace(place, lists[0], ratings, photos, dishes);
 }
 
 export async function getMapPlaces(): Promise<PublicMapPlace[]> {
@@ -681,6 +797,7 @@ export function getListStatsFromPlaces(places: Place[]): PublicListStats {
       externalRatingCount: place.externalRatingCount,
       mixedScore: place.mixedScore,
       photoCount: 0,
+      featuredDishes: [],
     })),
   );
 }
@@ -826,12 +943,19 @@ export async function getAdminLists(input: GetAdminListsInput): Promise<AdminLis
       const rows = await getPlacesForListId({ listId: list.id });
       const places = rows.map((row) => row.place);
       const placeIds = places.map((place) => place.id);
-      const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+      const [ratings, photos, dishes] = await Promise.all([
+        getRatingsForPlaces(placeIds),
+        getPhotosForPlaces(placeIds),
+        getDishesForPlaces(placeIds),
+      ]);
       const photosByPlace = getPhotosByPlace(photos);
+      const dishesByPlace = getDishesByPlace(dishes);
 
       return {
         list,
-        places: places.map((place) => toPublicPlace(place, list, ratings, photosByPlace.get(place.id))),
+        places: places.map((place) =>
+          toPublicPlace(place, list, ratings, photosByPlace.get(place.id), dishesByPlace.get(place.id)),
+        ),
       };
     }),
   );
@@ -922,10 +1046,11 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
     throw new PlaceWriteError("Current user cannot read this place.", "not_allowed");
   }
 
-  const [listRows, ratings, photos] = await Promise.all([
+  const [listRows, ratings, photos, dishes] = await Promise.all([
     getListsForPlaces([place.id]),
     getRatingsForPlaces([place.id]),
     getPhotosForPlaces([place.id]),
+    getDishesForPlaces([place.id]),
   ]);
   const primaryList = listRows[0]?.list ?? {
     id: "",
@@ -937,7 +1062,7 @@ export async function getAdminPlace(input: GetAdminPlaceInput): Promise<AdminPla
   };
 
   return {
-    ...toPublicPlace(place, primaryList, ratings, photos),
+    ...toPublicPlace(place, primaryList, ratings, photos, dishes),
     teamId: place.team_id,
     archivedAt: place.archived_at,
     photos: getSortedPhotos(photos).map(toPublicPlacePhoto),
@@ -998,13 +1123,15 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
     .filter((place) => placeMatchesQuery(place, input.query ?? ""))
     .slice(0, limit);
   const placeIds = places.map((place) => place.id);
-  const [listRows, ratings, photos] = await Promise.all([
+  const [listRows, ratings, photos, dishes] = await Promise.all([
     getListsForPlaces(places.map((place) => place.id)),
     getRatingsForPlaces(placeIds),
     getPhotosForPlaces(placeIds),
+    getDishesForPlaces(placeIds),
   ]);
   const listsByPlace = new Map<string, PublicListRecord[]>();
   const photosByPlace = getPhotosByPlace(photos);
+  const dishesByPlace = getDishesByPlace(dishes);
 
   for (const row of listRows) {
     const lists = listsByPlace.get(row.place_id) ?? [];
@@ -1024,7 +1151,7 @@ export async function getAdminPlaces(input: GetAdminPlacesInput): Promise<AdminP
     };
 
     return {
-      ...toPublicPlace(place, primaryList, ratings, photosByPlace.get(place.id)),
+      ...toPublicPlace(place, primaryList, ratings, photosByPlace.get(place.id), dishesByPlace.get(place.id)),
       teamId: place.team_id,
       listSlugs: lists.map((list) => list.slug),
       listNames: lists.map((list) => list.name),
@@ -1118,11 +1245,16 @@ export async function getAdminPlacesByList(input: GetAdminListPlacesInput): Prom
   });
   const places = rows.map((row) => row.place);
   const placeIds = places.map((place) => place.id);
-  const [ratings, photos] = await Promise.all([getRatingsForPlaces(placeIds), getPhotosForPlaces(placeIds)]);
+  const [ratings, photos, dishes] = await Promise.all([
+    getRatingsForPlaces(placeIds),
+    getPhotosForPlaces(placeIds),
+    getDishesForPlaces(placeIds),
+  ]);
   const photosByPlace = getPhotosByPlace(photos);
+  const dishesByPlace = getDishesByPlace(dishes);
 
   return rows.map((row) => ({
-    ...toPublicPlace(row.place, list, ratings, photosByPlace.get(row.place.id)),
+    ...toPublicPlace(row.place, list, ratings, photosByPlace.get(row.place.id), dishesByPlace.get(row.place.id)),
     sortOrder: row.sort_order,
     archivedAt: row.place.archived_at,
   }));
@@ -1232,6 +1364,126 @@ export async function deleteAdminPlacePhoto(input: DeleteAdminPlacePhotoInput): 
   return {
     photo: photo ? toPublicPlacePhoto(photo) : null,
     deleted: Boolean(photo),
+  };
+}
+
+export async function uploadAdminPlaceDish(input: UploadAdminPlaceDishInput): Promise<AdminPlaceDishMutationResult> {
+  const place = await getManageableDishPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+  const name = input.name.trim();
+
+  if (!name) {
+    throw new PlaceDishError("Dish name is required.", "invalid_name");
+  }
+
+  if (!ALLOWED_PHOTO_TYPES.has(input.file.type)) {
+    throw new PlaceDishError("Dish photo must be a jpeg, png, webp, or gif image.", "invalid_file");
+  }
+
+  if (input.file.size <= 0) {
+    throw new PlaceDishError("Dish photo file is empty.", "invalid_file");
+  }
+
+  if (input.file.size > MAX_PHOTO_BYTES) {
+    throw new PlaceDishError("Dish photo exceeds the 10MB limit.", "file_too_large");
+  }
+
+  const extension = getPhotoExtension(input.file);
+  const storagePath = `${place.team_id}/${place.id}/${randomUUID()}.${extension}`;
+  const supabase = createSupabaseAdminClient();
+  const { error: uploadError } = await supabase.storage
+    .from(PLACE_DISHES_BUCKET)
+    .upload(storagePath, input.file, {
+      contentType: input.file.type,
+      upsert: false,
+    });
+
+  if (uploadError) {
+    throw new PlaceDishError(uploadError.message, "storage_error");
+  }
+
+  const { data } = supabase.storage.from(PLACE_DISHES_BUCKET).getPublicUrl(storagePath);
+  let dish: PlaceDishRecord;
+
+  try {
+    dish = await insertDishRecord({
+      placeId: place.id,
+      name,
+      description: optionalText(input.description),
+      photoUrl: data.publicUrl,
+      storagePath,
+      sortOrder: input.sortOrder ?? 0,
+    });
+  } catch (error) {
+    await supabase.storage.from(PLACE_DISHES_BUCKET).remove([storagePath]);
+    throw error;
+  }
+
+  return {
+    dish: toPublicPlaceDish(dish),
+  };
+}
+
+export async function updateAdminPlaceDish(input: UpdateAdminPlaceDishInput): Promise<AdminPlaceDishMutationResult> {
+  const place = await getManageableDishPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+  const existingDish = await getDishById(input.dishId);
+
+  if (!existingDish || existingDish.place_id !== place.id) {
+    throw new PlaceDishError("Dish not found.", "dish_not_found");
+  }
+
+  const name = input.name?.trim();
+
+  if (input.name !== undefined && !name) {
+    throw new PlaceDishError("Dish name cannot be empty.", "invalid_name");
+  }
+
+  const dish = await updateDishRecord({
+    dishId: input.dishId,
+    placeId: place.id,
+    name,
+    description: input.description === undefined ? undefined : optionalText(input.description),
+    sortOrder: input.sortOrder,
+  });
+
+  return {
+    dish: dish ? toPublicPlaceDish(dish) : null,
+  };
+}
+
+export async function deleteAdminPlaceDish(input: DeleteAdminPlaceDishInput): Promise<AdminPlaceDishMutationResult> {
+  const place = await getManageableDishPlace({
+    userId: input.userId,
+    placeId: input.placeId,
+  });
+  const existingDish = await getDishById(input.dishId);
+
+  if (!existingDish || existingDish.place_id !== place.id) {
+    throw new PlaceDishError("Dish not found.", "dish_not_found");
+  }
+
+  if (existingDish.storage_path) {
+    const supabase = createSupabaseAdminClient();
+    const { error } = await supabase.storage.from(PLACE_DISHES_BUCKET).remove([existingDish.storage_path]);
+
+    if (error) {
+      throw new PlaceDishError(error.message, "storage_error");
+    }
+  }
+
+  const dish = await deleteDishRecord({
+    dishId: input.dishId,
+    placeId: place.id,
+  });
+
+  return {
+    dish: dish ? toPublicPlaceDish(dish) : null,
+    deleted: Boolean(dish),
   };
 }
 

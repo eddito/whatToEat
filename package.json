@@ -21,6 +21,7 @@
     "smoke:supabase": "node scripts/smoke-supabase-public.mjs",
     "smoke:auth": "node scripts/smoke-authenticated.mjs",
     "smoke:change-password": "node scripts/smoke-change-password.mjs",
+    "smoke:admin-dishes": "node scripts/smoke-admin-dishes.mjs",
     "smoke:admin-read": "node scripts/smoke-admin-read.mjs",
     "smoke:admin-photos": "node scripts/smoke-admin-photos.mjs",
     "smoke:admin-write": "node scripts/smoke-admin-write.mjs",
